@@ -8,20 +8,40 @@ import type {
   SliderId,
   StartRisk,
 } from '../engine/types';
-import { fromExample, resetCase, withRegion } from './case';
+import { emptyCase, fromExample, resetCase, withRegion } from './case';
 
 export type OpenMap = Partial<Record<DomainId, boolean>>;
 
+/** welcome = accueil patient ; patient = questions ; done = merci ; clinician = espace physio. */
+export type Mode = 'welcome' | 'patient' | 'done' | 'clinician';
+
+export interface View {
+  mode: Mode;
+  /** Étape du parcours patient. */
+  p: number;
+  /** Étape de l'espace physio. */
+  c: number;
+  /** Le patient a choisi sa zone (la région a une valeur par défaut dans l'état du cas). */
+  regionChosen: boolean;
+}
+
 export interface AppState {
+  view: View;
   c: CaseState;
   /** État ouvert/fermé de chaque branche de l'arbre ; absent = défaut (2 premiers prioritaires). */
   open: OpenMap;
   hideEmpty: boolean;
 }
 
+export const initialView = (): View => ({ mode: 'welcome', p: 0, c: 0, regionChosen: false });
+
 type NumField = 'pain' | 'dis' | 'csi' | 'pd';
 
 export type Action =
+  | { type: 'mode'; mode: Mode }
+  | { type: 'pstep'; n: number }
+  | { type: 'cstep'; n: number }
+  | { type: 'newPatient' }
   | { type: 'region'; region: Region }
   | { type: 'example'; region: Region }
   | { type: 'reset' }
@@ -40,16 +60,31 @@ export type Action =
   | { type: 'setOpen'; open: OpenMap }
   | { type: 'hideEmpty'; value: boolean };
 
-export const initialState = (): AppState => ({ c: fromExample('cervical'), open: {}, hideEmpty: false });
+export const initialState = (): AppState => ({
+  view: initialView(),
+  c: emptyCase(),
+  open: {},
+  hideEmpty: false,
+});
 
 export function reducer(st: AppState, a: Action): AppState {
   const c = st.c;
   const set = (patch: Partial<CaseState>): AppState => ({ ...st, c: { ...c, ...patch } });
   switch (a.type) {
-    case 'region':
-      return a.region === c.region ? st : { ...st, c: withRegion(c, a.region) };
+    case 'mode':
+      return { ...st, view: { ...st.view, mode: a.mode } };
+    case 'pstep':
+      return { ...st, view: { ...st.view, p: Math.max(0, a.n) } };
+    case 'cstep':
+      return { ...st, view: { ...st.view, c: Math.max(0, a.n) } };
+    case 'newPatient':
+      return initialState();
+    case 'region': {
+      const view = { ...st.view, regionChosen: true };
+      return a.region === c.region ? { ...st, view } : { ...st, view, c: withRegion(c, a.region) };
+    }
     case 'example':
-      return { ...st, c: fromExample(a.region), open: {} };
+      return { ...st, c: fromExample(a.region), open: {}, view: { ...st.view, regionChosen: true } };
     case 'reset':
       return { ...st, c: resetCase(c), open: {} };
     case 'label':

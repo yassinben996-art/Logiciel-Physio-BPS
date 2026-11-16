@@ -53,6 +53,24 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
 18. **En-tête** : emblème décoratif des six volets (aria-hidden), ombres légères sur les cartes, zones sûres
     des téléphones respectées (marges `env(safe-area-inset-*)`).
 
+## Refonte « parcours patient » (v2)
+
+19. **Deux temps** : le patient remplit seul un questionnaire guidé (une question par écran, environ
+    10 minutes), puis le physio complète dans un espace dédié en 5 étapes (réponses du patient, sécurité,
+    questionnaires, examen clinique, plan). Démarrage sur un cas vide ; les cas d'exemple ne sont plus proposés
+    dans l'interface (ils restent dans le code pour les tests).
+20. **Ce que le patient remplit** : zone, durée, début, douleur 0–10, les 6 repères de ressenti, santé
+    (volet 4), travail et quotidien (volet 6), objectif. Les items de santé et de quotidien sont **reformulés en
+    langage courant** (`src/data/patient.ts`) : choix de conception, à valider cliniquement. Les identifiants
+    sont ceux du moteur ; les règles ne changent pas.
+21. **Questionnaires sous licence** (STarT MSK, CSI, painDETECT, NDI, ODI, SPADI, QuickDASH) : toujours non
+    reproduits. Le patient les remplit sur les versions officielles ; le physio saisit le score (étape 3).
+22. **Drapeaux rouges, examen clinique, comportements observés, comorbidité mal contrôlée** : côté physio
+    uniquement.
+23. **Palette** : fond neutre clair, accent vert sauge (au lieu du bleu-sarcelle) ; couleurs des six volets
+    inchangées. Limites et références repliées en bas du plan.
+24. **Nouveau patient** : efface tout après une confirmation intégrée à la page.
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant
