@@ -1,0 +1,5 @@
+dist
+reference
+node_modules
+package-lock.json
+PROMPT_CLAUDE_CODE.md
