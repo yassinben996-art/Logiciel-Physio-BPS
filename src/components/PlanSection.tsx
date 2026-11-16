@@ -1,6 +1,7 @@
 import type { Dispatch } from 'react';
 import type { Analysis, CaseState, DomainId } from '../engine/types';
-import type { Action, OpenMap } from '../state/reducer';
+import type { Action, OpenMap, QAnswers } from '../state/reducer';
+import { QResults } from './QResults';
 import { DomainTree } from './DomainTree';
 import { ExportBar } from './ExportBar';
 import { LimitsSection } from './LimitsSection';
@@ -12,6 +13,7 @@ import { References } from './References';
 interface Props {
   c: CaseState;
   X: Analysis;
+  qa: QAnswers;
   open: OpenMap;
   hideEmpty: boolean;
   dispatch: Dispatch<Action>;
@@ -20,7 +22,7 @@ interface Props {
 
 const ALL: DomainId[] = [1, 2, 3, 4, 5, 6];
 
-export function PlanSection({ c, X, open, hideEmpty, dispatch, onGo }: Props) {
+export function PlanSection({ c, X, qa, open, hideEmpty, dispatch, onGo }: Props) {
   return (
     <div id="s-plan" className="plan-page">
       <FlagAlert X={X} />
@@ -35,6 +37,7 @@ export function PlanSection({ c, X, open, hideEmpty, dispatch, onGo }: Props) {
                 <p>« {c.goal.trim()} »</p>
               </div>
             )}
+            <QResults c={c} qa={qa} compact />
           </div>
         </div>
       </section>

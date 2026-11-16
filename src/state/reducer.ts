@@ -8,6 +8,9 @@ import type {
   SliderId,
   StartRisk,
 } from '../engine/types';
+import { QUESTIONNAIRES } from '@q';
+import { appliesTo, scoreQ } from '../questionnaires/scoring';
+import type { QDef } from '../questionnaires/types';
 import { emptyCase, fromExample, resetCase, withRegion } from './case';
 
 export type OpenMap = Partial<Record<DomainId, boolean>>;
@@ -25,9 +28,13 @@ export interface View {
   regionChosen: boolean;
 }
 
+/** Réponses aux questionnaires intégrés : id du questionnaire → id de l'item → valeur. */
+export type QAnswers = Readonly<Record<string, Readonly<Record<string, number>>>>;
+
 export interface AppState {
   view: View;
   c: CaseState;
+  qa: QAnswers;
   /** État ouvert/fermé de chaque branche de l'arbre ; absent = défaut (2 premiers prioritaires). */
   open: OpenMap;
   hideEmpty: boolean;
@@ -42,6 +49,7 @@ export type Action =
   | { type: 'pstep'; n: number }
   | { type: 'cstep'; n: number }
   | { type: 'newPatient' }
+  | { type: 'qanswer'; q: string; item: string; value: number; index?: number }
   | { type: 'region'; region: Region }
   | { type: 'example'; region: Region }
   | { type: 'reset' }
@@ -63,9 +71,26 @@ export type Action =
 export const initialState = (): AppState => ({
   view: initialView(),
   c: emptyCase(),
+  qa: {},
   open: {},
   hideEmpty: false,
 });
+
+/**
+ * Reporte dans le cas clinique les scores VALIDES des questionnaires remplis par le patient :
+ * incapacité (questionnaire de la région) et painDETECT. Un score invalide ne modifie rien.
+ */
+export function deriveScores(c: CaseState, qa: QAnswers, list: readonly QDef[] = QUESTIONNAIRES): CaseState {
+  let next = c;
+  for (const q of list) {
+    if (!q.feeds || !appliesTo(q, c.region)) continue;
+    const r = scoreQ(q, qa[q.id]);
+    if (!r?.valid) continue;
+    if (q.feeds.field === 'dis') next = { ...next, instr: q.feeds.instr, dis: r.value };
+    else next = { ...next, pd: r.value };
+  }
+  return next;
+}
 
 export function reducer(st: AppState, a: Action): AppState {
   const c = st.c;
@@ -79,9 +104,18 @@ export function reducer(st: AppState, a: Action): AppState {
       return { ...st, view: { ...st.view, c: Math.max(0, a.n) } };
     case 'newPatient':
       return initialState();
+    case 'qanswer': {
+      // « item# » garde l'index de la réponse choisie (deux options peuvent valoir le même score).
+      const entry: Record<string, number> = { ...st.qa[a.q], [a.item]: a.value };
+      if (a.index !== undefined) entry[`${a.item}#`] = a.index;
+      const qa = { ...st.qa, [a.q]: entry };
+      return { ...st, qa, c: deriveScores(c, qa) };
+    }
     case 'region': {
       const view = { ...st.view, regionChosen: true };
-      return a.region === c.region ? { ...st, view } : { ...st, view, c: withRegion(c, a.region) };
+      return a.region === c.region
+        ? { ...st, view }
+        : { ...st, view, c: deriveScores(withRegion(c, a.region), st.qa) };
     }
     case 'example':
       return { ...st, c: fromExample(a.region), open: {}, view: { ...st.view, regionChosen: true } };

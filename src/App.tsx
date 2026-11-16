@@ -73,7 +73,7 @@ export default function App() {
   if (mode === 'patient') return <PatientFlow st={st} dispatch={dispatch} />;
   if (mode === 'done') return <PatientDone dispatch={dispatch} />;
 
-  const p = { c: st.c, X, dispatch };
+  const p = { c: st.c, X, dispatch, qa: st.qa };
   return (
     <ClinicianLayout step={cstep} c={st.c} X={X} dispatch={dispatch} onGo={goDomain}>
       {cstep === 0 && <PatientAnswers {...p} />}
@@ -84,6 +84,7 @@ export default function App() {
         <PlanSection
           c={st.c}
           X={X}
+          qa={st.qa}
           open={st.open}
           hideEmpty={st.hideEmpty}
           dispatch={dispatch}

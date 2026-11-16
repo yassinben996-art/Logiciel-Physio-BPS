@@ -71,6 +71,25 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     inchangées. Limites et références repliées en bas du plan.
 24. **Nouveau patient** : efface tout après une confirmation intégrée à la page.
 
+## Questionnaires intégrés (version personnelle)
+
+25. **Deux versions** : la version publique (site github.io) ne contient aucun questionnaire sous licence. La
+    version personnelle (`npm run build:private`) inclut `private/questionnaires.ts`, **exclu de git**, qui
+    contient les textes fournis par l'utilisateur (NDI, ODI, QuickDASH, TSK, painDETECT). Usage personnel
+    uniquement ; ne jamais publier ce build.
+26. **Règles de calcul** (publiques, `src/questionnaires/scoring.ts`, testées) : NDI et ODI en % sur les sections
+    répondues (règle standard, non écrite sur les formulaires fournis) ; QuickDASH ((somme/n) − 1) × 25, non
+    valable si plus d'une réponse manque (règle du formulaire) ; TSK somme 17–68, items 4, 8, 12, 16 inversés,
+    valable seulement complet ; painDETECT 7 items + évolution + irradiation, valable seulement complet.
+27. **Report automatique** : un score valable alimente le cas (incapacité avec son instrument, painDETECT) ; le
+    physio peut le corriger à l'étape 3. Le TSK est affiché, sans effet sur les volets (option a ; un seuil
+    d'allumage serait une décision clinique à valider).
+28. **painDETECT** : traduction personnelle de la version anglaise, **non validée** ; l'avertissement s'affiche à
+    côté du score. Les 3 échelles d'intensité et le schéma corporel (non cotés) ne sont pas repris : le patient
+    a déjà donné sa douleur moyenne.
+29. Textes transcrits fidèlement ; seules des fautes d'orthographe évidentes ont été corrigées, et « cochez /
+    entourez » devient « touchez ».
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

@@ -42,3 +42,34 @@ describe('reducer', () => {
     expect('a_mech' in s.c.chk).toBe(false);
   });
 });
+
+describe('scores des questionnaires', () => {
+  it('reporte le score valide du questionnaire de la région, ignore les autres', async () => {
+    const { deriveScores } = await import('../src/state/reducer');
+    const { emptyCase } = await import('../src/state/case');
+    const ndi = {
+      id: 'ndi',
+      name: 'NDI',
+      regions: ['cervical'] as const,
+      feeds: { field: 'dis', instr: 'NDI' } as const,
+      source: '',
+      pages: [],
+      scoring: { kind: 'sections-percent', items: ['a', 'b'] } as const,
+    };
+    const pd = {
+      id: 'pd',
+      name: 'pD',
+      regions: 'all' as const,
+      feeds: { field: 'pd' } as const,
+      source: '',
+      pages: [],
+      scoring: { kind: 'paindetect', items: ['p1'], course: 'c', radiation: 'r' } as const,
+    };
+    const c = deriveScores(emptyCase('cervical'), { ndi: { a: 5, b: 0 }, pd: { p1: 5, c: 1, r: 2 } }, [ndi, pd]);
+    expect([c.instr, c.dis, c.pd]).toEqual(['NDI', 50, 8]);
+    // Région différente : le NDI ne s'applique pas
+    expect(deriveScores(emptyCase('lumbar'), { ndi: { a: 5, b: 5 } }, [ndi]).dis).toBeNull();
+    // painDETECT incomplet : rien n'est reporté
+    expect(deriveScores(emptyCase(), { pd: { p1: 5 } }, [pd]).pd).toBeNull();
+  });
+});
