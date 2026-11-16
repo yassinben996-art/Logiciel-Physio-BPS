@@ -87,6 +87,12 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
 28. **painDETECT** : traduction personnelle de la version anglaise, **non validée** ; l'avertissement s'affiche à
     côté du score. Les 3 échelles d'intensité et le schéma corporel (non cotés) ne sont pas repris : le patient
     a déjà donné sa douleur moyenne.
+30. **CSI-25, PCS, FABQ, PSEQ** ajoutés. CSI-25 (0–4 par item, total sur 100) alimente le volet 2 avec le seuil
+    40 déjà prévu ; la partie B (diagnostics, non cotée) n'est pas reprise. PCS (sur 52, avec rumination,
+    amplification, impuissance), FABQ (sur 96, avec activité physique /24 et travail /42) et PSEQ (sur 60) sont
+    affichés sans effet sur les volets. Tous valables seulement s'ils sont complets (le formulaire FABQ précise
+    qu'aucun ajustement n'existe). **FABQ proposé seulement pour les lombaires** : ses phrases parlent du dos.
+    **PSEQ** : traduction personnelle de la version anglaise, non validée.
 29. Textes transcrits fidèlement ; seules des fautes d'orthographe évidentes ont été corrigées, et « cochez /
     entourez » devient « touchez ».
 

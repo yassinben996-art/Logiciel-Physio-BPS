@@ -65,10 +65,21 @@ describe('scores des questionnaires', () => {
       pages: [],
       scoring: { kind: 'paindetect', items: ['p1'], course: 'c', radiation: 'r' } as const,
     };
-    const c = deriveScores(emptyCase('cervical'), { ndi: { a: 5, b: 0 }, pd: { p1: 5, c: 1, r: 2 } }, [ndi, pd]);
+    const c = deriveScores(emptyCase('cervical'), { ndi: { a: 5, b: 0 }, pd: { p1: 5, c: 1, r: 2 } }, [
+      ndi,
+      pd,
+    ]);
     expect([c.instr, c.dis, c.pd]).toEqual(['NDI', 50, 8]);
     // Région différente : le NDI ne s'applique pas
     expect(deriveScores(emptyCase('lumbar'), { ndi: { a: 5, b: 5 } }, [ndi]).dis).toBeNull();
+    const csi = {
+      ...pd,
+      id: 'csi',
+      feeds: { field: 'csi', csiType: 'csi25' } as const,
+      scoring: { kind: 'sum', items: ['x', 'y'], max: 8 } as const,
+    };
+    const c2 = deriveScores({ ...emptyCase(), csiType: 'csi9' }, { csi: { x: 4, y: 3 } }, [csi]);
+    expect([c2.csiType, c2.csi]).toEqual(['csi25', 7]);
     // painDETECT incomplet : rien n'est reporté
     expect(deriveScores(emptyCase(), { pd: { p1: 5 } }, [pd]).pd).toBeNull();
   });

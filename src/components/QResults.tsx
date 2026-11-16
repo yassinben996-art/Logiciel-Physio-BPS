@@ -28,6 +28,9 @@ export function QResults({ c, qa, compact }: { c: CaseState; qa: QAnswers; compa
               <div className="qres-meta">
                 {q.feeds?.field === 'dis' && r!.valid && <span>{disBand(q.feeds.instr, r!.value)}</span>}
                 {r!.note && <span>{r!.note}</span>}
+                {r!.parts?.map((x) => (
+                  <span key={x}>{x}</span>
+                ))}
                 {r!.answered < r!.expected && (
                   <span>
                     {r!.answered} réponses sur {r!.expected}

@@ -1759,3 +1759,12 @@ sup.c a:hover {
 .h-qres {
   font-size: 19px;
 }
+.likert.num {
+  grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr));
+  gap: 6px;
+}
+.likert.num .lk {
+  min-height: 46px;
+  font: 600 16px var(--f-d);
+  padding: 4px;
+}

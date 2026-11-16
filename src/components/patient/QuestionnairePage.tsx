@@ -18,7 +18,7 @@ function CourseIcon({ kind }: { kind: NonNullable<QOption['icon']> }) {
 }
 
 const isLikert = (opts: readonly QOption[]) =>
-  opts.length <= 6 && opts.every((o) => o.label.length <= 46 && !o.icon);
+  opts.length <= 7 && opts.every((o) => o.label.length <= 46 && !o.icon);
 
 interface Props {
   q: QDef;
@@ -35,10 +35,22 @@ export function QuestionnairePage({ q, page, qa, dispatch }: Props) {
         const opts = it.options ?? page.options ?? [];
         const name = `q-${q.id}-${it.id}`;
         const likert = isLikert(opts) && opts.length > 2;
+        const numeric = likert && opts.every((o) => /^\d+$/.test(o.label));
         return (
           <fieldset key={it.id} className="q">
             <legend className="q-legend">{it.text}</legend>
-            <div className={likert ? 'likert' : opts.some((o) => o.icon) ? 'choices course' : 'choices'}>
+            <div
+              className={
+                numeric
+                  ? 'likert num'
+                  : likert
+                    ? 'likert'
+                    : opts.some((o) => o.icon)
+                      ? 'choices course'
+                      : 'choices'
+              }
+              style={numeric ? ({ '--n': opts.length } as React.CSSProperties) : undefined}
+            >
               {opts.map((o, k) => (
                 <label key={k} className={likert ? 'lk' : 'choice'}>
                   <input
@@ -56,6 +68,16 @@ export function QuestionnairePage({ q, page, qa, dispatch }: Props) {
                 </label>
               ))}
             </div>
+            {numeric && page.ends && (
+              <div className="scale-ends" aria-hidden="true">
+                <span>
+                  {opts[0]!.label} · {page.ends[0]}
+                </span>
+                <span>
+                  {page.ends[1]} · {opts[opts.length - 1]!.label}
+                </span>
+              </div>
+            )}
           </fieldset>
         );
       })}

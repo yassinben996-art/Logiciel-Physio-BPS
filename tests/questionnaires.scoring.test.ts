@@ -11,7 +11,12 @@ describe('règles de calcul', () => {
     expect(score(s, fill(ids('s', 10), 0))!.value).toBe(0);
     expect(score(s, fill(ids('s', 10), 5))!.value).toBe(100);
     // 23 / 50 = 46 %
-    expect(score(s, fill(ids('s', 10), (i) => (i < 3 ? 3 : 2)))!.value).toBe(46);
+    expect(
+      score(
+        s,
+        fill(ids('s', 10), (i) => (i < 3 ? 3 : 2)),
+      )!.value,
+    ).toBe(46);
     const partial = score(s, fill(ids('s', 9), 2))!;
     expect(partial.value).toBe(40);
     expect(partial.note).toMatch(/9 sections sur 10/);
@@ -48,5 +53,21 @@ describe('règles de calcul', () => {
     expect(score(s, { ...fill(ids('p', 7), 2), course: -1, rad: 0 })!.note).toMatch(/incertain/); // 13
     expect(score(s, { ...fill(ids('p', 7), 3), course: 0, rad: 0 })!.note).toMatch(/positif/); // 21
     expect(score(s, base)!.valid).toBe(false);
+  });
+
+  it('somme (PCS) : total, sous-échelles, validité', () => {
+    const s = {
+      kind: 'sum',
+      items: ids('c', 13),
+      max: 52,
+      subscales: [
+        { name: 'Rumination', items: ['c8', 'c9', 'c10', 'c11'], max: 16 },
+        { name: 'Amplification', items: ['c6', 'c7', 'c13'], max: 12 },
+      ],
+    } as const;
+    const r = score(s, fill(ids('c', 13), 2))!;
+    expect([r.value, r.display, r.valid]).toEqual([26, '26 / 52', true]);
+    expect(r.parts).toEqual(['Rumination 8 / 16', 'Amplification 6 / 12']);
+    expect(score(s, fill(ids('c', 12), 2))!.valid).toBe(false);
   });
 });

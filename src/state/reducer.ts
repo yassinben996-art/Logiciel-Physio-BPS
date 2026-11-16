@@ -87,6 +87,7 @@ export function deriveScores(c: CaseState, qa: QAnswers, list: readonly QDef[] =
     const r = scoreQ(q, qa[q.id]);
     if (!r?.valid) continue;
     if (q.feeds.field === 'dis') next = { ...next, instr: q.feeds.instr, dis: r.value };
+    else if (q.feeds.field === 'csi') next = { ...next, csiType: q.feeds.csiType, csi: r.value };
     else next = { ...next, pd: r.value };
   }
   return next;

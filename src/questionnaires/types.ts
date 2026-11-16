@@ -22,6 +22,8 @@ export interface QPage {
   intro?: string;
   /** Options partagées par les items de la page. */
   options?: readonly QOption[];
+  /** Libellés des extrémités d'une échelle chiffrée (ex. 0 = pas du tout, 6 = tout à fait). */
+  ends?: readonly [string, string];
   items: readonly QItem[];
 }
 
@@ -32,6 +34,16 @@ export type Scoring =
   | { kind: 'quickdash'; items: readonly string[] }
   /** TSK : somme ; items inversés (5 − x) ; invalide si une réponse manque. */
   | { kind: 'tsk'; items: readonly string[]; reversed: readonly string[] }
+  /**
+   * Somme simple (CSI, PCS, FABQ, PSEQ), valable seulement si tout est rempli ;
+   * sous-échelles facultatives (sommes partielles).
+   */
+  | {
+      kind: 'sum';
+      items: readonly string[];
+      max: number;
+      subscales?: readonly { name: string; items: readonly string[]; max: number }[];
+    }
   /** painDETECT : somme des 7 items (0–5) + évolution (−1/0/+1) + irradiation (0/+2). */
   | { kind: 'paindetect'; items: readonly string[]; course: string; radiation: string };
 
@@ -42,7 +54,7 @@ export interface QDef {
   /** Régions concernées ('all' = toutes). */
   regions: readonly Region[] | 'all';
   /** Champ du cas alimenté par le score : incapacité (avec l'instrument) ou painDETECT. */
-  feeds?: { field: 'dis'; instr: string } | { field: 'pd' };
+  feeds?: { field: 'dis'; instr: string } | { field: 'pd' } | { field: 'csi'; csiType: 'csi9' | 'csi25' };
   /** Référence de la version (affichée côté physio). */
   source: string;
   /** Avertissement (ex. traduction non validée). */
@@ -62,6 +74,8 @@ export interface QResult {
   /** Faux si les règles de validité ne sont pas remplies (score non transmis au moteur). */
   valid: boolean;
   note?: string;
+  /** Sous-scores : « Rumination 6 / 16 »… */
+  parts?: string[];
 }
 
 export type Answers = Readonly<Record<string, number>>;

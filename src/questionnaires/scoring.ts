@@ -52,6 +52,26 @@ export function score(s: Scoring, a: Answers): QResult | null {
         note: valid ? undefined : 'incomplet',
       };
     }
+    case 'sum': {
+      const ids = got(a, s.items);
+      if (!ids.length) return null;
+      const sum = ids.reduce((t, id) => t + a[id]!, 0);
+      const valid = ids.length === s.items.length;
+      const parts = valid
+        ? s.subscales?.map(
+            (sc) => `${sc.name} ${sc.items.reduce((t, id) => t + (a[id] ?? 0), 0)} / ${sc.max}`,
+          )
+        : undefined;
+      return {
+        value: sum,
+        display: `${sum} / ${s.max}`,
+        answered: ids.length,
+        expected: s.items.length,
+        valid,
+        note: valid ? undefined : 'incomplet',
+        parts,
+      };
+    }
     case 'paindetect': {
       const all = [...s.items, s.course, s.radiation];
       const ids = got(a, all);
