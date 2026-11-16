@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profil des moteurs de douleur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* Plan : outil clinique en une colonne, saisie en haut, diagramme interactif en bas.
+   Palette froide (encre bleu nuit, teal) ; six couleurs fixes = six volets du modèle. */
+:root{
+  --bg:#F2F5F8; --surface:#FFFFFF; --ink:#12212E; --muted:#556575; --line:#D5DDE5; --soft:#E9EEF3;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF;
+  --warn:#9A4A06; --warn-bg:#FDF1DF; --danger:#B42318; --danger-bg:#FDECEA; --ok:#1B6F46; --ok-bg:#E4F3EB;
+  --c1:#1D4ED8; --t1:#E6EDFD; --c2:#6D28D9; --t2:#EEE8FB; --c3:#B83A0B; --t3:#FCE9DF;
+  --c4:#0F766E; --t4:#DCF2EF; --c5:#BE185D; --t5:#FBE5EE; --c6:#8A4B08; --t6:#F6EBD9;
+  --f-d:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --f-b:'Public Sans','Segoe UI',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1923; --surface:#15232F; --ink:#E6EDF3; --muted:#9DAFBE; --line:#2A3C4B; --soft:#1C2E3C;
+  --accent:#55B8C9; --accent-ink:#06222A;
+  --warn:#F0B26B; --warn-bg:#3A2A13; --danger:#FF8A7E; --danger-bg:#401C19; --ok:#6FD3A0; --ok-bg:#15352A;
+  --c1:#8BAAFF; --t1:#1B2A4A; --c2:#BEA5FF; --t2:#2C2347; --c3:#FF9F72; --t3:#432519;
+  --c4:#52D6C4; --t4:#12322E; --c5:#FF92BA; --t5:#43203A; --c6:#E4AE66; --t6:#3A2D17; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0E1923; --surface:#15232F; --ink:#E6EDF3; --muted:#9DAFBE; --line:#2A3C4B; --soft:#1C2E3C;
+  --accent:#55B8C9; --accent-ink:#06222A;
+  --warn:#F0B26B; --warn-bg:#3A2A13; --danger:#FF8A7E; --danger-bg:#401C19; --ok:#6FD3A0; --ok-bg:#15352A;
+  --c1:#8BAAFF; --t1:#1B2A4A; --c2:#BEA5FF; --t2:#2C2347; --c3:#FF9F72; --t3:#432519;
+  --c4:#52D6C4; --t4:#12322E; --c5:#FF92BA; --t5:#43203A; --c6:#E4AE66; --t6:#3A2D17; color-scheme:dark;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--f-b);}
+h1,h2,h3,h4{font-family:var(--f-d);margin:0;line-height:1.2;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.hero{padding:26px 0 18px}
+.hero h1{font-size:clamp(26px,5vw,38px);font-weight:700;letter-spacing:-.01em}
+.hero p{margin:8px 0 0;color:var(--muted);max-width:68ch}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
+.pill b{color:var(--ink);font-weight:600}
+.status{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.status .wrap{display:flex;align-items:center;gap:10px;padding-top:8px;padding-bottom:8px;overflow-x:auto}
+.status .lbl{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.dot{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:3px 10px 3px 4px;font-size:12.5px;white-space:nowrap;background:var(--surface);text-decoration:none;color:var(--ink)}
+.dot i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:700 11px var(--f-d);font-style:normal;background:var(--soft);color:var(--muted)}
+.dot.l2{border-color:var(--dc)}.dot.l2 i{background:var(--dc);color:var(--surface)}
+.dot.l1{border-color:var(--dc);border-style:dashed}.dot.l1 i{background:var(--dt);color:var(--dc)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+.card>h2{font-size:20px;display:flex;align-items:center;gap:10px}
+.card>h2 .n{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:14px}
+.card .sub{color:var(--muted);margin:6px 0 14px;font-size:14px;max-width:75ch}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600}
+.seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.grid2{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:repeat(3,1fr)!important}}
+.grid3{display:grid;grid-template-columns:1fr;gap:12px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);font-weight:500}
+select,input[type=number],input[type=text],textarea{border:1.5px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;min-height:40px}
+textarea{width:100%;min-height:64px;resize:vertical}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer;background:var(--surface);font-size:14px}
+.chk input{margin-top:3px;width:17px;height:17px;accent-color:var(--accent);flex:none}
+.chk:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.chk.red:has(input:checked){border-color:var(--danger);background:var(--danger-bg)}
+.chk small{display:block;color:var(--muted);font-size:12px}
+details.sec{border:1px solid var(--line);border-radius:12px;margin-top:10px;background:var(--surface)}
+details.sec>summary{cursor:pointer;list-style:none;padding:12px 14px;display:flex;align-items:center;gap:10px;font-weight:600;font-family:var(--f-d)}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+details.sec[open]>summary::after{transform:rotate(-135deg)}
+details.sec>.in{padding:2px 14px 14px}
+.badge{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#fff;font:700 13px var(--f-d);background:var(--dc)}
+.sl{display:grid;grid-template-columns:1fr;gap:2px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.sl:last-child{border:0}
+.sl .top{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.sl .top b{font-family:var(--f-d);min-width:2ch;text-align:right}
+.sl input[type=range]{width:100%;accent-color:var(--accent)}
+.sl .ends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted);margin-top:8px}
+.alert{border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14px}
+.alert.danger{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger)}
+.alert.warn{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 50%,transparent)}
+.alert.ok{background:var(--ok-bg);color:var(--ok)}
+.alert b{font-family:var(--f-d)}
+.btn{border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* diagramme */
+.plan{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+@media(min-width:900px){.plan{grid-template-columns:minmax(0,430px) 1fr}}
+.radial{width:100%;max-width:460px;margin:0 auto;display:block}
+.radial text{font-family:var(--f-d)}
+.node{cursor:pointer}
+.node:focus-visible circle.hit{stroke:var(--accent);stroke-width:3}
+.prio{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.prio li{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-left:5px solid var(--dc);border-radius:10px;padding:9px 12px;background:var(--surface);cursor:pointer}
+.prio li:hover{background:var(--soft)}
+.prio .rk{font:700 18px var(--f-d);color:var(--dc);min-width:22px}
+.prio small{color:var(--muted);display:block}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:50%;display:inline-block}
+.tree details{border:1px solid var(--line);border-left:6px solid var(--dc);border-radius:12px;margin-top:10px;background:var(--surface)}
+.tree details.l0{opacity:.78}
+.tree summary{cursor:pointer;list-style:none;padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary h3{font-size:16.5px}
+.tree summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.tree details[open]>summary::after{transform:rotate(-135deg)}
+.tag{font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 9px;border:1px solid var(--dc);color:var(--dc);background:var(--dt)}
+.tag.solid{background:var(--dc);color:var(--surface)}
+.tag.dash{border-style:dashed}
+.tag.gray{border-color:var(--line);color:var(--muted);background:var(--soft)}
+.branch{padding:0 14px 14px}
+.branch h4{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dc);margin:14px 0 6px}
+.branch ul{margin:0;padding-left:18px}
+.branch li{margin:3px 0}
+.tg{border:1px dashed var(--dc);background:var(--dt);border-radius:10px;padding:8px 11px;margin:6px 0}
+.iv{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin:6px 0;background:var(--bg)}
+.iv b{font-family:var(--f-d)}
+.ev{display:inline-block;font-size:11px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.ev.CPG{background:var(--ok-bg);color:var(--ok)}
+.ev.RCT{background:var(--t1);color:var(--c1)}
+.ev.EXP{background:var(--warn-bg);color:var(--warn)}
+.ev.NR{background:var(--soft);color:var(--muted)}
+.iv p{margin:3px 0 0;font-size:13.5px;color:var(--muted)}
+sup.c{font-size:10.5px;margin-left:1px}
+sup.c a{text-decoration:none;font-weight:600}
+.refer{border:1px solid var(--danger);background:var(--danger-bg);color:var(--danger);border-radius:10px;padding:8px 11px;margin:6px 0;font-size:14px}
+.refs{columns:1;font-size:12.5px;color:var(--muted);padding-left:20px}
+@media(min-width:760px){.refs{columns:2;column-gap:28px}}
+.refs li{break-inside:avoid;margin-bottom:5px}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.scroll{overflow-x:auto}
+footer{padding:24px 0 48px;color:var(--muted);font-size:12.5px}
+@media print{.status,.noprint{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <h1>Profil des moteurs de douleur</h1>
+  <p>Saisis ce que tu observes en consultation (nuque, lombaires ou épaule). L’outil allume les volets qui entretiennent la douleur et le handicap, propose des cibles de traitement et classe les interventions selon leur niveau de preuve.</p>
+  <div class="pillrow">
+    <span class="pill"><b>Aide au raisonnement</b> · ne remplace ni l’examen ni l’avis médical</span>
+    <span class="pill"><b>Aucune donnée enregistrée</b> · tout reste dans cette page</span>
+    <span class="pill"><b id="pillModel">Modèle</b></span>
+  </div>
+</div></header>
+
+<nav class="status" aria-label="Volets en un coup d’œil"><div class="wrap" id="statusbar"></div></nav>
+
+<main class="wrap">
+  <section class="card" id="s-cas">
+    <h2><span class="n">1</span>Cas</h2>
+    <p class="sub">Choisis la région ou charge un cas fictif pour voir l’outil fonctionner.</p>
+    <div class="seg" id="regionSeg" role="group" aria-label="Région">
+      <button type="button" data-r="cervical" aria-pressed="true">Nuque</button>
+      <button type="button" data-r="lumbar" aria-pressed="false">Lombaires</button>
+      <button type="button" data-r="shoulder" aria-pressed="false">Épaule</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span class="note" style="margin:0">Cas fictifs :</span>
+      <button type="button" class="btn ghost" data-ex="cervical">Marie, nuque (webinaire)</button>
+      <button type="button" class="btn ghost" data-ex="lumbar">Karim, lombalgie</button>
+      <button type="button" class="btn ghost" data-ex="shoulder">Paul, épaule</button>
+      <button type="button" class="btn ghost" id="btnReset">Vider le formulaire</button>
+    </div>
+    <div class="grid3" style="margin-top:14px">
+      <label class="f">Repère du patient (initiales, pas de nom)<input type="text" id="f-label" maxlength="40" autocomplete="off"></label>
+      <label class="f">Durée des symptômes
+        <select id="f-duration"><option value="lt6w">Moins de 6 semaines</option><option value="6w3m">6 semaines à 3 mois</option><option value="gt3m">Plus de 3 mois</option></select></label>
+      <label class="f">Début
+        <select id="f-onset"><option value="nontrauma">Non traumatique / insidieux</option><option value="trauma">Traumatique</option><option value="postop">Post-opératoire</option></select></label>
+    </div>
+    <div class="grid3" style="margin-top:12px">
+      <label class="f">Risque STarT MSK (outil officiel)
+        <select id="f-start"><option value="na">Non passé</option><option value="low">Faible</option><option value="medium">Moyen</option><option value="high">Élevé</option></select></label>
+      <label class="f">Douleur moyenne (0–10)<input type="number" id="f-pain" min="0" max="10" step="0.5" inputmode="decimal"></label>
+      <div class="f"><label class="f" style="gap:5px">Incapacité (en %)
+        <span class="row" style="flex-wrap:nowrap"><select id="f-instr" style="flex:0 0 auto"></select><input type="number" id="f-dis" min="0" max="100" step="1" inputmode="numeric" style="flex:1;min-width:0"></span></label>
+        <span class="note" id="disNote" style="margin:0"></span></div>
+    </div>
+    <p class="note">STarT MSK : tu saisis la catégorie obtenue avec l’outil officiel de Keele (10 items, 3 niveaux de risque). Les items ne sont pas reproduits ici.</p>
+  </section>
+
+  <section class="card" id="s-secu">
+    <h2><span class="n">2</span>Sécurité d’abord</h2>
+    <p class="sub">Coche ce qui est présent. Un drapeau isolé a une faible valeur prédictive ; c’est la combinaison et le contexte qui comptent, et l’absence de drapeau n’exclut pas une pathologie sérieuse.</p>
+    <div class="grid2" id="flags"></div>
+    <div id="flagAlert"></div>
+  </section>
+
+  <section class="card" id="s-eval">
+    <h2><span class="n">3</span>Évaluation en six volets</h2>
+    <p class="sub">Un volet par moteur possible de douleur et d’incapacité. Remplis ce que tu as observé ; le reste reste neutre.</p>
+    <div id="domains"></div>
+  </section>
+
+  <section class="card" id="s-plan">
+    <h2><span class="n">4</span>Plan : les volets sur lesquels travailler</h2>
+    <p class="sub">Clique un volet du schéma ou de la liste. Chaque branche se déplie pour montrer pourquoi il est allumé, la cible de traitement, les interventions et le niveau de preuve.</p>
+    <div id="planAlert"></div>
+    <div class="plan">
+      <div>
+        <svg id="radial" class="radial" viewBox="-70 -30 660 580" role="img" aria-label="Schéma des six volets"></svg>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>Volet présent</span>
+          <span><i style="border:2px dashed var(--accent)"></i>À surveiller</span>
+          <span><i style="border:2px solid var(--line)"></i>Sans signal</span>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:16px;margin-bottom:8px">Axes prioritaires</h3>
+        <ol class="prio" id="prio"></ol>
+        <div class="alert warn" id="goalBox" style="margin-top:12px">
+          <b>Objectif du patient</b>
+          <textarea id="f-goal" placeholder="Ex. : porter mon fils sans douleur, reprendre la natation, finir ma journée sans arrêt…" style="margin-top:6px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="row noprint" style="margin-top:16px">
+      <button type="button" class="btn ghost" id="btnOpen">Tout déplier</button>
+      <button type="button" class="btn ghost" id="btnClose">Tout replier</button>
+      <label class="chk" style="padding:6px 10px"><input type="checkbox" id="hideEmpty"><span>Masquer les volets sans signal</span></label>
+    </div>
+    <div class="tree" id="tree"></div>
+  </section>
+
+  <section class="card" id="s-export">
+    <h2><span class="n">5</span>Garder une trace</h2>
+    <p class="sub">Le résumé reprend le profil, les cibles et les interventions retenues. Il ne contient que ce que tu as saisi ici.</p>
+    <div class="row">
+      <button type="button" class="btn" id="btnPdf">Exporter en PDF</button>
+      <button type="button" class="btn ghost" id="btnCopy">Copier le résumé</button>
+      <span class="note" id="exportMsg" style="margin:0" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="card" id="s-crit">
+    <h2><span class="n">6</span>Limites à connaître</h2>
+    <div id="crit"></div>
+  </section>
+
+  <section class="card" id="s-refs">
+    <h2><span class="n">7</span>Sources</h2>
+    <p class="sub">Références consultées via PubMed et Consensus. Les liens ouvrent la notice ou l’article. Seuls les titres et résumés ont été lus pour la plupart ; vérifie les chiffres clés dans les textes complets avant toute citation.</p>
+    <ol class="refs" id="refs"></ol>
+  </section>
+</main>
+<footer><div class="wrap">Adaptation inspirée du modèle Pain and Disability Drivers Management (PDDM / MGVDI). Volet cervical : contenu validé par Delphi (Gérard 2025). Volet lombaire : essais pilotes (Longtin 2021, 2023). Volet épaule : adaptation non validée. Les règles de calcul sont des choix de conception explicites, pas des seuils publiés, sauf mention contraire.</div></footer>
+<script>
+"use strict";
+/* ============ DONNÉES ============ */
+const CS='?utm_source=claude_desktop';
+const cons=id=>'https://consensus.app/papers/details/w:'+id+'/'+CS;
+const REFS=[
+ ['dunn21',`Dunn et al. 2021, Refinement and validation of a tool for stratifying patients with musculoskeletal pain (Keele STarT MSK). Eur J Pain`,'https://doi.org/10.1002/ejp.1821'],
+ ['hill11',`Hill et al. 2011, Stratified primary care vs current best practice for low back pain (STarT Back), essai randomisé. Lancet`,cons('a25bda4e-e1ff-4a92-90cf-ba2f2b2c145b')],
+ ['croft24',`Croft et al. 2024, Stratified care for low back pain with STarT Back: holy grail or doomed to fail? Pain`,cons('f7e4fb34-cba5-4642-91c7-4dfd8aa3f70c')],
+ ['gerard25',`Gérard et al. 2025, Rehabilitation management of neck pain: diagnostic framework based on the PDDM model (Delphi). J Eval Clin Pract`,'https://doi.org/10.1111/jep.14299'],
+ ['gerard24',`Gérard et al. 2024, Prognostic factors of pain, disability and poor outcomes in neck pain, umbrella review. Clin Rehabil`,cons('ae94df3c-9d2c-4003-a3ad-6f7cbfda83d2')],
+ ['long21',`Longtin et al. 2021, PDDM model for low back pain: feasibility trial. PLoS ONE`,cons('4abc9d3e-07c4-4521-b26d-0dc63e6e2c96')],
+ ['long23',`Longtin et al. 2023, PDDM for low back pain: pilot cluster non-randomised controlled trial. Musculoskelet Care`,cons('301f738f-0a78-4233-8c27-1e85767a9797')],
+ ['long23b',`Longtin et al. 2023, Low back pain managed with the PDDM model: improver analysis. Musculoskelet Care`,cons('52053a02-121f-474e-b327-70870bd95bdf')],
+ ['lecam25',`Le Cam et al. 2025, Biopsychosocial phenotyping of chronic low back pain with the PDDM model (cohorte rétrospective). J Back Musculoskelet Rehabil`,cons('c20715c7-f9c9-4157-90e1-994e2f81af69')],
+ ['fortin26',`Fortin et al. 2026, STRONG-BACK, protocole d’essai (PDDM + LSIQ, douleur nociceptive prédominante). BMJ Open`,'https://doi.org/10.1136/bmjopen-2025-115538'],
+ ['tanaka19',`Tanaka et al. 2019, Cutoff value for the short form of the Central Sensitization Inventory (CSI-9). Pain Pract`,cons('0b66e0ba-d819-4edc-8cc3-a401e994cf37')],
+ ['nijs21',`Nijs et al. 2021, Nociplastic pain criteria or recognition of central sensitization? J Clin Med`,cons('c0e03b40-2559-47d8-98d5-ace381341bf5')],
+ ['debaets25',`De Baets et al. 2025, Shoulder pain phenotyping: a guide for clinicians (nociceptive, neuropathic, nociplastic). Braz J Phys Ther`,cons('876daafe-41ab-4ee5-add6-87d20947f853')],
+ ['foster18',`Foster et al. 2018, Prevention and treatment of low back pain: evidence, challenges, promising directions. Lancet`,cons('62a73d62-0ff0-419a-956b-0baa6ca294ba')],
+ ['oliv18',`Oliveira et al. 2018, Clinical practice guidelines for non-specific low back pain in primary care: an updated overview. Eur Spine J`,cons('9b92d3d2-08da-4590-8d5b-155522675381')],
+ ['zaina23',`Zaina et al. 2023, Systematic review of CPGs for low back pain with and without radiculopathy (WHO rehabilitation package). Arch Phys Med Rehabil`,cons('ab197cdf-8d0c-41ba-bffd-42b5fd8f1ee4')],
+ ['wong16',`Wong et al. 2016, CPGs for the noninvasive management of low back pain (OPTIMa). Eur J Pain`,cons('cec383fc-cf13-44f7-a979-39a021fb0076')],
+ ['kent23',`Kent et al. 2023, Cognitive functional therapy vs usual care for chronic disabling low back pain (RESTORE). Lancet`,cons('d5188409-86ca-419c-a66a-187926db9e47')],
+ ['okeeffe19',`O’Keeffe et al. 2019, Cognitive functional therapy vs group exercise and education for chronic low back pain. Br J Sports Med`,cons('7edc9b59-27e2-405f-9269-028bfa49f70a')],
+ ['marelli25',`Marelli et al. 2025, Effectiveness of cognitive functional therapy for chronic spinal pain: systematic review and meta-analysis. Pain Med`,cons('a0171ba6-d450-4b12-aa56-b87c790d0eb8')],
+ ['may18',`May et al. 2018, Centralization and directional preference: updated systematic review. Musculoskelet Sci Pract`,cons('286e20f2-a500-464e-bf21-63464f606d28')],
+ ['henn24',`Hennemann et al. 2024, McKenzie Method for chronic low back pain with directional preference: meta-analysis. J Man Manip Ther`,cons('e2bf1442-9601-4c26-be52-74dd142a44a7')],
+ ['watson19',`Watson et al. 2019, Pain neuroscience education for adults with chronic musculoskeletal pain: mixed-methods review and meta-analysis. J Pain`,cons('31b42334-5827-4a77-ad1c-e8d066f96dbc')],
+ ['sidd21',`Siddall et al. 2021, Combining pain neuroscience education with exercise for chronic musculoskeletal pain: meta-analysis. Pain`,cons('a86937bf-0d75-405e-a438-bd4ec1c96fb9')],
+ ['lepri23',`Lepri et al. 2023, Pain neuroscience education in chronic musculoskeletal pain with central sensitization: systematic review. Int J Environ Res Public Health`,cons('36db2536-0509-4bff-b0ee-fab76920d7f6')],
+ ['khan26',`Khan et al. 2026, Pain neuroscience education: pain, sleep and psychosocial factors in chronic musculoskeletal pain. Clin J Pain`,cons('0d257f5f-cb55-4a21-a4e6-8e7f16637dcd')],
+ ['verh16',`Verhagen et al. 2016, Red flags presented in current low back pain guidelines: a review. Eur Spine J`,cons('5e515cd9-b77b-4aca-8116-3298331cdc1d')],
+ ['prem18',`Premkumar et al. 2018, Red flags for low back pain are not always really red. J Bone Joint Surg Am`,cons('2b1b7add-1568-4878-8a8c-a6f5b12f4c7f')],
+ ['nota25',`Notarangelo et al. 2025, Diagnostic utility of red flags for spinal malignancies in low back pain: scoping review. J Clin Med`,cons('eb25d874-db00-4383-99d9-c26580f36022')],
+ ['blan17',`Blanpied et al. 2017, Neck pain: revision 2017 (clinical practice guideline). J Orthop Sports Phys Ther`,'https://doi.org/10.2519/jospt.2017.0302'],
+ ['bier17',`Bier et al. 2017, CPG for physical therapy assessment and treatment in nonspecific neck pain (KNGF). Phys Ther`,cons('7aa488a7-dd3f-4d25-9f61-4a2cb5d90a54')],
+ ['cote16',`Côté et al. 2016, Management of neck pain and associated disorders: CPG from the OPTIMa Collaboration. Eur Spine J`,cons('7099fd5a-8d89-45a1-b952-deeec99dc1e5')],
+ ['buss16',`Bussières et al. 2016, Treatment of neck pain-associated disorders and whiplash-associated disorders: CPG. J Manipulative Physiol Ther`,cons('c472db92-f5e3-446a-90d6-1e97e96d980b')],
+ ['thoo17',`Thoomes et al. 2017, Value of physical tests in diagnosing cervical radiculopathy: systematic review. Spine J`,cons('5e568322-3abf-42d3-9fe3-1f4f8f610d3f')],
+ ['grond26',`Grondin et al. 2026, Independent validation of a clinical prediction rule for cervical radiculopathy with radicular pain. Braz J Phys Ther`,cons('a012b2f6-0c59-427e-8e5b-d40854c6bf39')],
+ ['jiang23',`Jiang et al. 2023, Value of clinical signs in the diagnosis of degenerative cervical myelopathy. Global Spine J`,cons('d5e03411-d118-479b-a41f-59e83532e93c')],
+ ['peters25',`Peters et al. 2025, Mobilization and manipulation recommendations and vascular screening in neck pain CPGs: systematic review. Phys Ther`,cons('1ce64a33-6ee4-401d-8f5c-9455123cb81a')],
+ ['yu25',`Yu et al. 2025, Physical and psychological predictors for persistent and recurrent non-specific neck pain. Eur J Pain`,cons('0dba705d-d735-4cc5-9bb1-fdb5c9934592')],
+ ['lafr22',`Lafrance et al. 2022, Diagnosing, managing and supporting return to work of adults with rotator cuff disorders: CPG. J Orthop Sports Phys Ther`,'https://doi.org/10.2519/jospt.2022.11306'],
+ ['desm25',`Desmeules et al. 2025, Rotator cuff tendinopathy: diagnosis, nonsurgical medical care and rehabilitation, CPG. J Orthop Sports Phys Ther`,'https://doi.org/10.2519/jospt.2025.13182'],
+ ['lowry23',`Lowry et al. 2023, Systematic review of CPGs on the diagnosis and management of various shoulder disorders. Arch Phys Med Rehabil`,cons('5959663b-4268-4eb7-af84-e588af31a8cf')],
+ ['doir20',`Doiron-Cadrin et al. 2020, Shoulder rotator cuff disorders: systematic review of CPGs and semantic analysis. Arch Phys Med Rehabil`,cons('8e92cc13-e74d-4e65-ac55-628adc2e3683')],
+ ['debaets19',`De Baets et al. 2019, Influence of cognitions, emotions and behavioral factors on treatment outcomes in shoulder pain: systematic review. Clin Rehabil`,cons('7a927496-7bc7-4347-b879-7868f5265326')],
+ ['sheik21',`Sheikhzadeh et al. 2021, Do psychological factors affect outcomes in musculoskeletal shoulder disorders? Systematic review. BMC Musculoskelet Disord`,cons('dcde2394-9187-4db6-8ff9-8613f07809de')],
+ ['mart18',`Martínez-Calderón et al. 2018, Association between pain beliefs and pain intensity/disability in shoulder pain: systematic review. Musculoskelet Sci Pract`,cons('6c4e4909-a46d-4e84-bef7-90b65aaba2b8')],
+ ['chall20',`Challoumas et al. 2020, Comparison of treatments for frozen shoulder: systematic review and meta-analysis. JAMA Netw Open`,cons('b382b887-23d6-4971-b1f0-6664022a8bc8')],
+ ['lee25',`Lee et al. 2025, CPG for diagnosis and non-surgical treatment of primary frozen shoulder. Ann Rehabil Med`,cons('03274b7c-9da6-4f20-808f-cf1aa2fd1547')],
+ ['brin26',`Brindisino et al. 2026, Psychological factors, central sensitization and insomnia as prognostic factors in frozen shoulder (cohorte). Pain Res Manag`,cons('5b886cf7-a334-4d37-a705-d4d3000cd983')],
+ ['chep25',`Chepeha et al. 2025, Criteria-based progressive shoulder exercise program for rotator cuff-related shoulder pain (cohorte). PLoS ONE`,cons('f0e4a13e-3b93-476e-9023-2d528f67c6fb')],
+ ['ferah26',`Ferahman et al. 2026, Overlapping roles of neuropathic and nociplastic pain in non-traumatic shoulder disorders. Ağrı`,cons('29e7e7a1-e896-4170-a460-815badf2dfb6')],
+ ['dunn24',`Dunn et al. 2024, Biopsychosocial factors associated with development of chronic musculoskeletal pain: umbrella review. PLoS ONE`,cons('0793c360-7c07-4acb-bacf-17025b3bee74')],
+ ['gwin22',`Gwinnutt et al. 2022, EULAR recommendations on lifestyle behaviours and work participation in rheumatic and musculoskeletal diseases. Ann Rheum Dis`,cons('a943212b-1260-496a-a23c-cf220b1a5a2b')],
+ ['web26',`Tousignant-Laflamme 2026, Webinaire SSFK n°8 : personnaliser les soins de la cervicalgie par les facteurs pronostiques (10 nov. 2026)`,null]
+];
+const RN={}; REFS.forEach((r,i)=>RN[r[0]]=i+1);
+
+const DOM=[
+ {id:1,name:'Nociceptif',short:'Nociceptif',c:'--c1',t:'--t1'},
+ {id:2,name:'Nociplastique',short:'Nociplastique',c:'--c2',t:'--t2'},
+ {id:3,name:'Neuropathique',short:'Neuropathique',c:'--c3',t:'--t3'},
+ {id:4,name:'Comorbidités',short:'Comorbidités',c:'--c4',t:'--t4'},
+ {id:5,name:'Cognitivo-affectif',short:'Cognitivo-affectif',c:'--c5',t:'--t5'},
+ {id:6,name:'Environnement et mode de vie',short:'Environnement',c:'--c6',t:'--t6'}
+];
+const DESC={
+ 1:`Douleur liée aux tissus et à la charge : elle varie avec le mouvement, la posture ou l’effort.`,
+ 2:`Douleur entretenue par une sensibilité accrue du système nerveux (sensibilisation centrale). Dépistage, pas diagnostic.`,
+ 3:`Douleur liée à une lésion ou maladie du système somatosensoriel : racine, nerf périphérique, moelle.`,
+ 4:`Maladies et états associés qui modifient le pronostic ou limitent le traitement.`,
+ 5:`Croyances, émotions (volet A) et comportements (volet B) face à la douleur : évitement, persistance, recherche de sécurité.`,
+ 6:`Travail, activité physique, sommeil, soutien et besoins sociaux qui entretiennent ou freinent la récupération.`
+};
+
+const REGION={
+ cervical:{name:'Cervicalgie',pain:'la nuque',instr:[['NDI','NDI']],model:'Nuque : contenu validé par Delphi (Gérard 2025)',
+  flags:[
+   ['x_myel',`Signes de myélopathie ou déficit neurologique qui s’aggrave (maladresse des mains, troubles de la marche)`,'u'],
+   ['x_vasc',`Suspicion de dysfonction artérielle cervicale : céphalée brutale inhabituelle, vertiges, diplopie, dysarthrie, dysphagie, drop attacks`,'u'],
+   ['x_trauma',`Traumatisme majeur récent avec douleur osseuse focale ou déficit neurologique`,'u'],
+   ['x_cardiac',`Douleur nuque, mâchoire ou bras à l’effort avec sueurs, dyspnée ou douleur thoracique`,'u'],
+   ['x_cancer',`Antécédent de cancer, perte de poids inexpliquée, douleur nocturne ou de repos constante`,'m'],
+   ['x_infect',`Fièvre, immunosuppression, infection récente ou drogue intraveineuse`,'m'],
+   ['x_inflam',`Rhumatisme inflammatoire connu (risque d’instabilité cervicale) ou raideur matinale > 30 min`,'m'],
+   ['x_nonmech',`Douleur constante, qu’aucune posture ni mouvement ne modifie`,'m']],
+  d1:[
+   ['a_mech',`La douleur varie avec les mouvements ou les postures de la nuque`,'mk'],
+   ['a_local',`Douleur axiale ou référée proximale, sans signe radiculaire`,'mk'],
+   ['a_dp',`Préférence directionnelle ou centralisation à l’examen en mouvements répétés`,'dp'],
+   ['a_head',`Céphalée associée, déclenchée par le mouvement ou la posture de la nuque`,'mk'],
+   ['a_noimp',`Pas d’amélioration après 4 à 6 semaines de prise en charge bien conduite`,'B']],
+  d3:[
+   ['r_rad',`Douleur irradiant au bras en territoire radiculaire`,'rad'],
+   ['r_def',`Déficit neurologique objectif (force, réflexe ou sensibilité dans un myotome ou dermatome)`,'def'],
+   ['r_t1',`Test de Spurling positif`,'test'],
+   ['r_t2',`Distraction cervicale qui soulage`,'test'],
+   ['r_t3',`Test neurodynamique du membre supérieur (ULNT1) positif`,'test'],
+   ['r_t4',`Rotation cervicale du côté douloureux < 60°`,'test'],
+   ['r_B',`Signes de myélopathie : Hoffmann, hyperréflexie, Babinski, clonus, troubles de la marche`,'B']]},
+ lumbar:{name:'Lombalgie',pain:'le dos',instr:[['ODI','ODI'],['RMDQ','Roland-Morris (×100/24)']],model:'Lombaires : essais pilotes PDDM (Longtin 2021, 2023)',
+  flags:[
+   ['x_cauda',`Anesthésie en selle, rétention ou incontinence urinaire ou fécale, dysfonction sexuelle récente`,'u'],
+   ['x_neuro',`Déficit moteur bilatéral ou qui progresse rapidement`,'u'],
+   ['x_fract',`Traumatisme important, ou ostéoporose / corticoïdes au long cours avec douleur osseuse`,'u'],
+   ['x_infect',`Fièvre avec douleur intense, drogue intraveineuse, immunosuppression ou infection récente`,'u'],
+   ['x_cancer',`Antécédent de cancer, perte de poids inexpliquée, douleur nocturne constante`,'m'],
+   ['x_axspa',`Début avant 40 ans, raideur matinale > 30 min, amélioration à l’exercice`,'m'],
+   ['x_age',`Première crise après 50 ans avec douleur non mécanique`,'m']],
+  d1:[
+   ['a_mech',`La douleur varie avec les positions ou mouvements (flexion, extension, charge)`,'mk'],
+   ['a_local',`Douleur lombaire ± fesse ou cuisse proximale, sans signe radiculaire`,'mk'],
+   ['a_dp',`Préférence directionnelle ou centralisation`,'dp'],
+   ['a_instab',`Sensation d’instabilité, accrochage, mouvements aberrants à la reprise de position`,'mk'],
+   ['a_noimp',`Pas d’amélioration après 4 à 6 semaines de prise en charge bien conduite`,'B']],
+  d3:[
+   ['r_rad',`Douleur irradiant sous le genou en territoire radiculaire`,'rad'],
+   ['r_def',`Déficit neurologique objectif (force, réflexe ou sensibilité)`,'def'],
+   ['r_t1',`Lasègue (SLR) ou slump qui reproduit la douleur`,'test'],
+   ['r_t2',`SLR croisé positif`,'test'],
+   ['r_B',`Déficit moteur important (≤ 3/5) ou qui progresse`,'B']]},
+ shoulder:{name:'Épaule douloureuse',pain:'l’épaule',instr:[['SPADI','SPADI'],['QuickDASH','QuickDASH']],model:'Épaule : adaptation non validée du modèle',
+  flags:[
+   ['x_trauma',`Traumatisme récent avec déformation, impotence totale ou suspicion de fracture ou luxation`,'u'],
+   ['x_septic',`Épaule chaude, gonflée, avec fièvre (arthrite septique possible)`,'u'],
+   ['x_cardiac',`Douleur à l’effort avec douleur thoracique, dyspnée ou sueurs`,'u'],
+   ['x_tear',`Perte brutale de force avec chute du bras après un effort`,'m'],
+   ['x_cancer',`Antécédent de cancer, perte de poids inexpliquée, douleur nocturne constante, signe de Horner ou atteinte de la main`,'m'],
+   ['x_neuro',`Faiblesse brutale après une douleur intense (névralgie amyotrophiante) ou déficit neurologique progressif`,'m'],
+   ['x_visc',`Douleur non mécanique, liée à la respiration, aux repas ou à la posture sans lien avec le mouvement du bras`,'m']],
+  d1:[
+   ['a_load',`Douleur reproduite par l’élévation ou la charge : arc douloureux, tests résistés douloureux`,'mk'],
+   ['a_stiff',`Raideur passive globale, surtout en rotation externe (capsulite possible)`,'mk'],
+   ['a_instab',`Appréhension, sensation d’instabilité ou antécédent de luxation`,'mk'],
+   ['a_oa',`Arthrose gléno-humérale probable : raideur progressive, crépitements`,'mk'],
+   ['a_noimp',`Pas d’amélioration après 4 à 6 semaines de prise en charge bien conduite`,'B']],
+  d3:[
+   ['r_rad',`Douleur référée du cou ou irradiant au bras avec signes radiculaires`,'rad'],
+   ['r_def',`Atrophie ou faiblesse du sus- ou infra-épineux, paresthésies inexpliquées (neuropathie périphérique)`,'def'],
+   ['r_burn',`Douleur dominante de type brûlure, décharges ou fourmillements`,'sym'],
+   ['r_B',`Déficit neurologique qui progresse`,'B']]}
+};
+const D2=[
+ ['n_reg',`Distribution régionale étendue, multifocale ou diffuse (pas un territoire anatomique discret)`],
+ ['n_disp',`Douleur ou irritabilité disproportionnée par rapport à la lésion ou à la charge`],
+ ['n_all',`Hypersensibilité à l’examen : allodynie, hyperalgésie, sensation résiduelle après stimulation`],
+ ['n_sens',`Hypersensibilité sensorielle rapportée : toucher, lumière, bruit, odeurs, froid ou chaud`]];
+const D4=[
+ ['co_diab',`Diabète`],['co_thy',`Maladie thyroïdienne`],['co_lip',`Dyslipidémie`],['co_obes',`Surpoids ou obésité`],
+ ['co_cv',`Hypertension ou maladie cardiovasculaire`],['co_mood',`Dépression ou anxiété diagnostiquée`],['co_sleep',`Troubles du sommeil, insomnie`],
+ ['co_rheum',`Rhumatisme inflammatoire ou fibromyalgie`],['co_multi',`Douleur multisite (trois régions ou plus)`],['co_head',`Migraine ou céphalées fréquentes`],
+ ['co_osteo',`Ostéoporose`]];
+const D4B=['co_unc',`Au moins une comorbidité mal contrôlée ou qui demande un avis médical`];
+const SL=[
+ ['exp',`Je pense que je vais guérir ou beaucoup m’améliorer`,'Pas du tout','Tout à fait'],
+ ['eff',`Je me sens capable d’agir moi-même sur ma douleur`,'Pas du tout','Tout à fait'],
+ ['fear',`J’ai peur que bouger aggrave le problème`,'Pas du tout','Énormément'],
+ ['worry',`Je m’inquiète beaucoup de ce que ça signifie`,'Pas du tout','Énormément'],
+ ['struct',`Je pense que cette région est abîmée ou fragile`,'Pas du tout','Tout à fait'],
+ ['dist',`Je me sens tendu(e), triste ou anxieux(se) à cause de la douleur`,'Pas du tout','Énormément']];
+const D5B=[
+ ['b_avoid',`Évitement de mouvements ou d’activités par peur de la douleur`],
+ ['b_persist',`Persistance malgré la douleur : suractivité suivie de poussées`],
+ ['b_safety',`Recherche de sécurité : collier, repos prolongé, ménagement protecteur, vérifications répétées`],
+ ['b_comm',`Communication de la douleur très démonstrative ou catastrophique (« 15 sur 10 »)`]];
+const D6=[
+ ['e_load',`Charge de travail élevée, peu de marge de manœuvre`,'A'],
+ ['e_phys',`Travail physiquement lourd, postures prolongées ou gestes répétés`,'A'],
+ ['e_supp',`Peu de soutien au travail ou à la maison`,'A'],
+ ['e_inact',`Peu d’activité physique, sédentarité`,'A'],
+ ['e_smoke',`Tabagisme`,'A'],
+ ['e_sleep',`Sommeil court ou irrégulier (horaires, travail posté)`,'A'],
+ ['e_sick',`Arrêt de travail en cours ou récidivant`,'B'],
+ ['e_lit',`Litige ou procédure d’assurance (accident, AI)`,'B'],
+ ['e_fin',`Difficultés financières, logement précaire, charge de proche aidant`,'B'],
+ ['e_iso',`Isolement social`,'B']];
+
+/* Cas fictifs */
+const EX={
+ cervical:{label:'M.B.',region:'cervical',duration:'gt3m',onset:'nontrauma',start:'medium',pain:6,instr:'NDI',dis:46,csiType:'csi9',csi:14,pd:6,
+  chk:['a_mech','a_dp','co_sleep','b_avoid','e_load','e_supp','e_inact'],sl:{exp:3,eff:3,fear:7,worry:8,struct:6,dist:5},
+  goal:`Reprendre mon travail sans douleur le soir et refaire du sport avec mes enfants.`},
+ lumbar:{label:'K.A.',region:'lumbar',duration:'gt3m',onset:'nontrauma',start:'high',pain:7,instr:'ODI',dis:52,csiType:'csi9',csi:24,pd:15,
+  chk:['a_mech','n_reg','n_disp','n_all','n_sens','co_sleep','co_multi','b_avoid','b_safety','e_phys','e_sick','e_inact','e_sleep'],sl:{exp:4,eff:3,fear:8,worry:7,struct:8,dist:7},
+  goal:`Pouvoir porter mes courses et reprendre mon poste sans crainte.`},
+ shoulder:{label:'P.D.',region:'shoulder',duration:'6w3m',onset:'nontrauma',start:'medium',pain:5,instr:'SPADI',dis:48,csiType:'csi9',csi:11,pd:5,
+  chk:['a_load','e_phys','e_load','co_diab'],sl:{exp:3,eff:4,fear:4,worry:5,struct:6,dist:3},
+  goal:`Lever le bras au-dessus de la tête pour peindre et dormir sur le côté.`}
+};
+</script>
+<script>
+/* ============ ÉTAT ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const S={region:'cervical',duration:'gt3m',onset:'nontrauma',label:'',start:'na',pain:null,instr:'NDI',dis:null,csiType:'csi9',csi:null,pd:null,chk:{},sl:{exp:null,eff:null,fear:null,worry:null,struct:null,dist:null},goal:''};
+let OPEN={};
+const LEVELTXT=['Sans signal','À surveiller','Présent'];
+const EVTXT={CPG:'Guideline',RCT:'Essais ou revues',OBS:'Étude observationnelle',EXP:'Avis d’experts',NR:'Non revu ici'};
+const cite=ks=>ks&&ks.length?`<sup class="c">${ks.map(k=>`<a href="#ref-${k}">${RN[k]}</a>`).join(',')}</sup>`:'';
+const num=v=>(v===null||v===undefined||v===''||isNaN(v))?null:Number(v);
+
+/* ============ ANALYSE ============ */
+function analyze(){
+  const R=REGION[S.region], c=S.chk, LBL={};
+  [...R.d1,...R.d3,...D2,...D4,D4B,...D5B,...D6].forEach(it=>LBL[it[0]]=it[1]);
+  const startRisk=S.start==='medium'||S.start==='high';
+  const A={};
+  /* 1 nociceptif */
+  const mk=R.d1.filter(i=>i[2]==='mk'&&c[i[0]]).map(i=>i[0]);
+  const dp=!!c.a_dp, noimp=!!c.a_noimp;
+  A[1]={level:(mk.length||dp||noimp)?2:0,sub:(mk.length||dp||noimp)?(noimp?'A+B':'A'):'',
+    reasons:[...mk,...(dp?['a_dp']:[]),...(noimp?['a_noimp']:[])].map(i=>LBL[i]),score:mk.length+(dp?2:0),
+    refer:noimp?[`Pas d’amélioration malgré une prise en charge conduite : réévaluer le diagnostic et demander un avis médical.`]:[]};
+  /* 2 nociplastique */
+  const cut=S.csiType==='csi9'?20:40, csi=num(S.csi), csiPos=csi!==null&&csi>=cut;
+  const reg=!!c.n_reg,disp=!!c.n_disp,all=!!c.n_all,sens=!!c.n_sens,gt3=S.duration==='gt3m';
+  const possible=gt3&&reg&&disp, probable=possible&&all;
+  let l2=0; if(probable||(csiPos&&(reg||disp||all)))l2=2; else if(csiPos||possible||(reg+disp+all+sens>=2))l2=1;
+  const slv=S.sl, distHigh=num(slv.dist)!==null&&slv.dist>=7;
+  const nco=D4.filter(i=>c[i[0]]).length;
+  const r2=[];
+  if(gt3&&(reg||disp||all||csiPos))r2.push(`Durée de plus de 3 mois`);
+  D2.forEach(i=>{if(c[i[0]])r2.push(LBL[i[0]])});
+  if(csi!==null)r2.push(`CSI-${S.csiType==='csi9'?'9':'25'} = ${csi} (seuil retenu : ${cut})`+(csiPos?'':', sous le seuil'));
+  A[2]={level:l2,sub:l2?((l2===2&&(S.start==='high'||distHigh||nco>=3))?'A+B':'A'):'',reasons:r2,score:(reg+disp+all)+(sens?1:0)+(csiPos?2:0),refer:[],
+    note:probable?`Profil proche de « nociplastique probable » (critères IASP 2021, à confirmer avec la grille officielle).`:possible?`Profil proche de « nociplastique possible » : durée, distribution régionale et douleur non expliquée par la seule lésion.`:''};
+  if(A[2].sub==='A+B')A[2].refer.push(`Persistance malgré 6 à 8 semaines, détresse élevée ou STarT MSK élevé : envisager un programme interdisciplinaire (exercice et approche cognitivo-comportementale).`);
+  /* 3 neuropathique */
+  const pd=num(S.pd), pdHigh=pd!==null&&pd>=19, pdAmb=pd!==null&&pd>=13&&pd<19;
+  const items3=R.d3, rad=!!c.r_rad, def=!!c.r_def, B3=!!c.r_B, burn=!!c.r_burn;
+  const tests=items3.filter(i=>i[2]==='test'&&c[i[0]]).length;
+  let l3=0; if(def||pdHigh||(rad&&tests>=2)||B3)l3=2; else if(pdAmb||rad||tests>=1||burn)l3=1;
+  const r3=items3.filter(i=>c[i[0]]).map(i=>LBL[i[0]]);
+  if(pd!==null)r3.push(`painDETECT = ${pd} (${pdHigh?'neuropathique probable, ≥ 19':pdAmb?'ambigu, 13 à 18':'neuropathique improbable, < 13'})`);
+  A[3]={level:l3,sub:l3?(B3?'B':def?'A+B':'A'):'',reasons:r3,score:(def?3:0)+(rad?1:0)+tests+(pdHigh?2:pdAmb?1:0)+(B3?5:0),refer:[]};
+  if(B3)A[3].refer.push(S.region==='cervical'?`Signes de myélopathie ou déficit qui progresse : avis médical rapide (imagerie, spécialiste).`:`Déficit neurologique qui progresse : avis médical rapide.`);
+  else if(def)A[3].refer.push(`Déficit objectif : réévaluer à chaque séance et demander un avis médical s’il persiste ou s’aggrave.`);
+  /* 4 comorbidités */
+  const co=D4.filter(i=>c[i[0]]).map(i=>LBL[i[0]]), unc=!!c.co_unc;
+  A[4]={level:co.length?2:0,sub:co.length?(unc?'A+B':'A'):'',reasons:[...co,...(unc?[LBL.co_unc]:[])],score:co.length+(unc?2:0),
+    refer:unc?[`Comorbidité mal contrôlée : avis du médecin traitant avant d’intensifier la charge ou les infiltrations.`]:[]};
+  /* 5 cognitivo-affectif */
+  const v=k=>num(slv[k]);
+  const flg=[];
+  if(v('exp')!==null&&v('exp')<=4)flg.push(['exp',`Attentes de récupération faibles (${v('exp')}/10)`]);
+  if(v('eff')!==null&&v('eff')<=4)flg.push(['eff',`Auto-efficacité faible (${v('eff')}/10)`]);
+  if(v('fear')!==null&&v('fear')>=6)flg.push(['fear',`Peur du mouvement élevée (${v('fear')}/10)`]);
+  if(v('worry')!==null&&v('worry')>=6)flg.push(['worry',`Inquiétude élevée (${v('worry')}/10)`]);
+  if(v('struct')!==null&&v('struct')>=6)flg.push(['struct',`Croyance structurelle forte : région abîmée ou fragile (${v('struct')}/10)`]);
+  if(v('dist')!==null&&v('dist')>=6)flg.push(['dist',`Détresse émotionnelle élevée (${v('dist')}/10)`]);
+  const key=flg.filter(f=>f[0]==='exp'||f[0]==='eff').length, nb=D5B.filter(i=>c[i[0]]).length, nf=flg.length;
+  let l5=0;
+  if(S.region==='shoulder'){ if(key>=1||nb>=2)l5=2; else if(nf>=1||nb>=1)l5=1; }
+  else { if(nf>=2||(nf>=1&&(startRisk||nb>=1)))l5=2; else if(nf===1||nb>=1)l5=1; }
+  A[5]={level:l5,sub:l5?(nf>=1&&nb>=1?'A+B':nb>=1?'B':'A'):'',reasons:[...flg.map(f=>f[1]),...D5B.filter(i=>c[i[0]]).map(i=>LBL[i[0]]),...(startRisk?[`STarT MSK : risque ${S.start==='high'?'élevé':'moyen'}`]:[])],
+    score:nf+nb+(startRisk?1:0),refer:[],
+    note:S.region==='shoulder'?`Épaule traitée en conservateur : les attentes de récupération et l’auto-efficacité sont les facteurs qui ressortent ; le reste a une valeur prédictive incertaine.`:''};
+  if(v('dist')>=8||c.co_mood)A[5].refer.push(`Détresse marquée ou dépression : avis du médecin traitant, psychologue si besoin.`);
+  /* 6 environnement */
+  const ea=D6.filter(i=>i[2]==='A'&&c[i[0]]), eb=D6.filter(i=>i[2]==='B'&&c[i[0]]);
+  let l6=0; if(ea.length+eb.length>=2||eb.length>=1)l6=2; else if(ea.length===1)l6=1;
+  A[6]={level:l6,sub:l6?(eb.length?(ea.length?'A+B':'B'):'A'):'',reasons:[...ea,...eb].map(i=>LBL[i[0]]),score:ea.length+2*eb.length,
+    refer:eb.length?[`Litige, arrêts prolongés ou besoins sociaux : médecin du travail, case manager ou assistant social selon la situation.`]:[]};
+  const order=[1,2,3,4,5,6].sort((a,b)=>(A[b].level-A[a].level)||(A[b].score-A[a].score)||(a-b));
+  const flags={u:R.flags.filter(f=>f[2]==='u'&&c[f[0]]),m:R.flags.filter(f=>f[2]==='m'&&c[f[0]])};
+  return {A,order,flags,csiPos,cut,startRisk};
+}
+
+/* ============ CIBLES ============ */
+function targets(id,X){
+  const r=S.region,c=S.chk,T=[],pain=num(S.pain),dis=num(S.dis),v=k=>num(S.sl[k]),sf=r=>S.chk[r];
+  if(id===1){
+    if(pain!==null)T.push(`Douleur : réduction d’au moins 20 % (${pain}/10 vers ${Math.round(pain*8)/10}/10 ou moins). Seuil minimal utilisé dans les essais PDDM.`);
+    if(dis!==null)T.push(`Incapacité (${S.instr}) : réduction d’au moins 20 % par rapport à ${dis} %. Perception du patient : « considérablement amélioré » (PGIC ≥ 3).`);
+    T.push(S.goal?`Retrouver l’activité choisie par le patient : ${S.goal}`:`Retrouver une activité choisie par le patient (à nommer).`);
+    if(c.a_dp)T.push(`Utiliser la direction qui centralise ou soulage comme exercice de base ; vérifier la réponse à chaque séance.`);
+    if(c.a_stiff)T.push(`Récupérer l’amplitude passive, en particulier la rotation externe, par paliers mesurés.`);
+  }
+  if(id===2){
+    T.push(`Le patient explique sa douleur avec ses mots, sans la réduire à une lésion.`);
+    T.push(`Réduire les poussées après effort grâce à un dosage progressif (pacing).`);
+    if(X.csiPos)T.push(`CSI-${S.csiType==='csi9'?'9':'25'} : ${S.csi} vers un score sous ${X.cut}.`);
+    if(c.n_sens||c.co_sleep)T.push(`Améliorer le sommeil et la tolérance aux stimulations (routine de sommeil, exposition progressive).`);
+  }
+  if(id===3){
+    T.push(`Stabiliser ou améliorer le déficit neurologique, réévalué à chaque séance.`);
+    if(num(S.pd)!==null&&S.pd>=13)T.push(`painDETECT : ${S.pd} vers moins de 13.`);
+    if(c.r_B)T.push(`Aucune aggravation tolérée : avis médical rapide.`);
+  }
+  if(id===4){
+    T.push(`Chaque comorbidité retenue est suivie et stabilisée avec le médecin traitant.`);
+    if(c.co_sleep)T.push(`Sommeil récupérateur, suivi au fil des séances.`);
+    if(c.co_obes||c.co_diab||c.co_cv)T.push(`Activité physique régulière adaptée à l’état cardio-métabolique.`);
+  }
+  if(id===5){
+    if(v('exp')!==null&&v('exp')<=4)T.push(`Attentes de récupération : ${v('exp')}/10 vers 6/10 ou plus.`);
+    if(v('eff')!==null&&v('eff')<=4)T.push(`Auto-efficacité : ${v('eff')}/10 vers 6/10 ou plus.`);
+    if(v('fear')!==null&&v('fear')>=6)T.push(`Peur du mouvement : ${v('fear')}/10 vers 4/10 ou moins. Si FABQ : −4 points (activité physique) ou −7 points (travail) = changement jugé significatif dans l’essai PDDM.`);
+    if(v('struct')!==null&&v('struct')>=6)T.push(`Croyance « région abîmée » : ${v('struct')}/10 vers 4/10 ou moins, par l’explication et l’expérience du mouvement.`);
+    if(v('worry')!==null&&v('worry')>=6)T.push(`Inquiétude : ${v('worry')}/10 vers 4/10 ou moins.`);
+    if(v('dist')!==null&&v('dist')>=6)T.push(`Détresse : ${v('dist')}/10 vers 4/10 ou moins, avis médical si elle persiste.`);
+    if(c.b_avoid)T.push(`Reprendre par paliers une activité évitée, nommée avec le patient.`);
+    if(c.b_persist)T.push(`Dosage de l’activité : alterner effort et récupération, sans poussée marquée.`);
+    if(c.b_safety)T.push(`Réduire les comportements de sécurité (collier, repos, vérifications).`);
+  }
+  if(id===6){
+    if(c.e_load||c.e_phys)T.push(`Ajuster la charge, les gestes et les pauses au poste, avec le patient.`);
+    if(c.e_inact)T.push(`Activité régulière : fréquence convenue avec le patient et suivie.`);
+    if(c.e_smoke)T.push(`Proposer un soutien au sevrage tabagique.`);
+    if(c.e_sleep)T.push(`Installer une routine de sommeil réaliste.`);
+    if(c.e_supp)T.push(`Identifier une personne ressource au travail ou à la maison.`);
+    if(c.e_sick||c.e_lit)T.push(`Plan de retour au travail documenté, avec les acteurs concernés.`);
+    if(c.e_fin||c.e_iso)T.push(`Orienter vers un soutien social adapté.`);
+  }
+  return T;
+}
+
+/* ============ INTERVENTIONS ============ */
+function interventions(id,X){
+  const r=S.region,c=S.chk,L=[],add=(t,d,ev,rs)=>L.push({t,d,ev,r:rs||[]});
+  if(id===1){
+    if(r==='cervical'){
+      add(`Éducation, réassurance, rester actif`,`Évolution le plus souvent favorable. L’éducation seule ne suffit pas : elle accompagne l’exercice.`,'CPG',['cote16','bier17','blan17']);
+      add(`Exercices d’amplitude puis de renforcement, avec mobilisation ou manipulation`,`Soins multimodaux. Au-delà de 3 mois : renforcement supervisé, exercices en groupe, yoga ou massage clinique. Les guidelines recommandent la manipulation mais décrivent rarement le dépistage vasculaire : ne l’utiliser qu’après un dépistage soigneux.`,'CPG',['cote16','buss16','blan17','peters25']);
+      add(`Ce qu’OPTIMa déconseille`,`Collier cervical, traction, électrothérapie, éducation seule, renforcement seul au-delà de 3 mois. Le guideline néerlandais tolère un collier bref en grade III.`,'CPG',['cote16','bier17']);
+      if(c.a_dp)add(`Préférence directionnelle ou centralisation`,`Indicateurs pronostiques utiles, mais preuve limitée pour la nuque et pas de preuve fiable qu’ils modifient l’effet du traitement.`,'RCT',['may18']);
+    } else if(r==='lumbar'){
+      add(`Éducation, réassurance, reprise des activités habituelles`,`Pronostic favorable, éviter le repos au lit, expliquer ce qu’est une poussée.`,'CPG',['oliv18','wong16','foster18']);
+      add(`Exercice supervisé`,`Choisir le type selon la préférence et la tolérance : les guidelines détaillent peu la dose.`,'CPG',['foster18','zaina23']);
+      if(c.a_dp)add(`Exercices selon la préférence directionnelle (McKenzie)`,`Lombalgie chronique avec préférence directionnelle : gain cliniquement important sur la douleur à court terme et sur l’incapacité à moyen terme, certitude faible à modérée.`,'RCT',['henn24','may18']);
+      add(`Thérapie manuelle en complément`,`Manipulation ou mobilisation, intégrée à l’exercice et à l’éducation.`,'CPG',['wong16','zaina23']);
+      if(c.a_instab)add(`Contrôle moteur et renforcement lombaire progressif`,`Un essai en cours (STRONG-BACK) associe le modèle PDDM et le questionnaire d’instabilité lombaire. Pas encore de résultats.`,'EXP',['fortin26']);
+      add(`Imagerie non systématique`,`La réserver aux suspicions de pathologie spécifique.`,'CPG',['oliv18']);
+    } else {
+      if(c.a_load||(!c.a_stiff&&!c.a_instab&&!c.a_oa)){
+        add(`Programme d’exercices actif, orienté tâche, avec éducation`,`Premier choix pour la douleur de la coiffe. Progression par critères plutôt que par durée.`,'CPG',['lafr22','desm25','lowry23','chep25']);
+        add(`Ce que les guidelines ne recommandent pas`,`Décompression sous-acromiale pour la tendinopathie de la coiffe. Imagerie réservée à des cas ciblés.`,'CPG',['lafr22','lowry23']);
+      }
+      if(c.a_stiff){
+        add(`Capsulite : infiltration précoce et programme à domicile`,`Le corticoïde intra-articulaire précoce (symptômes de moins d’un an) donne le meilleur bénéfice à court terme ; ajouter un programme d’exercices simples. Prescription par le médecin. Éducation sur l’évolution parfois longue.`,'RCT',['chall20','lee25']);
+      }
+      if(c.a_instab||c.a_oa)add(`Exercice adapté au diagnostic`,`Les guidelines recommandent ou envisagent la rééducation active pour tous les troubles de l’épaule : renforcement et contrôle neuromusculaire selon l’instabilité ou l’arthrose.`,'CPG',['lowry23']);
+    }
+  }
+  if(id===2){
+    add(`Éducation à la neurophysiologie de la douleur (PNE), en face à face`,`Seule : effets faibles à court terme (douleur −5,9/100, incapacité −4,1/100). Associée à l’exercice, elle réduit nettement la kinésiophobie (SMD −1,20, certitude modérée).`,'RCT',['watson19','sidd21','lepri23']);
+    add(`Exercice progressif dosé`,`Charge croissante par petits paliers pour éviter les poussées, sans tout arrêter pendant une crise.`,'NR');
+    add(`Sommeil comme cible`,`La PNE est associée à un petit gain de temps de sommeil total (SMD 0,42), davantage en combinaison avec l’exercice ou l’approche cognitivo-comportementale.`,'RCT',['khan26']);
+    add(`Lire le dépistage avec prudence`,`Le CSI repère un risque, il ne pose pas de diagnostic. Seuil CSI-9 de 20 : discrimine fibromyalgie et troubles musculo-squelettiques ; des études donnent 17 à 18 selon la population.`,'OBS',['tanaka19','nijs21']);
+    if(r==='shoulder')add(`Phénotypage de l’épaule`,`Un guide clinique récent propose de distinguer douleur nociceptive, neuropathique et nociplastique à l’épaule.`,'EXP',['debaets25']);
+  }
+  if(id===3){
+    if(r==='cervical'){
+      add(`Confirmer la radiculopathie par un groupe de tests`,`Spurling, distraction, ULNT1 et rotation < 60°, ou Spurling plus traction plus arm squeeze, toujours cohérents avec l’histoire. Quatre ULNT négatifs avec arm squeeze permettent de l’exclure.`,'OBS',['thoo17','grond26']);
+      add(`Prise en charge conservatrice, réévaluation à chaque séance`,`La radiculopathie est couverte par le guideline néerlandais. Signes neurologiques persistant plus de 3 mois : avis médical.`,'CPG',['bier17','cote16']);
+      if(c.r_B)add(`Suspicion de myélopathie`,`Hoffmann, Babinski, clonus, hyperréflexie : imagerie et avis spécialisé.`,'OBS',['jiang23']);
+    } else if(r==='lumbar'){
+      add(`Radiculopathie lombaire`,`La manipulation peut aider en cas de hernie discale avec radiculopathie. Avis spécialisé si suspicion de radiculopathie sévère ou pas d’amélioration à 4 semaines.`,'CPG',['wong16','oliv18']);
+      add(`painDETECT élevé`,`Dans un pilote PDDM lombaire, chaque point de plus était associé à moins de chances d’amélioration à 12 semaines (OR 0,91). Résultat exploratoire.`,'OBS',['long23b']);
+    } else {
+      add(`Ordre de grandeur à l’épaule`,`Chez 73 patients avec une épaule chronique non traumatique : 26 % de douleur neuropathique et 28,8 % de nociplastique ; la neuropathique était la plus liée à l’incapacité.`,'OBS',['ferah26']);
+      add(`Écarter une origine cervicale`,`Dépistage cervical et neurologique avant d’attribuer la douleur à l’épaule.`,'NR');
+    }
+  }
+  if(id===4){
+    add(`Coordonner avec le médecin traitant`,`Les comorbidités et le sommeil font partie du plan, pas du décor.`,'EXP',['web26']);
+    if(c.co_multi)add(`Douleur multisite`,`Élargir l’évaluation au volet nociplastique et à la charge globale.`,'EXP');
+    if(r==='shoulder'&&(c.a_stiff||c.co_diab||c.co_thy||c.co_lip))add(`Capsulite et facteurs métaboliques`,`Diabète, maladie thyroïdienne et dyslipidémie augmentent le risque de capsulite.`,'CPG',['lee25']);
+    if(r==='shoulder'&&(c.co_mood||c.a_stiff))add(`Anxiété et pronostic`,`Dans une cohorte de 80 patients avec capsulite, l’anxiété (trait et état) prédisait douleur et incapacité à 3 mois.`,'OBS',['brin26']);
+    add(`Activité, poids, tabac`,`Principes EULAR pour les maladies rhumatismales : exercice, poids, sevrage tabagique, participation au travail. Extrapolés ici aux douleurs musculo-squelettiques.`,'CPG',['gwin22']);
+  }
+  if(id===5){
+    if(r==='cervical')add(`Pourquoi cibler ce volet`,`Catastrophisme et détresse psychologique prédisent persistance et récidive de la douleur cervicale (certitude faible à modérée).`,'OBS',['yu25','gerard24']);
+    if(r==='shoulder')add(`Pourquoi ce volet pèse moins ici`,`Après physiothérapie, attentes de récupération et auto-efficacité prédisent l’évolution ; peur, catastrophisme et détresse sont peu ou pas prédictifs en conservateur. Après chirurgie, la peur du mouvement prédit l’évolution.`,'OBS',['debaets19','sheik21','mart18']);
+    add(`Laisser le patient raconter son histoire`,`Nommer ses croyances (fragilité, peur, attentes) avant d’expliquer. Les patients décrivent ce temps comme un élément clé de la PNE.`,'OBS',['watson19']);
+    add(`Éducation personnalisée liée au mouvement`,`Combiner explication et exercice : meilleur effet sur la peur et le catastrophisme que l’exercice seul.`,'RCT',['sidd21','foster18']);
+    if(r==='lumbar')add(`Thérapie cognitivo-fonctionnelle (CFT)`,`Lombalgie chronique invalidante : −4,6 points au Roland-Morris contre soins usuels à 13 semaines, effet maintenu à 52 semaines ; supérieure à un programme de groupe sur l’incapacité à 6 et 12 mois.`,'RCT',['kent23','okeeffe19','marelli25']);
+    if(r==='cervical')add(`Approche de type CFT`,`Un seul essai pour la nuque (n = 72), certitude faible à très faible : à utiliser comme piste, pas comme standard.`,'RCT',['marelli25']);
+    add(`Exposition graduelle aux mouvements redoutés`,`Hiérarchiser les activités évitées, progresser par paliers, mesurer la peur avant et après.`,'EXP',['web26']);
+    if(c.b_avoid)add(`Évitement`,`Comprendre ce que le patient évite, puis remplacer la stratégie d’évitement par une autre.`,'EXP',['web26']);
+    if(c.b_persist)add(`Persistance`,`Dosage de l’activité (pacing) : expliquer que s’irriter à répétition n’aide pas.`,'EXP',['web26']);
+    if(c.b_safety&&r==='cervical')add(`Recherche de sécurité : collier`,`À éviter : non recommandé par OPTIMa, toléré brièvement en grade III par le guideline néerlandais.`,'CPG',['cote16','bier17']);
+  }
+  if(id===6){
+    add(`Plan de retour au travail précoce`,r==='shoulder'?`Construit avec le patient et les acteurs du travail, avec plusieurs stratégies combinées.`:`Interventions de santé au travail intégrées à la prise en charge.`,'CPG',r==='shoulder'?['lafr22','doir20']:['foster18']);
+    if(c.e_load||c.e_phys)add(`Adaptation du poste et de l’organisation`,`Tâches, rythme, pauses, gestes. Les guidelines de la coiffe citent l’adaptation de l’organisation du travail.`,r==='shoulder'?'CPG':'EXP',r==='shoulder'?['doir20']:[]);
+    if(c.e_inact||c.e_smoke)add(`Activité physique et tabac`,`Le tabagisme (OR 1,24) est associé au passage à la douleur chronique, avec certitude modérée.`,'OBS',['dunn24','gwin22']);
+    if(c.e_supp||c.e_iso||c.e_fin)add(`Soutien social et statut socio-économique`,`Soutien faible (OR 1,21) et statut socio-économique bas (OR 2,0) sont associés à la chronicisation, certitude modérée.`,'OBS',['dunn24']);
+    add(`Besoins sociaux`,`Soins informés par les besoins (adapter le plan) ou ciblés sur le besoin (agir avec l’assistant social).`,'EXP',['web26']);
+  }
+  return L;
+}
+
+/* ============ FORMULAIRES ============ */
+const chkHtml=(id,label,cls='')=>`<label class="chk ${cls}"><input type="checkbox" data-k="${id}"><span>${label}</span></label>`;
+function buildFlags(){
+  const R=REGION[S.region];
+  $('#flags').innerHTML=R.flags.map(f=>chkHtml(f[0],`${f[1]}<small>${f[2]==='u'?'Orienter sans attendre':'Avis médical rapide'}</small>`,f[2]==='u'?'red':'')).join('');
+}
+function buildDomains(){
+  const R=REGION[S.region], H=[];
+  const sec=(d,body,open)=>`<details class="sec" ${open?'open':''} style="--dc:var(${DOM[d-1].c});--dt:var(${DOM[d-1].t})" data-sec="${d}"><summary><span class="badge">${d}</span><span>${DOM[d-1].name}</span><span class="tag gray" id="sx${d}" style="margin-left:6px">Sans signal</span></summary><div class="in"><p class="note" style="margin:0 0 10px">${DESC[d]}</p>${body}</div></details>`;
+  H.push(sec(1,`<div class="grid2">${R.d1.map(i=>chkHtml(i[0],i[1])).join('')}</div>`,true));
+  H.push(sec(2,`<div class="grid2">${D2.map(i=>chkHtml(i[0],i[1])).join('')}</div>
+    <div class="grid3" style="margin-top:12px"><label class="f">Questionnaire CSI utilisé<select id="f-csitype"><option value="csi9">CSI-9 (seuil 20)</option><option value="csi25">CSI-25 (seuil 40)</option></select></label>
+    <label class="f">Score CSI<input type="number" id="f-csi" min="0" max="100" inputmode="numeric"></label></div>
+    <p class="note">Critères inspirés de l’IASP 2021 : durée > 3 mois, distribution régionale, douleur non expliquée par la seule lésion, signes d’hypersensibilité. Le CSI est un repère.</p>`));
+  H.push(sec(3,`<div class="grid2">${R.d3.map(i=>chkHtml(i[0],i[1])).join('')}</div>
+    <div class="grid3" style="margin-top:12px"><label class="f">Score painDETECT (−1 à 38)<input type="number" id="f-pd" min="-1" max="38" inputmode="numeric"></label></div>
+    <p class="note">painDETECT : moins de 13 improbable, 13 à 18 ambigu, 19 et plus probable (valeurs usuelles du questionnaire d’origine).</p>`));
+  H.push(sec(4,`<div class="grid2">${D4.map(i=>chkHtml(i[0],i[1])).join('')}</div><div style="margin-top:10px">${chkHtml(D4B[0],D4B[1])}</div>`));
+  H.push(sec(5,`<h4 style="font-size:14px;margin:0 0 4px">Questions au patient, de 0 à 10</h4><p class="note" style="margin:0 0 6px">Repères maison, non validés : à remplacer par tes questionnaires habituels (FABQ, TSK, PCS, PSEQ) si tu les as.</p>
+    ${SL.map(s=>`<div class="sl"><div class="top"><label for="sl-${s[0]}">${s[1]}</label><b id="slv-${s[0]}">—</b></div><input type="range" id="sl-${s[0]}" data-sl="${s[0]}" min="0" max="10" step="1" value="5"><div class="ends"><span>${s[2]}</span><span>${s[3]}</span></div></div>`).join('')}
+    <h4 style="font-size:14px;margin:14px 0 6px">Comportements observés (volet B)</h4><div class="grid2">${D5B.map(i=>chkHtml(i[0],i[1])).join('')}</div>`));
+  H.push(sec(6,`<div class="grid2">${D6.map(i=>chkHtml(i[0],i[1]+`<small>${i[2]==='B'?'Volet B : complexe, orientation':'Volet A : dans le champ du physio'}</small>`)).join('')}</div>`));
+  $('#domains').innerHTML=H.join('');
+}
+function syncForm(){
+  $('#f-label').value=S.label; $('#f-duration').value=S.duration; $('#f-onset').value=S.onset; $('#f-start').value=S.start;
+  $('#f-pain').value=S.pain??''; $('#f-dis').value=S.dis??''; $('#f-goal').value=S.goal;
+  const R=REGION[S.region];
+  $('#f-instr').innerHTML=R.instr.map(i=>`<option value="${i[0]}">${i[1]}</option>`).join('');
+  if(!R.instr.some(i=>i[0]===S.instr))S.instr=R.instr[0][0];
+  $('#f-instr').value=S.instr;
+  $('#f-csitype').value=S.csiType; $('#f-csi').value=S.csi??''; $('#f-pd').value=S.pd??'';
+  $$('[data-k]').forEach(i=>i.checked=!!S.chk[i.dataset.k]);
+  $$('[data-sl]').forEach(i=>{const k=i.dataset.sl,val=S.sl[k]; i.value=val===null?5:val; $('#slv-'+k).textContent=val===null?'—':val;});
+  $$('#regionSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===S.region));
+  $('#pillModel').textContent=R.model;
+}
+function setRegion(r,keep){
+  S.region=r;
+  if(!keep){Object.keys(S.chk).forEach(k=>{if(/^(x_|a_|r_)/.test(k))delete S.chk[k]});}
+  buildFlags();buildDomains();syncForm();update();
+}
+function loadExample(r){
+  const e=EX[r];
+  Object.assign(S,{region:r,label:e.label,duration:e.duration,onset:e.onset,start:e.start,pain:e.pain,instr:e.instr,dis:e.dis,csiType:e.csiType,csi:e.csi,pd:e.pd,goal:e.goal});
+  S.chk={}; e.chk.forEach(k=>S.chk[k]=true); S.sl=Object.assign({exp:null,eff:null,fear:null,worry:null,struct:null,dist:null},e.sl);
+  OPEN={}; buildFlags();buildDomains();syncForm();update();
+}
+function resetAll(){
+  Object.assign(S,{label:'',duration:'gt3m',onset:'nontrauma',start:'na',pain:null,dis:null,csi:null,pd:null,goal:''});
+  S.chk={}; S.sl={exp:null,eff:null,fear:null,worry:null,struct:null,dist:null}; OPEN={};
+  buildFlags();buildDomains();syncForm();update();
+}
+
+/* ============ RENDU ============ */
+function disBand(){
+  const v=num(S.dis); if(v===null)return '';
+  if(S.instr==='NDI')return v<10?'NDI : incapacité minimale':v<30?'NDI : incapacité légère':v<50?'NDI : incapacité modérée':v<66?'NDI : incapacité sévère':'NDI : incapacité majeure';
+  if(S.instr==='ODI')return v<=20?'ODI : minimale':v<=40?'ODI : modérée':v<=60?'ODI : sévère':v<=80?'ODI : très sévère':'ODI : maximale';
+  return 'Pas de seuils de gravité consensuels : suivre la variation.';
+}
+function renderStatus(X){
+  $('#statusbar').innerHTML=`<span class="lbl">Volets</span>`+DOM.map(d=>{const l=X.A[d.id].level;return `<a class="dot l${l}" style="--dc:var(${d.c});--dt:var(${d.t})" href="#tr-${d.id}" data-go="${d.id}" title="${d.name} : ${LEVELTXT[l]}"><i>${d.id}</i>${d.short}</a>`}).join('')+`<a class="dot" style="margin-left:auto;border-color:var(--accent);color:var(--accent);font-weight:600" href="#s-plan">Voir le plan ↓</a>`;
+}
+function renderAlerts(X){
+  const u=X.flags.u,m=X.flags.m;
+  const html=u.length?`<div class="alert danger"><b>Drapeau rouge à traiter d’abord.</b> ${u.map(f=>esc(f[1])).join(' ; ')}. Oriente sans attendre ; le plan ci-dessous ne s’applique qu’après exclusion d’une cause sérieuse.</div>`
+   :m.length?`<div class="alert warn"><b>Avis médical rapide conseillé.</b> ${m.map(f=>esc(f[1])).join(' ; ')}.</div>`:'';
+  $('#flagAlert').innerHTML=html; $('#planAlert').innerHTML=html;
+}
+function renderSectionTags(X){
+  DOM.forEach(d=>{const a=X.A[d.id],el=$('#sx'+d.id);if(!el)return;el.textContent=LEVELTXT[a.level]+(a.sub?` · ${a.sub}`:'');el.className='tag '+(a.level===2?'solid':a.level===1?'dash':'gray');});
+}
+function renderRadial(X){
+  const cx=260,cy=262,R0=166,rn=44;let h='';
+  const rank={};X.order.filter(i=>X.A[i].level===2).slice(0,3).forEach((i,k)=>rank[i]=k+1);
+  const pos=DOM.map((d,i)=>{const a=(-90+60*i)*Math.PI/180;return {x:cx+R0*Math.cos(a),y:cy+R0*Math.sin(a),ox:cx+(R0+rn+16)*Math.cos(a),oy:cy+(R0+rn+16)*Math.sin(a),a}});
+  pos.forEach(p=>h+=`<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" style="stroke:var(--line);stroke-width:2"/>`);
+  const R=REGION[S.region];
+  h+=`<circle cx="${cx}" cy="${cy}" r="58" style="fill:var(--accent)"/><text x="${cx}" y="${cy-4}" text-anchor="middle" style="fill:var(--accent-ink);font-size:15px;font-weight:700">${esc(R.name.split(' ')[0])}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" style="fill:var(--accent-ink);font-size:11.5px">${S.start==='na'?'STarT : —':'STarT : '+({low:'faible',medium:'moyen',high:'élevé'})[S.start]}</text>`;
+  DOM.forEach((d,i)=>{
+    const a=X.A[d.id],p=pos[i],l=a.level;
+    const fill=l===2?`var(${d.c})`:l===1?`var(${d.t})`:'var(--surface)';
+    const stroke=l===0?'var(--line)':`var(${d.c})`;
+    const txt=l===2?'var(--surface)':l===1?`var(${d.c})`:'var(--muted)';
+    h+=`<g class="node" tabindex="0" role="button" aria-label="${d.name} : ${LEVELTXT[l]}" data-go="${d.id}">
+      <circle class="hit" cx="${p.x}" cy="${p.y}" r="${rn}" style="fill:${fill};stroke:${stroke};stroke-width:${l===0?2:3};${l===1?'stroke-dasharray:6 4;':''}"/>
+      <text x="${p.x}" y="${p.y+8}" text-anchor="middle" style="fill:${txt};font-size:26px;font-weight:700">${d.id}</text>
+      ${a.sub?`<text x="${p.x}" y="${p.y+27}" text-anchor="middle" style="fill:${txt};font-size:11px;font-weight:600">${a.sub}</text>`:''}
+      <text x="${Math.abs(Math.cos(p.a))<0.2?p.x:Math.cos(p.a)>0?p.x+rn+10:p.x-rn-10}" y="${Math.abs(Math.cos(p.a))<0.2?(Math.sin(p.a)<0?p.y-rn-12:p.y+rn+22):p.y+5}" text-anchor="${Math.abs(Math.cos(p.a))<0.2?'middle':Math.cos(p.a)>0?'start':'end'}" style="fill:${l===0?'var(--muted)':'var(--ink)'};font-size:15px;font-weight:600">${d.short}</text>
+      ${rank[d.id]?`<circle cx="${p.x+34}" cy="${p.y-34}" r="13" style="fill:var(--ink)"/><text x="${p.x+34}" y="${p.y-29}" text-anchor="middle" style="fill:var(--bg);font-size:14px;font-weight:700">${rank[d.id]}</text>`:''}
+    </g>`;
+  });
+  $('#radial').innerHTML=h;
+}
+function renderPrio(X){
+  const L=X.order.filter(i=>X.A[i].level===2);
+  $('#prio').innerHTML=L.length?L.map((i,k)=>{const d=DOM[i-1],a=X.A[i];return `<li style="--dc:var(${d.c})" data-go="${i}" tabindex="0"><span class="rk">${k+1}</span><div><b>${d.name}</b> <span class="tag" style="--dc:var(${d.c});--dt:var(${d.t})">${a.sub}</span><small>${esc(a.reasons.slice(0,2).join(' · ')||DESC[i])}</small></div></li>`}).join('')
+    :`<li style="--dc:var(--line)"><span class="rk">·</span><div><b>Aucun volet allumé</b><small>Coche des observations dans la section 3.</small></div></li>`;
+}
+function renderTree(X){
+  const hide=$('#hideEmpty').checked;
+  const ord=X.order.filter(i=>!(hide&&X.A[i].level===0));
+  const rank={};X.order.filter(i=>X.A[i].level===2).forEach((i,k)=>rank[i]=k+1);
+  $('#tree').innerHTML=ord.map(i=>{
+    const d=DOM[i-1],a=X.A[i],l=a.level,tg=targets(i,X),iv=interventions(i,X);
+    const open=OPEN[i]!==undefined?OPEN[i]:(rank[i]&&rank[i]<=2);
+    let b=`<p class="note" style="margin:0">${DESC[i]}</p>`;
+    if(l===0){ b+=`<p style="margin:10px 0 0">Aucun signal saisi pour ce volet. ${i===2?`Pas de critère nociplastique retenu.`:`Rien à travailler ici pour l’instant.`}</p>`; }
+    else{
+      b+=`<h4>Pourquoi ce volet est ${l===2?'allumé':'à surveiller'}</h4><ul>${a.reasons.map(r=>`<li>${esc(r)}</li>`).join('')||'<li>Signal partiel.</li>'}</ul>${a.note?`<p class="note">${esc(a.note)}</p>`:''}`;
+      b+=`<h4>Cibles de traitement <span class="note" style="text-transform:none;letter-spacing:0">(suggestions à négocier avec le patient)</span></h4>${tg.map(t=>`<div class="tg">${esc(t)}</div>`).join('')}`;
+      b+=`<h4>Interventions</h4>${iv.map(x=>`<div class="iv"><b>${esc(x.t)}</b><span class="ev ${x.ev}">${EVTXT[x.ev]}</span>${cite(x.r)}<p>${esc(x.d)}</p></div>`).join('')}`;
+      if(a.refer.length)b+=`<h4>Orienter si</h4>${a.refer.map(t=>`<div class="refer">${esc(t)}</div>`).join('')}`;
+    }
+    return `<details id="tr-${i}" class="${l===0?'l0':''}" data-d="${i}" ${open?'open':''} style="--dc:var(${d.c});--dt:var(${d.t})"><summary><span class="badge">${i}</span><h3>${d.name}</h3><span class="tag ${l===2?'solid':l===1?'dash':'gray'}">${LEVELTXT[l]}</span>${a.sub?`<span class="tag">Volet ${a.sub}</span>`:''}${rank[i]?`<span class="tag gray">Priorité ${rank[i]}</span>`:''}</summary><div class="branch">${b}</div></details>`;
+  }).join('');
+}
+function renderStatic(){
+  $('#refs').innerHTML=REFS.map(r=>`<li id="ref-${r[0]}">${r[2]?`<a href="${r[2]}" target="_blank" rel="noopener">${esc(r[1])}</a>`:esc(r[1])}</li>`).join('');
+  $('#crit').innerHTML=`<ul style="margin:0;padding-left:18px;display:grid;gap:7px">
+   <li><b>Prédire n’est pas améliorer.</b> STarT MSK classe bien le risque (discrimination 0,82 à 0,84 en cohorte), mais les essais de soins stratifiés sont contrastés : la mise en œuvre pèse plus que l’outil.${cite(['dunn21','croft24','hill11'])}</li>
+   <li><b>Nuque.</b> Le contenu du modèle est validé par Delphi (70 éléments, six volets). L’efficacité clinique d’une prise en charge guidée par le modèle n’est pas démontrée.${cite(['gerard25'])}</li>
+   <li><b>Lombaires.</b> Essais pilotes sans randomisation, avec 29 % à 43 % de perdus de vue. Dans une cohorte rétrospective, seul le volet cognitivo-émotionnel prédisait le changement d’incapacité.${cite(['long21','long23','lecam25'])}</li>
+   <li><b>Épaule.</b> Adaptation non validée. Les facteurs psychologiques y prédisent moins l’évolution en traitement conservateur.${cite(['sheik21','debaets19'])}</li>
+   <li><b>Drapeaux rouges.</b> Isolés, ils ont une faible valeur ; l’antécédent de cancer est le plus fiable pour la malignité, et 64 % des tumeurs vertébrales d’une grande série n’avaient aucun drapeau.${cite(['verh16','prem18','nota25'])}</li>
+   <li><b>Questionnaires.</b> STarT MSK, CSI, painDETECT, NDI, ODI et SPADI relèvent de licences : utilise les versions officielles. Ici, tu saisis seulement les scores.</li>
+   <li><b>Seuils de changement.</b> Essai PDDM lombaire : réduction ≥ 20 % de la douleur et de l’incapacité, PGIC ≥ 3, FABQ-PA −4 points, FABQ-W −7 points.${cite(['long23b'])}</li>
+   <li><b>Règles d’allumage.</b> Les seuils qui allument un volet (nombre d’éléments, notes de 0 à 10) sont mes choix de conception, pas des seuils publiés. Seuls CSI-9 ≥ 20 et les catégories painDETECT viennent d’outils publiés.${cite(['tanaka19'])}</li></ul>`;
+}
+function update(){
+  const X=analyze();
+  renderStatus(X);renderAlerts(X);renderSectionTags(X);renderRadial(X);renderPrio(X);renderTree(X);
+  $('#disNote').textContent=disBand();
+  window.__X=X;
+}
+
+/* ============ RÉSUMÉ / EXPORT ============ */
+function summaryLines(){
+  const X=analyze(),R=REGION[S.region],L=[],used=new Set();
+  const dt=new Date().toLocaleDateString('fr-CH');
+  L.push({t:'t',s:`Profil des moteurs de douleur : ${R.name}`});
+  L.push({t:'p',s:`Date : ${dt}. Repère : ${S.label||'non renseigné'}. Durée : ${({lt6w:'< 6 semaines','6w3m':'6 semaines à 3 mois',gt3m:'> 3 mois'})[S.duration]}. STarT MSK : ${({na:'non passé',low:'faible',medium:'moyen',high:'élevé'})[S.start]}.${S.pain!==null&&S.pain!==''?` Douleur ${S.pain}/10.`:''}${S.dis?` ${S.instr} ${S.dis} %.`:''}`});
+  if(X.flags.u.length||X.flags.m.length)L.push({t:'w',s:`Drapeaux : ${[...X.flags.u,...X.flags.m].map(f=>f[1]).join(' ; ')}`});
+  if(S.goal)L.push({t:'p',s:`Objectif du patient : ${S.goal}`});
+  X.order.filter(i=>X.A[i].level>0).forEach((i,k)=>{
+    const a=X.A[i];
+    L.push({t:'h',s:`${k+1}. Volet ${i} ${DOM[i-1].name} : ${LEVELTXT[a.level]}${a.sub?` (${a.sub})`:''}`});
+    a.reasons.forEach(r=>L.push({t:'li',s:r}));
+    L.push({t:'s',s:'Cibles'});targets(i,X).forEach(t=>L.push({t:'li',s:t}));
+    L.push({t:'s',s:'Interventions'});
+    interventions(i,X).forEach(x=>{x.r.forEach(k=>used.add(k));L.push({t:'li',s:`${x.t} [${EVTXT[x.ev]}]${x.r.length?' ('+x.r.map(k=>RN[k]).join(', ')+')':''} : ${x.d}`})});
+    a.refer.forEach(t=>L.push({t:'li',s:`Orienter si : ${t}`}));
+  });
+  if(used.size){L.push({t:'h',s:'Sources'});REFS.filter(r=>used.has(r[0])).forEach(r=>L.push({t:'li',s:`${RN[r[0]]}. ${r[1]}${r[2]?' - '+r[2]:''}`}));}
+  L.push({t:'n',s:`Aide au raisonnement clinique, non validée. Ne remplace ni l’examen clinique ni l’avis médical. Les seuils d’allumage des volets sont des choix de conception.`});
+  return L;
+}
+function toText(L){return L.map(l=>l.t==='t'?l.s.toUpperCase():l.t==='h'?'\n'+l.s:l.t==='s'?l.s+' :':l.t==='li'?'- '+l.s:l.s).join('\n')}
+const ascii=s=>s.replace(/[’‘]/g,"'").replace(/[«»“”]/g,'"').replace(/→/g,'->').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/[–—−]/g,'-').replace(/×/g,'x').replace(/±/g,'+/-').replace(/œ/g,'oe').replace(/…/g,'...').replace(/[^\x20-\x7E -ÿ\n]/g,'');
+function msg(t){$('#exportMsg').textContent=t}
+async function exportPdf(){
+  try{
+    if(!window.jspdf){msg('La bibliothèque PDF n’est pas chargée. Utilise « Copier le résumé ».');return;}
+    const dl=await (window.claude&&window.claude.use?window.claude.use('downloads'):null);
+    if(!dl){msg('Le téléchargement n’est pas disponible ici. Utilise « Copier le résumé ».');return;}
+    const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'a4'}), W=180, M=15; let y=M;
+    const need=h=>{if(y+h>282){doc.addPage();y=M}};
+    summaryLines().forEach(l=>{
+      const txt=ascii(l.t==='li'?'- '+l.s:l.s);
+      if(l.t==='t'){need(10);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.splitTextToSize(txt,W).forEach(x=>{doc.text(x,M,y);y+=7});y+=2;}
+      else if(l.t==='h'){need(12);y+=3;doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(11,110,127);doc.splitTextToSize(txt,W).forEach(x=>{doc.text(x,M,y);y+=5.5});doc.setTextColor(0);}
+      else if(l.t==='s'){need(8);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text(txt+' :',M,y);y+=4.5;}
+      else {doc.setFont('helvetica',l.t==='n'?'italic':'normal');doc.setFontSize(9);if(l.t==='w')doc.setTextColor(180,35,24);
+        doc.splitTextToSize(txt,l.t==='li'?W-4:W).forEach(x=>{need(5);doc.text(x,l.t==='li'?M+3:M,y);y+=4.3});doc.setTextColor(0);y+=l.t==='li'?0.8:1.5;}
+    });
+    const n=doc.getNumberOfPages();for(let p=1;p<=n;p++){doc.setPage(p);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(120);doc.text(`Aide au raisonnement clinique, non validee - page ${p}/${n}`,M,291);}
+    await dl.save({filename:`profil-douleur-${new Date().toISOString().slice(0,10)}.pdf`,data:doc.output('blob')});
+    msg('PDF proposé au téléchargement.');
+  }catch(e){msg(e&&e.code==='declined'?'Téléchargement annulé.':'Export impossible ici. Utilise « Copier le résumé ».');}
+}
+async function copySummary(){
+  try{await navigator.clipboard.writeText(toText(summaryLines()));msg('Résumé copié.');}
+  catch(e){msg('Copie refusée par le navigateur.');}
+}
+
+/* ============ ÉVÉNEMENTS ============ */
+function goDomain(id){
+  OPEN[id]=true; const el=$('#tr-'+id); if(!el){$('#hideEmpty').checked=false;update();}
+  const t=$('#tr-'+id); if(t){t.open=true;t.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});}
+}
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.k){S.chk[t.dataset.k]=t.checked;update();}
+  else if(t.id==='f-duration'){S.duration=t.value;update();}
+  else if(t.id==='f-onset'){S.onset=t.value;update();}
+  else if(t.id==='f-start'){S.start=t.value;update();}
+  else if(t.id==='f-instr'){S.instr=t.value;update();}
+  else if(t.id==='f-csitype'){S.csiType=t.value;update();}
+  else if(t.id==='hideEmpty'){update();}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.sl){S.sl[t.dataset.sl]=+t.value;$('#slv-'+t.dataset.sl).textContent=t.value;update();}
+  else if(t.id==='f-label'){S.label=t.value;}
+  else if(t.id==='f-pain'){S.pain=num(t.value);update();}
+  else if(t.id==='f-dis'){S.dis=num(t.value);update();}
+  else if(t.id==='f-csi'){S.csi=num(t.value);update();}
+  else if(t.id==='f-pd'){S.pd=num(t.value);update();}
+  else if(t.id==='f-goal'){S.goal=t.value;update();}
+});
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-go]'); if(go){e.preventDefault();goDomain(+go.dataset.go);return;}
+  const rb=e.target.closest('#regionSeg button'); if(rb){setRegion(rb.dataset.r);return;}
+  const ex=e.target.closest('[data-ex]'); if(ex){loadExample(ex.dataset.ex);return;}
+  const id=e.target.id;
+  if(id==='btnReset')resetAll();
+  else if(id==='btnOpen'){X0().order.forEach(i=>OPEN[i]=true);update();}
+  else if(id==='btnClose'){[1,2,3,4,5,6].forEach(i=>OPEN[i]=false);update();}
+  else if(id==='btnPdf')exportPdf();
+  else if(id==='btnCopy')copySummary();
+});
+const X0=()=>window.__X||analyze();
+document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.matches('.node,.prio li')){e.preventDefault();goDomain(+e.target.dataset.go);}
+});
+document.addEventListener('toggle',e=>{const d=e.target;if(d.matches&&d.matches('#tree details')){OPEN[+d.dataset.d]=d.open;}},true);
+
+/* ============ DÉMARRAGE ============ */
+renderStatic();
+loadExample('cervical');
+</script>
+</body>
+</html>
