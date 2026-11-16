@@ -38,8 +38,8 @@ Le site est 100 % statique (`dist/`), avec un `base` relatif : il fonctionne à 
 - **Vercel** : « Add New… → Project » → importer le dépôt. `vercel.json` fournit la même configuration.
   En ligne de commande : `npx vercel` puis `npx vercel --prod`.
 - **GitHub Pages** (en place) : `.github/workflows/deploy.yml` publie automatiquement le site à chaque push sur
-  `main`, à l'adresse https://yassinben996-art.github.io/Logiciel-Physio-BPS/. Prérequis, une seule fois :
-  Settings → Pages → Source : « GitHub Actions ».
+  `main` (branche `gh-pages`), à l'adresse https://yassinben996-art.github.io/Logiciel-Physio-BPS/.
+  Si le site n'apparaît pas : Settings → Pages → Source « Deploy from a branch », branche `gh-pages`, dossier `/`.
 
 La CI GitHub (`.github/workflows/ci.yml`) lance lint, tests et build à chaque push.
 
