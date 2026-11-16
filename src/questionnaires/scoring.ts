@@ -72,6 +72,39 @@ export function score(s: Scoring, a: Answers): QResult | null {
         parts,
       };
     }
+    case 'spadi': {
+      const all = [...s.pain, ...s.disability];
+      const ids = got(a, all);
+      if (!ids.length) return null;
+      const valid = ids.length === all.length;
+      const sumOf = (xs: readonly string[]) => xs.reduce((t, id) => t + (a[id] ?? 0), 0);
+      const pain = round1((sumOf(s.pain) / (10 * s.pain.length)) * 100);
+      const dis = round1((sumOf(s.disability) / (10 * s.disability.length)) * 100);
+      const total = round1((pain + dis) / 2);
+      return {
+        value: total,
+        display: `${fr(total)} / 100`,
+        answered: ids.length,
+        expected: all.length,
+        valid,
+        note: valid ? undefined : 'incomplet',
+        parts: valid ? [`Douleur ${fr(pain)} / 100`, `Incapacité ${fr(dis)} / 100`] : undefined,
+      };
+    }
+    case 'yes-count': {
+      const ids = got(a, [s.pain, ...s.items]);
+      if (!ids.length) return null;
+      const yes = s.items.filter((id) => a[id] === 1).length;
+      const valid = ids.length === s.items.length + 1;
+      return {
+        value: yes,
+        display: `${yes} « oui » / ${s.items.length}`,
+        answered: ids.length,
+        expected: s.items.length + 1,
+        valid,
+        note: `douleur ${a[s.pain] ?? '—'}/10 · catégorie à saisir (règle de cotation officielle non intégrée)`,
+      };
+    }
     case 'paindetect': {
       const all = [...s.items, s.course, s.radiation];
       const ids = got(a, all);

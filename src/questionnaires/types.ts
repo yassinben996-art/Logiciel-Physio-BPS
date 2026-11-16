@@ -44,6 +44,13 @@ export type Scoring =
       max: number;
       subscales?: readonly { name: string; items: readonly string[]; max: number }[];
     }
+  /** SPADI : douleur = somme/50 × 100, incapacité = somme/80 × 100, total = moyenne des deux. */
+  | { kind: 'spadi'; pain: readonly string[]; disability: readonly string[] }
+  /**
+   * Réponses brutes sans catégorie (STarT MSK tant que la feuille de cotation officielle n'est pas fournie) :
+   * intensité de la douleur + nombre de « oui ».
+   */
+  | { kind: 'yes-count'; pain: string; items: readonly string[] }
   /** painDETECT : somme des 7 items (0–5) + évolution (−1/0/+1) + irradiation (0/+2). */
   | { kind: 'paindetect'; items: readonly string[]; course: string; radiation: string };
 
@@ -59,6 +66,8 @@ export interface QDef {
   source: string;
   /** Avertissement (ex. traduction non validée). */
   warning?: string;
+  /** Non proposé par défaut au patient (le physio peut l'activer). */
+  defaultOff?: boolean;
   pages: readonly QPage[];
   scoring: Scoring;
 }

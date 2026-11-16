@@ -35,6 +35,8 @@ export interface AppState {
   view: View;
   c: CaseState;
   qa: QAnswers;
+  /** Questionnaires désactivés par le physio (conservé d'un patient à l'autre pendant la session). */
+  qOff: Readonly<Record<string, boolean>>;
   /** État ouvert/fermé de chaque branche de l'arbre ; absent = défaut (2 premiers prioritaires). */
   open: OpenMap;
   hideEmpty: boolean;
@@ -50,6 +52,7 @@ export type Action =
   | { type: 'cstep'; n: number }
   | { type: 'newPatient' }
   | { type: 'qanswer'; q: string; item: string; value: number; index?: number }
+  | { type: 'qtoggle'; q: string; on: boolean }
   | { type: 'region'; region: Region }
   | { type: 'example'; region: Region }
   | { type: 'reset' }
@@ -72,6 +75,7 @@ export const initialState = (): AppState => ({
   view: initialView(),
   c: emptyCase(),
   qa: {},
+  qOff: Object.fromEntries(QUESTIONNAIRES.filter((q) => q.defaultOff).map((q) => [q.id, true])),
   open: {},
   hideEmpty: false,
 });
@@ -80,12 +84,21 @@ export const initialState = (): AppState => ({
  * Reporte dans le cas clinique les scores VALIDES des questionnaires remplis par le patient :
  * incapacité (questionnaire de la région) et painDETECT. Un score invalide ne modifie rien.
  */
-export function deriveScores(c: CaseState, qa: QAnswers, list: readonly QDef[] = QUESTIONNAIRES): CaseState {
+export function deriveScores(
+  c: CaseState,
+  qa: QAnswers,
+  list: readonly QDef[] = QUESTIONNAIRES,
+  off: Readonly<Record<string, boolean>> = {},
+): CaseState {
   let next = c;
+  const done = new Set<string>();
   for (const q of list) {
-    if (!q.feeds || !appliesTo(q, c.region)) continue;
+    if (!q.feeds || off[q.id] || !appliesTo(q, c.region)) continue;
+    // Un seul questionnaire par champ : le premier valable dans l'ordre de la liste.
+    if (done.has(q.feeds.field)) continue;
     const r = scoreQ(q, qa[q.id]);
     if (!r?.valid) continue;
+    done.add(q.feeds.field);
     if (q.feeds.field === 'dis') next = { ...next, instr: q.feeds.instr, dis: r.value };
     else if (q.feeds.field === 'csi') next = { ...next, csiType: q.feeds.csiType, csi: r.value };
     else next = { ...next, pd: r.value };
@@ -104,19 +117,23 @@ export function reducer(st: AppState, a: Action): AppState {
     case 'cstep':
       return { ...st, view: { ...st.view, c: Math.max(0, a.n) } };
     case 'newPatient':
-      return initialState();
+      return { ...initialState(), qOff: st.qOff };
+    case 'qtoggle': {
+      const qOff = { ...st.qOff, [a.q]: !a.on };
+      return { ...st, qOff, c: deriveScores(c, st.qa, QUESTIONNAIRES, qOff) };
+    }
     case 'qanswer': {
       // « item# » garde l'index de la réponse choisie (deux options peuvent valoir le même score).
       const entry: Record<string, number> = { ...st.qa[a.q], [a.item]: a.value };
       if (a.index !== undefined) entry[`${a.item}#`] = a.index;
       const qa = { ...st.qa, [a.q]: entry };
-      return { ...st, qa, c: deriveScores(c, qa) };
+      return { ...st, qa, c: deriveScores(c, qa, QUESTIONNAIRES, st.qOff) };
     }
     case 'region': {
       const view = { ...st.view, regionChosen: true };
       return a.region === c.region
         ? { ...st, view }
-        : { ...st, view, c: deriveScores(withRegion(c, a.region), st.qa) };
+        : { ...st, view, c: deriveScores(withRegion(c, a.region), st.qa, QUESTIONNAIRES, st.qOff) };
     }
     case 'example':
       return { ...st, c: fromExample(a.region), open: {}, view: { ...st.view, regionChosen: true } };

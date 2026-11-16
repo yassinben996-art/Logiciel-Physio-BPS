@@ -93,6 +93,16 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     affichés sans effet sur les volets. Tous valables seulement s'ils sont complets (le formulaire FABQ précise
     qu'aucun ajustement n'existe). **FABQ proposé seulement pour les lombaires** : ses phrases parlent du dos.
     **PSEQ** : traduction personnelle de la version anglaise, non validée.
+31. **STarT MSK** (version française PrePaC/Inselspital) : le patient le remplit, le physio voit l'intensité
+    de la douleur et le nombre de « oui ». La **catégorie de risque reste saisie par le physio** : la feuille
+    de cotation officielle n'a pas été fournie et n'a pas pu être vérifiée (sites Keele et PMC inaccessibles
+    depuis l'environnement de développement). Aucune règle n'a été devinée.
+32. **SPADI** : traduction personnelle de la version anglaise, non validée ; calcul selon le formulaire fourni
+    (douleur /50, incapacité /80, total = moyenne des deux). Désactivé par défaut (le QuickDASH reste
+    proposé pour l'épaule). Si plusieurs questionnaires alimentent la même mesure, le premier valable
+    dans l'ordre de la liste l'emporte.
+33. **Choix des questionnaires** par le physio (étape 3), conservé d'un patient à l'autre pendant la session,
+    sans stockage : il revient aux réglages par défaut à la réouverture de la page.
 29. Textes transcrits fidèlement ; seules des fautes d'orthographe évidentes ont été corrigées, et « cochez /
     entourez » devient « touchez ».
 

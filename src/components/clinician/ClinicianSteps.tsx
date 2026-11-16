@@ -30,6 +30,39 @@ interface P {
   X: Analysis;
   dispatch: Dispatch<Action>;
   qa: QAnswers;
+  qOff: Readonly<Record<string, boolean>>;
+}
+
+const REGION_SHORT: Record<string, string> = { cervical: 'nuque', lumbar: 'lombaires', shoulder: 'épaule' };
+
+/** Choix des questionnaires proposés au patient (version personnelle). */
+function QSelection({ qOff, dispatch: d }: { qOff: P['qOff']; dispatch: Dispatch<Action> }) {
+  if (!QUESTIONNAIRES.length) return null;
+  return (
+    <Panel title="Questionnaires proposés au patient">
+      <p className="lead">
+        Choisis avant de tendre la tablette. Le choix est gardé pour les patients suivants pendant la session,
+        puis revient aux réglages par défaut à la réouverture de la page.
+      </p>
+      <div className="chips">
+        {QUESTIONNAIRES.map((q) => (
+          <label key={q.id} className="chip">
+            <input
+              type="checkbox"
+              checked={!qOff[q.id]}
+              onChange={(e) => d({ type: 'qtoggle', q: q.id, on: e.target.checked })}
+            />
+            <span>
+              {q.name}
+              <small className="chip-sub">
+                {q.regions === 'all' ? 'toutes les zones' : q.regions.map((r) => REGION_SHORT[r]).join(', ')}
+              </small>
+            </span>
+          </label>
+        ))}
+      </div>
+    </Panel>
+  );
 }
 
 function Panel({ title, children, aside }: { title: ReactNode; children: ReactNode; aside?: ReactNode }) {
@@ -180,11 +213,11 @@ export function Safety({ c, X, dispatch: d }: P) {
 }
 
 /* 3 — Questionnaires (scores saisis depuis les versions officielles) */
-export function Questionnaires({ c, qa, dispatch: d }: P) {
+export function Questionnaires({ c, qa, qOff, dispatch: d }: P) {
   const R = REGION[c.region];
   return (
     <>
-      <QResults c={c} qa={qa} />
+      <QResults c={c} qa={qa} off={qOff} />
       <Panel title="Scores des questionnaires">
         <p className="lead">
           {QUESTIONNAIRES.length
@@ -277,6 +310,7 @@ export function Questionnaires({ c, qa, dispatch: d }: P) {
           </div>
         </div>
       </Panel>
+      <QSelection qOff={qOff} dispatch={d} />
     </>
   );
 }

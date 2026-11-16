@@ -1768,3 +1768,9 @@ sup.c a:hover {
   font: 600 16px var(--f-d);
   padding: 4px;
 }
+.chip-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}

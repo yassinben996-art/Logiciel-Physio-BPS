@@ -160,15 +160,16 @@ const P_STEPS: readonly StepDef[] = [
 
 /** Étapes du parcours : questions de base, puis questionnaires de la région, puis l'objectif. */
 function buildSteps(st: AppState): StepDef[] {
-  const qs: StepDef[] = QUESTIONNAIRES.filter((q) => appliesTo(q, st.c.region)).flatMap((q) =>
-    q.pages.map((page, i) => ({
-      title: q.name,
-      eyebrow: q.pages.length > 1 ? `Partie ${i + 1} sur ${q.pages.length}` : undefined,
-      hint: page.intro,
-      render: (_c: CaseState, d: Dispatch<Action>, s: AppState) => (
-        <QuestionnairePage q={q} page={page} qa={s.qa} dispatch={d} />
-      ),
-    })),
+  const qs: StepDef[] = QUESTIONNAIRES.filter((q) => !st.qOff[q.id] && appliesTo(q, st.c.region)).flatMap(
+    (q) =>
+      q.pages.map((page, i) => ({
+        title: q.name,
+        eyebrow: q.pages.length > 1 ? `Partie ${i + 1} sur ${q.pages.length}` : undefined,
+        hint: page.intro,
+        render: (_c: CaseState, d: Dispatch<Action>, s: AppState) => (
+          <QuestionnairePage q={q} page={page} qa={s.qa} dispatch={d} />
+        ),
+      })),
   );
   return [...P_STEPS.slice(0, -1), ...qs, P_STEPS[P_STEPS.length - 1]!];
 }

@@ -70,4 +70,18 @@ describe('règles de calcul', () => {
     expect(r.parts).toEqual(['Rumination 8 / 16', 'Amplification 6 / 12']);
     expect(score(s, fill(ids('c', 12), 2))!.valid).toBe(false);
   });
+
+  it('SPADI : douleur /50, incapacité /80, total = moyenne', () => {
+    const s = { kind: 'spadi', pain: ids('a', 5), disability: ids('b', 8) } as const;
+    const r = score(s, { ...fill(ids('a', 5), 5), ...fill(ids('b', 8), 0) })!;
+    expect([r.value, r.valid]).toEqual([25, true]);
+    expect(r.parts).toEqual(['Douleur 50 / 100', 'Incapacité 0 / 100']);
+    expect(score(s, fill(ids('a', 5), 5))!.valid).toBe(false);
+  });
+  it('STarT MSK (réponses brutes) : nombre de oui, sans catégorie', () => {
+    const s = { kind: 'yes-count', pain: 'p', items: ids('y', 9) } as const;
+    const r = score(s, { p: 6, ...fill(ids('y', 9), (i) => (i < 4 ? 1 : 0)) })!;
+    expect([r.value, r.display, r.valid]).toEqual([4, '4 « oui » / 9', true]);
+    expect(r.note).toMatch(/douleur 6\/10 · catégorie à saisir/);
+  });
 });

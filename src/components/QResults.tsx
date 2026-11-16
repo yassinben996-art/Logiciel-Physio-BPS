@@ -5,8 +5,18 @@ import { appliesTo, scoreQ } from '../questionnaires/scoring';
 import type { QAnswers } from '../state/reducer';
 
 /** Résultats des questionnaires remplis par le patient (version personnelle uniquement). */
-export function QResults({ c, qa, compact }: { c: CaseState; qa: QAnswers; compact?: boolean }) {
-  const rows = QUESTIONNAIRES.filter((q) => appliesTo(q, c.region))
+export function QResults({
+  c,
+  qa,
+  off = {},
+  compact,
+}: {
+  c: CaseState;
+  qa: QAnswers;
+  off?: Readonly<Record<string, boolean>>;
+  compact?: boolean;
+}) {
+  const rows = QUESTIONNAIRES.filter((q) => !off[q.id] && appliesTo(q, c.region))
     .map((q) => ({ q, r: scoreQ(q, qa[q.id]) }))
     .filter((x) => x.r);
   if (!QUESTIONNAIRES.length) return null;

@@ -17,8 +17,9 @@ function CourseIcon({ kind }: { kind: NonNullable<QOption['icon']> }) {
   );
 }
 
+const isNumeric = (opts: readonly QOption[]) => opts.length <= 11 && opts.every((o) => /^\d+$/.test(o.label));
 const isLikert = (opts: readonly QOption[]) =>
-  opts.length <= 7 && opts.every((o) => o.label.length <= 46 && !o.icon);
+  isNumeric(opts) || (opts.length <= 7 && opts.every((o) => o.label.length <= 46 && !o.icon));
 
 interface Props {
   q: QDef;
@@ -34,8 +35,9 @@ export function QuestionnairePage({ q, page, qa, dispatch }: Props) {
       {page.items.map((it) => {
         const opts = it.options ?? page.options ?? [];
         const name = `q-${q.id}-${it.id}`;
-        const likert = isLikert(opts) && opts.length > 2;
-        const numeric = likert && opts.every((o) => /^\d+$/.test(o.label));
+        // Oui / Non : sur une ligne ; options longues : en cartes.
+        const likert = isLikert(opts) && (opts.length > 2 || opts.every((o) => o.label.length <= 5));
+        const numeric = likert && isNumeric(opts);
         return (
           <fieldset key={it.id} className="q">
             <legend className="q-legend">{it.text}</legend>

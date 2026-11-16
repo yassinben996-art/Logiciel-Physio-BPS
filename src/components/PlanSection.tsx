@@ -14,6 +14,7 @@ interface Props {
   c: CaseState;
   X: Analysis;
   qa: QAnswers;
+  qOff: Readonly<Record<string, boolean>>;
   open: OpenMap;
   hideEmpty: boolean;
   dispatch: Dispatch<Action>;
@@ -22,7 +23,7 @@ interface Props {
 
 const ALL: DomainId[] = [1, 2, 3, 4, 5, 6];
 
-export function PlanSection({ c, X, qa, open, hideEmpty, dispatch, onGo }: Props) {
+export function PlanSection({ c, X, qa, qOff, open, hideEmpty, dispatch, onGo }: Props) {
   return (
     <div id="s-plan" className="plan-page">
       <FlagAlert X={X} />
@@ -37,7 +38,7 @@ export function PlanSection({ c, X, qa, open, hideEmpty, dispatch, onGo }: Props
                 <p>« {c.goal.trim()} »</p>
               </div>
             )}
-            <QResults c={c} qa={qa} compact />
+            <QResults c={c} qa={qa} off={qOff} compact />
           </div>
         </div>
       </section>
