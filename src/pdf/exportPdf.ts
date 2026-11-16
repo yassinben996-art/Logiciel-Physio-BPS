@@ -7,7 +7,15 @@ export const pdfFilename = (d: Date = new Date()): string => {
   return `profil-douleur-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.pdf`;
 };
 
-export async function exportPdf(lines: SummaryLine[], date: Date = new Date()): Promise<void> {
+type SaveFn = (r: { filename: string; data: Blob }) => Promise<unknown>;
+interface ClaudeHost {
+  use?: (name: string) => Promise<{ save: SaveFn } | null>;
+}
+
+/** Résultat : « saved » (enregistré), « declined » (refusé par l'utilisateur). */
+export type PdfResult = 'saved' | 'declined';
+
+export async function exportPdf(lines: SummaryLine[], date: Date = new Date()): Promise<PdfResult> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 180;
@@ -73,5 +81,22 @@ export async function exportPdf(lines: SummaryLine[], date: Date = new Date()): 
     doc.text(toLatin1('Aide au raisonnement clinique, non validée'), M, 291);
     doc.text(`page ${p}/${n}`, M + W, 291, { align: 'right' });
   }
-  doc.save(pdfFilename(date));
+  const filename = pdfFilename(date);
+  // Page hébergée sur claude.ai : le téléchargement direct est bloqué, on passe par la
+  // capacité « downloads » (l'utilisateur confirme). Ailleurs : téléchargement classique.
+  const host = (globalThis as { claude?: ClaudeHost }).claude;
+  if (host?.use) {
+    const dl = await host.use('downloads');
+    if (dl) {
+      try {
+        await dl.save({ filename, data: doc.output('blob') });
+        return 'saved';
+      } catch (e) {
+        if ((e as { code?: string })?.code === 'declined') return 'declined';
+        throw e;
+      }
+    }
+  }
+  doc.save(filename);
+  return 'saved';
 }

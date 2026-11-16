@@ -47,6 +47,12 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     titre de la branche ouverte (en plus du défilement).
 16. Section « Limites » : texte du prototype inchangé ; titre « Limites et esprit critique ».
 
+17. **Page hébergée sur claude.ai** : version en un seul fichier (`npm run build:single`). Le téléchargement
+    direct y étant bloqué, l'export PDF passe par la capacité « downloads » (confirmation du navigateur) ;
+    ailleurs, téléchargement jsPDF classique.
+18. **En-tête** : emblème décoratif des six volets (aria-hidden), ombres légères sur les cartes, zones sûres
+    des téléphones respectées (marges `env(safe-area-inset-*)`).
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

@@ -11,8 +11,8 @@ export function ExportBar({ c }: { c: CaseState }) {
     setMsg('Préparation du PDF…');
     try {
       const { exportPdf } = await import('../pdf/exportPdf');
-      await exportPdf(summaryLines(c));
-      setMsg('PDF généré et proposé au téléchargement.');
+      const r = await exportPdf(summaryLines(c));
+      setMsg(r === 'declined' ? 'Téléchargement annulé.' : 'PDF généré et proposé au téléchargement.');
     } catch {
       setMsg('Export PDF impossible dans ce navigateur. Utilise « Copier le résumé ».');
     } finally {

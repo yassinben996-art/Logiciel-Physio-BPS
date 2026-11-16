@@ -22,6 +22,7 @@ npm run dev        # http://localhost:5173
 | ----------------- | --------------------------------------------------------------------------- |
 | `npm run dev`     | Serveur de développement                                                    |
 | `npm run build`   | Vérification TypeScript + build statique dans `dist/`                       |
+| `npm run build:single` | Version en un seul fichier HTML (`dist-single/artifact.html`), utilisée pour la page hébergée sur claude.ai |
 | `npm run preview` | Sert `dist/` localement                                                     |
 | `npm test`        | Tests Vitest (moteur, données, résumé, interface, parité avec le prototype) |
 | `npm run lint`    | ESLint (zéro avertissement toléré)                                          |
