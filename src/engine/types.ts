@@ -90,6 +90,9 @@ export interface CaseState {
   chk: Readonly<Record<string, boolean>>;
   sl: Sliders;
   goal: string;
+  /** Scores de questionnaires pouvant allumer le volet 5 (au plus « à surveiller »). */
+  tsk?: number | null;
+  fabqW?: number | null;
 }
 
 export interface DomainResult {

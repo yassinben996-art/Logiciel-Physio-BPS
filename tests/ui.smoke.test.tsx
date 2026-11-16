@@ -35,6 +35,17 @@ describe('parcours patient', () => {
     next();
     fireEvent.click(screen.getByLabelText(/Travail physique/));
     next();
+    // Questionnaires de l'épaule (version publique) : on les traverse sans répondre.
+    const seen: string[] = [];
+    let guard = 0;
+    while (!screen.queryByRole('heading', { name: 'Votre objectif' }) && guard++ < 30) {
+      seen.push(screen.getByRole('heading', { level: 1 }).textContent ?? '');
+      next();
+    }
+    expect(seen.some((t) => t === 'QuickDASH')).toBe(true);
+    expect(seen.some((t) => /SPADI/.test(t))).toBe(false); // désactivé par défaut
+    expect(seen.some((t) => /TSK/.test(t))).toBe(true);
+    expect(seen.some((t) => /FABQ/.test(t))).toBe(false); // lombaires seulement
     fireEvent.change(screen.getByLabelText('Votre objectif'), { target: { value: 'Peindre au plafond' } });
     next();
     expect(screen.getByRole('heading', { name: 'Merci !' })).toBeInTheDocument();

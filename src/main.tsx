@@ -8,6 +8,9 @@ import '@fontsource/public-sans/600.css';
 import './styles/styles.css';
 import App from './App';
 
+// La page claude.ai fournit son propre <html> sans attribut lang.
+document.documentElement.lang = 'fr';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

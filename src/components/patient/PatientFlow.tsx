@@ -2,7 +2,10 @@ import { useEffect, useRef, type Dispatch, type ReactNode } from 'react';
 import { D4, D6, SL } from '../../data/items';
 import { P_DURATION, P_HEALTH, P_LIFE, P_ONSET, P_REGION } from '../../data/patient';
 import type { CaseState, Duration, Onset, Region } from '../../engine/types';
+import { QUESTIONNAIRES } from '@q';
+import { appliesTo } from '../../questionnaires/scoring';
 import type { Action, AppState } from '../../state/reducer';
+import { QuestionnairePage } from './QuestionnairePage';
 import { BodyIcon, ChoiceCards, Chips, Scale } from '../inputs';
 
 interface Props {
@@ -14,6 +17,7 @@ const REGIONS: Region[] = ['cervical', 'lumbar', 'shoulder'];
 
 interface StepDef {
   title: string;
+  eyebrow?: string;
   hint?: string;
   render: (c: CaseState, d: Dispatch<Action>, st: AppState) => ReactNode;
   /** Étape bloquante tant qu'elle n'est pas remplie. */
@@ -154,10 +158,27 @@ const P_STEPS: readonly StepDef[] = [
   },
 ];
 
+/** Étapes du parcours : questions de base, puis questionnaires de la région, puis l'objectif. */
+function buildSteps(st: AppState): StepDef[] {
+  const qs: StepDef[] = QUESTIONNAIRES.filter((q) => !st.qOff[q.id] && appliesTo(q, st.c.region)).flatMap(
+    (q) =>
+      q.pages.map((page, i) => ({
+        title: q.name,
+        eyebrow: q.pages.length > 1 ? `Partie ${i + 1} sur ${q.pages.length}` : undefined,
+        hint: page.intro,
+        render: (_c: CaseState, d: Dispatch<Action>, s: AppState) => (
+          <QuestionnairePage q={q} page={page} qa={s.qa} dispatch={d} />
+        ),
+      })),
+  );
+  return [...P_STEPS.slice(0, -1), ...qs, P_STEPS[P_STEPS.length - 1]!];
+}
+
 export function PatientFlow({ st, dispatch }: Props) {
-  const n = st.view.p;
-  const step = P_STEPS[Math.min(n, P_STEPS.length - 1)]!;
-  const last = n >= P_STEPS.length - 1;
+  const steps = buildSteps(st);
+  const n = Math.min(st.view.p, steps.length - 1);
+  const step = steps[n]!;
+  const last = n >= steps.length - 1;
   const ready = step.ready ? step.ready(st) : true;
   const h = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -175,14 +196,14 @@ export function PatientFlow({ st, dispatch }: Props) {
           className="progress"
           role="progressbar"
           aria-valuemin={1}
-          aria-valuemax={P_STEPS.length}
+          aria-valuemax={steps.length}
           aria-valuenow={n + 1}
           aria-label="Progression"
         >
-          <span style={{ width: `${((n + 1) / P_STEPS.length) * 100}%` }} />
+          <span style={{ width: `${((n + 1) / steps.length) * 100}%` }} />
         </div>
         <span className="pcount">
-          {n + 1} / {P_STEPS.length}
+          {n + 1} / {steps.length}
         </span>
       </header>
       <form
@@ -193,6 +214,7 @@ export function PatientFlow({ st, dispatch }: Props) {
           if (ready) next();
         }}
       >
+        {step.eyebrow && <p className="eyebrow">{step.eyebrow}</p>}
         <h1 ref={h} tabIndex={-1}>
           {step.title}
         </h1>

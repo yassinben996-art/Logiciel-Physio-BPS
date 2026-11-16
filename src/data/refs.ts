@@ -312,6 +312,18 @@ export const REFS: readonly Reference[] = [
     url: 'https://consensus.app/papers/details/w:a943212b-1260-496a-a23c-cf220b1a5a2b/',
   },
   {
+    key: 'fritz02',
+    title:
+      'Fritz & George 2002, Identifying psychosocial variables in patients with acute work-related low back pain: the importance of fear-avoidance beliefs. Phys Ther',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/12350212/',
+  },
+  {
+    key: 'devroey20',
+    title:
+      'De Vroey et al. 2020, High levels of kinesiophobia at discharge may negatively affect short-term functional outcome after knee replacement (TSK ≥ 37). J Clin Med',
+    url: 'https://consensus.app/papers/details/w:ac4ff462-eefb-4363-b3b2-a1cf2c30943d/',
+  },
+  {
     key: 'web26',
     title:
       'Tousignant-Laflamme 2026, Webinaire SSFK n°8 : personnaliser les soins de la cervicalgie par les facteurs pronostiques (10 nov. 2026)',

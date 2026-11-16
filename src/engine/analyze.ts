@@ -6,6 +6,9 @@ import { REGION } from '../data/regions';
 import type { Analysis, CaseState, DomainId, DomainResult, SliderId } from './types';
 
 export const CSI_CUT = { csi9: 20, csi25: 40 } as const;
+/** Seuils de questionnaires (volet 5) : TSK-17 > 37 (usage courant), FABQ-Travail > 34 (Fritz et George 2002). */
+export const TSK_CUT = 37;
+export const FABQW_CUT = 34;
 export const PD_AMBIGUOUS = 13;
 export const PD_PROBABLE = 19;
 
@@ -167,6 +170,17 @@ export function analyze(s: CaseState): Analysis {
     if (nf >= 2 || (nf >= 1 && (startRisk || nb >= 1))) l5 = 2;
     else if (nf === 1 || nb >= 1) l5 = 1;
   }
+  // Questionnaires : ajoutent une raison et peuvent porter le volet au plus à « à surveiller » (choix de
+  // conception : ils signalent sans modifier l'ordre de priorité, qui reste porté par les signaux principaux).
+  const tsk = num(s.tsk);
+  const fabqW = num(s.fabqW);
+  const qFlags: string[] = [];
+  if (tsk !== null && tsk > TSK_CUT) qFlags.push(`TSK = ${tsk}/68 (> ${TSK_CUT} : kinésiophobie marquée)`);
+  if (fabqW !== null && fabqW > FABQW_CUT)
+    qFlags.push(
+      `FABQ travail = ${fabqW}/42 (> ${FABQW_CUT} : croyances d’évitement élevées liées au travail)`,
+    );
+  if (l5 === 0 && qFlags.length) l5 = 1;
   const d5: DomainResult = {
     level: l5,
     sub: l5 ? (nf >= 1 && nb >= 1 ? 'A+B' : nb >= 1 ? 'B' : 'A') : '',
@@ -174,6 +188,7 @@ export function analyze(s: CaseState): Analysis {
       ...flg.map((f) => f[1]),
       ...beh.map((i) => i.label),
       ...(startRisk ? [`STarT MSK : risque ${s.start === 'high' ? 'élevé' : 'moyen'}`] : []),
+      ...qFlags,
     ],
     score: nf + nb + (startRisk ? 1 : 0),
     refer: [],

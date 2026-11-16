@@ -71,6 +71,56 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     inchangées. Limites et références repliées en bas du plan.
 24. **Nouveau patient** : efface tout après une confirmation intégrée à la page.
 
+## Questionnaires intégrés (version personnelle)
+
+25. **Deux versions** (voir aussi 37) : la version publique ne contient aucun questionnaire sous licence restrictive. La
+    version personnelle (`npm run build:private`) inclut `private/questionnaires.ts`, **exclu de git**, qui
+    contient les textes fournis par l'utilisateur (NDI, ODI, QuickDASH, TSK, painDETECT). Usage personnel
+    uniquement ; ne jamais publier ce build.
+26. **Règles de calcul** (publiques, `src/questionnaires/scoring.ts`, testées) : NDI et ODI en % sur les sections
+    répondues (règle standard, non écrite sur les formulaires fournis) ; QuickDASH ((somme/n) − 1) × 25, non
+    valable si plus d'une réponse manque (règle du formulaire) ; TSK somme 17–68, items 4, 8, 12, 16 inversés,
+    valable seulement complet ; painDETECT 7 items + évolution + irradiation, valable seulement complet.
+27. **Report automatique** : un score valable alimente le cas (incapacité avec son instrument, painDETECT) ; le
+    physio peut le corriger à l'étape 3. Le TSK est affiché, sans effet sur les volets (option a ; un seuil
+    d'allumage serait une décision clinique à valider).
+28. **painDETECT** : traduction personnelle de la version anglaise, **non validée** ; l'avertissement s'affiche à
+    côté du score. Les 3 échelles d'intensité et le schéma corporel (non cotés) ne sont pas repris : le patient
+    a déjà donné sa douleur moyenne.
+30. **CSI-25, PCS, FABQ, PSEQ** ajoutés. CSI-25 (0–4 par item, total sur 100) alimente le volet 2 avec le seuil
+    40 déjà prévu ; la partie B (diagnostics, non cotée) n'est pas reprise. PCS (sur 52, avec rumination,
+    amplification, impuissance), FABQ (sur 96, avec activité physique /24 et travail /42) et PSEQ (sur 60) sont
+    affichés sans effet sur les volets. Tous valables seulement s'ils sont complets (le formulaire FABQ précise
+    qu'aucun ajustement n'existe). **FABQ proposé seulement pour les lombaires** : ses phrases parlent du dos.
+    **PSEQ** : traduction personnelle de la version anglaise, non validée.
+31. **STarT MSK** (version française PrePaC/Inselspital) : le patient le remplit, le physio voit l'intensité
+    de la douleur et le nombre de « oui ». La **catégorie de risque reste saisie par le physio** : la feuille
+    de cotation officielle n'a pas été fournie et n'a pas pu être vérifiée (sites Keele et PMC inaccessibles
+    depuis l'environnement de développement). Aucune règle n'a été devinée.
+32. **SPADI** : traduction personnelle de la version anglaise, non validée ; calcul selon le formulaire fourni
+    (douleur /50, incapacité /80, total = moyenne des deux). Désactivé par défaut (le QuickDASH reste
+    proposé pour l'épaule). Si plusieurs questionnaires alimentent la même mesure, le premier valable
+    dans l'ordre de la liste l'emporte.
+33. **Choix des questionnaires** par le physio (étape 3), conservé d'un patient à l'autre pendant la session,
+    sans stockage : il revient aux réglages par défaut à la réouverture de la page.
+34. **Volet 5 et questionnaires** (demande de l'utilisateur : « qu'il s'allume, mais pas aussi gros ») : TSK > 37
+    et FABQ travail > 34 ajoutent une raison et portent le volet au plus à « à surveiller » ; ils ne changent
+    ni le niveau « présent » ni le score de priorité. FABQ > 34 : Fritz & George 2002 (vérifié sur le résumé
+    PubMed). TSK > 37 : seuil d'usage courant (De Vroey 2020 et autres), source originale non vérifiée.
+    PCS, PSEQ et FABQ activité physique : affichés seulement (seuils non vérifiés).
+35. **Questionnaires qui se recoupent, un seul par défaut** : peur du mouvement = TSK (nuque, épaule) ou FABQ
+    (lombaires, cohérent avec les cibles FABQ des essais PDDM lombaires) ; incapacité de l'épaule =
+    QuickDASH (SPADI désactivé par défaut).
+36. **STarT MSK** : cotation fournie (questions 2 à 10 = 1 point, maximum 12, 0–4 faible, 5–8 moyen, 9–12
+    élevé). La ligne de cotation de la question 1 (douleur, 0 à 3 points) manque : la catégorie n'est
+    calculée que si elle est la même quel que soit ce score ; sinon le physio tranche (« faible ou moyen »).
+37. **Version publique et licences** : à la demande de l'utilisateur, les questionnaires utilisables librement en
+    clinique (NDI, QuickDASH, SPADI, CSI, TSK, PCS, FABQ, PSEQ) sont dans la version publique
+    (`src/questionnaires/public.ts`). painDETECT (© Pfizer), STarT MSK (© Keele) et ODI (licence Mapi)
+    restent dans la version personnelle uniquement (`private/`, exclu de git).
+29. Textes transcrits fidèlement ; seules des fautes d'orthographe évidentes ont été corrigées, et « cochez /
+    entourez » devient « touchez ».
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

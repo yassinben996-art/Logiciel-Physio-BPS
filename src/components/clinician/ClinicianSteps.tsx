@@ -19,6 +19,9 @@ import type {
 import type { Action } from '../../state/reducer';
 import { BodyIcon, ChoiceCards, Chips, Scale } from '../inputs';
 import { FlagAlert } from '../RedFlags';
+import { QResults } from '../QResults';
+import { QUESTIONNAIRES } from '@q';
+import type { QAnswers } from '../../state/reducer';
 import { dstyle } from '../style';
 import { Check, LevelTag, NumberField } from '../ui';
 
@@ -26,6 +29,40 @@ interface P {
   c: CaseState;
   X: Analysis;
   dispatch: Dispatch<Action>;
+  qa: QAnswers;
+  qOff: Readonly<Record<string, boolean>>;
+}
+
+const REGION_SHORT: Record<string, string> = { cervical: 'nuque', lumbar: 'lombaires', shoulder: 'épaule' };
+
+/** Choix des questionnaires proposés au patient (version personnelle). */
+function QSelection({ qOff, dispatch: d }: { qOff: P['qOff']; dispatch: Dispatch<Action> }) {
+  if (!QUESTIONNAIRES.length) return null;
+  return (
+    <Panel title="Questionnaires proposés au patient">
+      <p className="lead">
+        Choisis avant de tendre la tablette. Le choix est gardé pour les patients suivants pendant la session,
+        puis revient aux réglages par défaut à la réouverture de la page.
+      </p>
+      <div className="chips">
+        {QUESTIONNAIRES.map((q) => (
+          <label key={q.id} className="chip">
+            <input
+              type="checkbox"
+              checked={!qOff[q.id]}
+              onChange={(e) => d({ type: 'qtoggle', q: q.id, on: e.target.checked })}
+            />
+            <span>
+              {q.name}
+              <small className="chip-sub">
+                {q.regions === 'all' ? 'toutes les zones' : q.regions.map((r) => REGION_SHORT[r]).join(', ')}
+              </small>
+            </span>
+          </label>
+        ))}
+      </div>
+    </Panel>
+  );
 }
 
 function Panel({ title, children, aside }: { title: ReactNode; children: ReactNode; aside?: ReactNode }) {
@@ -176,100 +213,105 @@ export function Safety({ c, X, dispatch: d }: P) {
 }
 
 /* 3 — Questionnaires (scores saisis depuis les versions officielles) */
-export function Questionnaires({ c, dispatch: d }: P) {
+export function Questionnaires({ c, qa, qOff, dispatch: d }: P) {
   const R = REGION[c.region];
   return (
-    <Panel title="Scores des questionnaires">
-      <p className="lead">
-        Utilise les versions officielles (licences) et saisis seulement le résultat. Les questions ne sont pas
-        reproduites ici.
-      </p>
-      <div className="qgrid">
-        <div className="qcard">
-          <h3>STarT MSK</h3>
-          <div className="field">
-            <label htmlFor="c-start">Catégorie de risque</label>
-            <select
-              id="c-start"
-              value={c.start}
-              onChange={(e) => d({ type: 'start', value: e.target.value as StartRisk })}
-            >
-              {(Object.keys(START_TXT) as StartRisk[]).map((k) => (
-                <option key={k} value={k}>
-                  {START_TXT[k]}
-                </option>
-              ))}
-            </select>
+    <>
+      <QResults c={c} qa={qa} off={qOff} />
+      <Panel title="Scores des questionnaires">
+        <p className="lead">
+          {QUESTIONNAIRES.length
+            ? 'Les scores des questionnaires remplis par le patient sont reportés ici ; tu peux les corriger. Pour les autres, saisis le résultat obtenu sur la version officielle.'
+            : 'Utilise les versions officielles (licences) et saisis seulement le résultat. Les questions ne sont pas reproduites ici.'}
+        </p>
+        <div className="qgrid">
+          <div className="qcard">
+            <h3>STarT MSK</h3>
+            <div className="field">
+              <label htmlFor="c-start">Catégorie de risque</label>
+              <select
+                id="c-start"
+                value={c.start}
+                onChange={(e) => d({ type: 'start', value: e.target.value as StartRisk })}
+              >
+                {(Object.keys(START_TXT) as StartRisk[]).map((k) => (
+                  <option key={k} value={k}>
+                    {START_TXT[k]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="qcard">
+            <h3>Incapacité</h3>
+            <div className="field">
+              <label htmlFor="c-instr">Questionnaire</label>
+              <select
+                id="c-instr"
+                value={c.instr}
+                onChange={(e) => d({ type: 'instr', value: e.target.value })}
+              >
+                {R.instr.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <NumberField
+              id="c-dis"
+              label="Score (%)"
+              value={c.dis}
+              min={0}
+              max={100}
+              onChange={(v) => d({ type: 'num', field: 'dis', value: v })}
+              hint={disBand(c.instr, c.dis)}
+            />
+          </div>
+          <div className="qcard" style={dstyle(2)}>
+            <h3>
+              <span className="dotc" aria-hidden="true" />
+              CSI <small>volet nociplastique</small>
+            </h3>
+            <div className="field">
+              <label htmlFor="c-csitype">Version</label>
+              <select
+                id="c-csitype"
+                value={c.csiType}
+                onChange={(e) => d({ type: 'csiType', value: e.target.value as CsiType })}
+              >
+                <option value="csi9">CSI-9 (seuil 20)</option>
+                <option value="csi25">CSI-25 (seuil 40)</option>
+              </select>
+            </div>
+            <NumberField
+              id="c-csi"
+              label="Score"
+              value={c.csi}
+              min={0}
+              max={c.csiType === 'csi9' ? 36 : 100}
+              onChange={(v) => d({ type: 'num', field: 'csi', value: v })}
+            />
+          </div>
+          <div className="qcard" style={dstyle(3)}>
+            <h3>
+              <span className="dotc" aria-hidden="true" />
+              painDETECT <small>volet neuropathique</small>
+            </h3>
+            <NumberField
+              id="c-pd"
+              label="Score (−1 à 38)"
+              value={c.pd}
+              min={-1}
+              max={38}
+              onChange={(v) => d({ type: 'num', field: 'pd', value: v })}
+              hint="< 13 improbable · 13–18 ambigu · ≥ 19 probable"
+            />
           </div>
         </div>
-        <div className="qcard">
-          <h3>Incapacité</h3>
-          <div className="field">
-            <label htmlFor="c-instr">Questionnaire</label>
-            <select
-              id="c-instr"
-              value={c.instr}
-              onChange={(e) => d({ type: 'instr', value: e.target.value })}
-            >
-              {R.instr.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <NumberField
-            id="c-dis"
-            label="Score (%)"
-            value={c.dis}
-            min={0}
-            max={100}
-            onChange={(v) => d({ type: 'num', field: 'dis', value: v })}
-            hint={disBand(c.instr, c.dis)}
-          />
-        </div>
-        <div className="qcard" style={dstyle(2)}>
-          <h3>
-            <span className="dotc" aria-hidden="true" />
-            CSI <small>volet nociplastique</small>
-          </h3>
-          <div className="field">
-            <label htmlFor="c-csitype">Version</label>
-            <select
-              id="c-csitype"
-              value={c.csiType}
-              onChange={(e) => d({ type: 'csiType', value: e.target.value as CsiType })}
-            >
-              <option value="csi9">CSI-9 (seuil 20)</option>
-              <option value="csi25">CSI-25 (seuil 40)</option>
-            </select>
-          </div>
-          <NumberField
-            id="c-csi"
-            label="Score"
-            value={c.csi}
-            min={0}
-            max={c.csiType === 'csi9' ? 36 : 100}
-            onChange={(v) => d({ type: 'num', field: 'csi', value: v })}
-          />
-        </div>
-        <div className="qcard" style={dstyle(3)}>
-          <h3>
-            <span className="dotc" aria-hidden="true" />
-            painDETECT <small>volet neuropathique</small>
-          </h3>
-          <NumberField
-            id="c-pd"
-            label="Score (−1 à 38)"
-            value={c.pd}
-            min={-1}
-            max={38}
-            onChange={(v) => d({ type: 'num', field: 'pd', value: v })}
-            hint="< 13 improbable · 13–18 ambigu · ≥ 19 probable"
-          />
-        </div>
-      </div>
-    </Panel>
+      </Panel>
+      <QSelection qOff={qOff} dispatch={d} />
+    </>
   );
 }
 
