@@ -57,11 +57,12 @@ export function score(s: Scoring, a: Answers): QResult | null {
       if (!ids.length) return null;
       const sum = ids.reduce((t, id) => t + a[id]!, 0);
       const valid = ids.length === s.items.length;
-      const parts = valid
-        ? s.subscales?.map(
-            (sc) => `${sc.name} ${sc.items.reduce((t, id) => t + (a[id] ?? 0), 0)} / ${sc.max}`,
+      const sub = valid
+        ? Object.fromEntries(
+            (s.subscales ?? []).map((sc) => [sc.name, sc.items.reduce((t, id) => t + (a[id] ?? 0), 0)]),
           )
         : undefined;
+      const parts = valid ? s.subscales?.map((sc) => `${sc.name} ${sub![sc.name]} / ${sc.max}`) : undefined;
       return {
         value: sum,
         display: `${sum} / ${s.max}`,
@@ -70,6 +71,7 @@ export function score(s: Scoring, a: Answers): QResult | null {
         valid,
         note: valid ? undefined : 'incomplet',
         parts,
+        sub,
       };
     }
     case 'spadi': {
@@ -96,13 +98,25 @@ export function score(s: Scoring, a: Answers): QResult | null {
       if (!ids.length) return null;
       const yes = s.items.filter((id) => a[id] === 1).length;
       const valid = ids.length === s.items.length + 1;
+      const cat = (t: number) => (t <= s.cuts[0] ? 'low' : t <= s.cuts[1] ? 'medium' : 'high');
+      const LBL = { low: 'faible', medium: 'moyen', high: 'élevé' } as const;
+      // La question de douleur vaut entre 0 et painMax points : la catégorie n'est certaine
+      // que si elle est la même aux deux extrêmes.
+      const lo = cat(yes);
+      const hi = cat(yes + s.painMax);
+      const category = valid && lo === hi ? lo : undefined;
       return {
         value: yes,
         display: `${yes} « oui » / ${s.items.length}`,
         answered: ids.length,
         expected: s.items.length + 1,
         valid,
-        note: `douleur ${a[s.pain] ?? '—'}/10 · catégorie à saisir (règle de cotation officielle non intégrée)`,
+        category,
+        note: !valid
+          ? 'incomplet'
+          : category
+            ? `douleur ${a[s.pain]}/10 · risque ${LBL[category]}`
+            : `douleur ${a[s.pain]}/10 · risque ${LBL[lo]} ou ${LBL[hi]} selon la cotation de la question 1 : à trancher`,
       };
     }
     case 'paindetect': {

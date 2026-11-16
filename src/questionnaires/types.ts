@@ -50,7 +50,15 @@ export type Scoring =
    * Réponses brutes sans catégorie (STarT MSK tant que la feuille de cotation officielle n'est pas fournie) :
    * intensité de la douleur + nombre de « oui ».
    */
-  | { kind: 'yes-count'; pain: string; items: readonly string[] }
+  | {
+      kind: 'yes-count';
+      pain: string;
+      items: readonly string[];
+      /** Points possibles pour la question de douleur (cotation fournie partiellement : 0 à painMax). */
+      painMax: number;
+      /** Bornes supérieures des catégories faible et moyen (au-delà : élevé). */
+      cuts: readonly [number, number];
+    }
   /** painDETECT : somme des 7 items (0–5) + évolution (−1/0/+1) + irradiation (0/+2). */
   | { kind: 'paindetect'; items: readonly string[]; course: string; radiation: string };
 
@@ -61,7 +69,13 @@ export interface QDef {
   /** Régions concernées ('all' = toutes). */
   regions: readonly Region[] | 'all';
   /** Champ du cas alimenté par le score : incapacité (avec l'instrument) ou painDETECT. */
-  feeds?: { field: 'dis'; instr: string } | { field: 'pd' } | { field: 'csi'; csiType: 'csi9' | 'csi25' };
+  feeds?:
+    | { field: 'dis'; instr: string }
+    | { field: 'pd' }
+    | { field: 'csi'; csiType: 'csi9' | 'csi25' }
+    | { field: 'start' }
+    | { field: 'tsk' }
+    | { field: 'fabqW'; subscale: string };
   /** Référence de la version (affichée côté physio). */
   source: string;
   /** Avertissement (ex. traduction non validée). */
@@ -85,6 +99,10 @@ export interface QResult {
   note?: string;
   /** Sous-scores : « Rumination 6 / 16 »… */
   parts?: string[];
+  /** Valeurs numériques des sous-échelles, par nom. */
+  sub?: Record<string, number>;
+  /** Catégorie de risque (STarT MSK), seulement quand elle est certaine. */
+  category?: 'low' | 'medium' | 'high';
 }
 
 export type Answers = Readonly<Record<string, number>>;

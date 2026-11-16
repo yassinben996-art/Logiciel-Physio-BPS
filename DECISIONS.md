@@ -73,7 +73,7 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
 
 ## Questionnaires intégrés (version personnelle)
 
-25. **Deux versions** : la version publique (site github.io) ne contient aucun questionnaire sous licence. La
+25. **Deux versions** (voir aussi 37) : la version publique ne contient aucun questionnaire sous licence restrictive. La
     version personnelle (`npm run build:private`) inclut `private/questionnaires.ts`, **exclu de git**, qui
     contient les textes fournis par l'utilisateur (NDI, ODI, QuickDASH, TSK, painDETECT). Usage personnel
     uniquement ; ne jamais publier ce build.
@@ -103,6 +103,21 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     dans l'ordre de la liste l'emporte.
 33. **Choix des questionnaires** par le physio (étape 3), conservé d'un patient à l'autre pendant la session,
     sans stockage : il revient aux réglages par défaut à la réouverture de la page.
+34. **Volet 5 et questionnaires** (demande de l'utilisateur : « qu'il s'allume, mais pas aussi gros ») : TSK > 37
+    et FABQ travail > 34 ajoutent une raison et portent le volet au plus à « à surveiller » ; ils ne changent
+    ni le niveau « présent » ni le score de priorité. FABQ > 34 : Fritz & George 2002 (vérifié sur le résumé
+    PubMed). TSK > 37 : seuil d'usage courant (De Vroey 2020 et autres), source originale non vérifiée.
+    PCS, PSEQ et FABQ activité physique : affichés seulement (seuils non vérifiés).
+35. **Questionnaires qui se recoupent, un seul par défaut** : peur du mouvement = TSK (nuque, épaule) ou FABQ
+    (lombaires, cohérent avec les cibles FABQ des essais PDDM lombaires) ; incapacité de l'épaule =
+    QuickDASH (SPADI désactivé par défaut).
+36. **STarT MSK** : cotation fournie (questions 2 à 10 = 1 point, maximum 12, 0–4 faible, 5–8 moyen, 9–12
+    élevé). La ligne de cotation de la question 1 (douleur, 0 à 3 points) manque : la catégorie n'est
+    calculée que si elle est la même quel que soit ce score ; sinon le physio tranche (« faible ou moyen »).
+37. **Version publique et licences** : à la demande de l'utilisateur, les questionnaires utilisables librement en
+    clinique (NDI, QuickDASH, SPADI, CSI, TSK, PCS, FABQ, PSEQ) sont dans la version publique
+    (`src/questionnaires/public.ts`). painDETECT (© Pfizer), STarT MSK (© Keele) et ODI (licence Mapi)
+    restent dans la version personnelle uniquement (`private/`, exclu de git).
 29. Textes transcrits fidèlement ; seules des fautes d'orthographe évidentes ont été corrigées, et « cochez /
     entourez » devient « touchez ».
 

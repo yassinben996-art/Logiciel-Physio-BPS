@@ -7,6 +7,6 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 export default defineConfig({
   base: './',
   plugins: [react(), viteSingleFile()],
-  resolve: { alias: { '@q': fileURLToPath(new URL('./src/questionnaires/none.ts', import.meta.url)) } },
+  resolve: { alias: { '@q': fileURLToPath(new URL('./src/questionnaires/public.ts', import.meta.url)) } },
   build: { outDir: 'dist-single', assetsInlineLimit: 100_000_000 },
 });

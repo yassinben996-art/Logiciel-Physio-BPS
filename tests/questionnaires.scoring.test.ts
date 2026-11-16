@@ -78,10 +78,16 @@ describe('règles de calcul', () => {
     expect(r.parts).toEqual(['Douleur 50 / 100', 'Incapacité 0 / 100']);
     expect(score(s, fill(ids('a', 5), 5))!.valid).toBe(false);
   });
-  it('STarT MSK (réponses brutes) : nombre de oui, sans catégorie', () => {
-    const s = { kind: 'yes-count', pain: 'p', items: ids('y', 9) } as const;
-    const r = score(s, { p: 6, ...fill(ids('y', 9), (i) => (i < 4 ? 1 : 0)) })!;
-    expect([r.value, r.display, r.valid]).toEqual([4, '4 « oui » / 9', true]);
-    expect(r.note).toMatch(/douleur 6\/10 · catégorie à saisir/);
+  it('STarT MSK : catégorie seulement quand elle est certaine (question 1 vaut 0 à 3 points)', () => {
+    const s = { kind: 'yes-count', pain: 'p', items: ids('y', 9), painMax: 3, cuts: [4, 8] } as const;
+    const yes = (n: number) => ({ p: 6, ...fill(ids('y', 9), (i) => (i < n ? 1 : 0)) });
+    expect(score(s, yes(1))!.category).toBe('low'); // 1 à 4 → faible
+    expect(score(s, yes(5))!.category).toBe('medium'); // 5 à 8 → moyen
+    expect(score(s, yes(9))!.category).toBe('high'); // 9 à 12 → élevé
+    const amb = score(s, yes(3))!; // 3 à 6 → faible ou moyen
+    expect(amb.category).toBeUndefined();
+    expect(amb.note).toMatch(/faible ou moyen/);
+    expect(score(s, yes(7))!.note).toMatch(/moyen ou élevé/);
+    expect(score(s, { p: 6 })!.valid).toBe(false);
   });
 });

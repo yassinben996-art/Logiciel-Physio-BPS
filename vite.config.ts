@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: './',
   plugins: [react()],
-  resolve: { alias: { '@q': fileURLToPath(new URL('./src/questionnaires/none.ts', import.meta.url)) } },
+  resolve: { alias: { '@q': fileURLToPath(new URL('./src/questionnaires/public.ts', import.meta.url)) } },
   test: {
     globals: true,
     environment: 'jsdom',

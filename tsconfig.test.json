@@ -28,7 +28,7 @@
     "noEmit": true,
     "paths": {
       "@q": [
-        "./src/questionnaires/none.ts"
+        "./src/questionnaires/public.ts"
       ]
     }
   },

@@ -92,6 +92,11 @@ export const LIMITS: readonly Limit[] = [
     refs: ['long23b'],
   },
   {
+    lead: 'Questionnaires du volet 5.',
+    text: 'TSK > 37 (seuil d’usage courant pour la version à 17 items) et FABQ travail > 34 (prédiction d’un arrêt de travail prolongé) peuvent porter le volet 5 à « à surveiller », jamais à « présent » : ils signalent sans changer l’ordre de priorité. PCS, PSEQ et FABQ activité physique sont affichés sans seuil (non vérifié).',
+    refs: ['fritz02', 'devroey20'],
+  },
+  {
     lead: 'Règles d’allumage.',
     text: 'Les seuils qui allument un volet (nombre d’éléments, notes de 0 à 10) sont mes choix de conception, pas des seuils publiés. Seuls CSI-9 ≥ 20 et les catégories painDETECT viennent d’outils publiés.',
     refs: ['tanaka19'],

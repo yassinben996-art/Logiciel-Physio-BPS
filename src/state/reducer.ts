@@ -98,10 +98,19 @@ export function deriveScores(
     if (done.has(q.feeds.field)) continue;
     const r = scoreQ(q, qa[q.id]);
     if (!r?.valid) continue;
-    done.add(q.feeds.field);
-    if (q.feeds.field === 'dis') next = { ...next, instr: q.feeds.instr, dis: r.value };
-    else if (q.feeds.field === 'csi') next = { ...next, csiType: q.feeds.csiType, csi: r.value };
-    else next = { ...next, pd: r.value };
+    const f = q.feeds;
+    if (f.field === 'start') {
+      if (!r.category) continue; // catégorie incertaine : le physio tranche
+      next = { ...next, start: r.category };
+    } else if (f.field === 'dis') next = { ...next, instr: f.instr, dis: r.value };
+    else if (f.field === 'csi') next = { ...next, csiType: f.csiType, csi: r.value };
+    else if (f.field === 'tsk') next = { ...next, tsk: r.value };
+    else if (f.field === 'fabqW') {
+      const v = r.sub?.[f.subscale];
+      if (v === undefined) continue;
+      next = { ...next, fabqW: v };
+    } else next = { ...next, pd: r.value };
+    done.add(f.field);
   }
   return next;
 }

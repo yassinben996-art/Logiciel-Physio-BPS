@@ -213,3 +213,26 @@ describe('disBand', () => {
   });
   it('vide si non saisi', () => expect(disBand('NDI', null)).toBe(''));
 });
+
+describe('volet 5 : questionnaires (au plus « à surveiller »)', () => {
+  it('TSK > 37 ou FABQ travail > 34 : à surveiller, sans changer le score de priorité', () => {
+    const s = emptyCase();
+    expect(analyze({ ...s, tsk: 37 }).A[5].level).toBe(0);
+    const t = analyze({ ...s, tsk: 38 });
+    expect([t.A[5].level, t.A[5].sub, t.A[5].score]).toEqual([1, 'A', 0]);
+    expect(t.A[5].reasons).toContain('TSK = 38/68 (> 37 : kinésiophobie marquée)');
+    expect(analyze({ ...emptyCase('lumbar'), fabqW: 35 }).A[5].level).toBe(1);
+    expect(analyze({ ...emptyCase('lumbar'), fabqW: 34 }).A[5].level).toBe(0);
+  });
+  it('ne fait jamais passer le volet à « présent »', () => {
+    const s = { ...emptyCase(), tsk: 60, fabqW: 42 };
+    expect(analyze(s).A[5].level).toBe(1);
+  });
+  it('si le volet est déjà présent, ajoute seulement la raison', () => {
+    const s = { ...fromExample('cervical'), tsk: 45 };
+    const X = analyze(s);
+    expect(X.A[5].level).toBe(2);
+    expect(X.A[5].score).toBe(analyze(fromExample('cervical')).A[5].score);
+    expect(X.A[5].reasons.at(-1)).toMatch(/^TSK = 45\/68/);
+  });
+});
