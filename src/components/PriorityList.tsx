@@ -6,7 +6,7 @@ export function PriorityList({ X, onGo }: { X: Analysis; onGo: (id: DomainId) =>
   const L = X.order.filter((i) => X.A[i].level === 2);
   return (
     <div>
-      <h3 className="h3">Axes prioritaires</h3>
+      <h2 className="h-prio">Axes prioritaires</h2>
       {L.length ? (
         <ol className="prio">
           {L.map((i, k) => {
@@ -29,7 +29,7 @@ export function PriorityList({ X, onGo }: { X: Analysis; onGo: (id: DomainId) =>
         </ol>
       ) : (
         <p className="empty">
-          <b>Aucun volet allumé.</b> Coche des observations dans la section 3.
+          <b>Aucun volet allumé pour l’instant.</b> Complète les étapes précédentes.
         </p>
       )}
     </div>

@@ -31,16 +31,12 @@ export function ExportBar({ c }: { c: CaseState }) {
   };
 
   return (
-    <section className="card" id="s-export" aria-labelledby="h-export">
-      <h2 id="h-export">
-        <span className="n" aria-hidden="true">
-          5
-        </span>
-        Garder une trace
-      </h2>
-      <p className="sub">
-        Le résumé reprend le profil, les cibles et les interventions retenues, avec les références citées. Il
-        ne contient que ce que tu as saisi ici : n’y mets jamais le nom complet du patient.
+    <section className="panel" id="s-export">
+      <div className="panel-h">
+        <h2>Garder une trace</h2>
+      </div>
+      <p className="note">
+        Le résumé reprend le profil, les cibles, les interventions et les références citées.
       </p>
       <div className="row">
         <button type="button" className="btn" onClick={onPdf} disabled={busy}>

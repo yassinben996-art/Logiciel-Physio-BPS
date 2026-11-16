@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
-import { CaseForm } from './components/CaseForm';
-import { DomainForms } from './components/DomainForms';
-import { ExportBar } from './components/ExportBar';
-import { Footer } from './components/Footer';
-import { Hero } from './components/Hero';
-import { LimitsSection } from './components/LimitsSection';
+import { ClinicianLayout } from './components/clinician/ClinicianLayout';
+import { PLAN_STEP } from './state/steps';
+import { Exam, PatientAnswers, Questionnaires, Safety } from './components/clinician/ClinicianSteps';
+import { PatientDone, PatientFlow, Welcome } from './components/patient/PatientFlow';
 import { PlanSection } from './components/PlanSection';
-import { RedFlags } from './components/RedFlags';
-import { References } from './components/References';
-import { StatusBar } from './components/StatusBar';
-import { REGION } from './data/regions';
 import { analyze } from './engine/analyze';
 import type { DomainId } from './engine/types';
 import { initialState, reducer } from './state/reducer';
@@ -21,23 +15,35 @@ export default function App() {
   const [st, dispatch] = useReducer(reducer, undefined, initialState);
   const X = useMemo(() => analyze(st.c), [st.c]);
   const pendingScroll = useRef<DomainId | null>(null);
+  const { mode, c: cstep } = st.view;
 
   const goDomain = useCallback(
     (id: DomainId) => {
       if (st.hideEmpty && X.A[id].level === 0) dispatch({ type: 'hideEmpty', value: false });
+      dispatch({ type: 'cstep', n: PLAN_STEP });
       dispatch({ type: 'open', id, value: true });
       pendingScroll.current = id;
     },
     [st.hideEmpty, X],
   );
 
-  // Après le rendu qui ouvre la branche : scroller et déplacer le focus sur son titre.
+  // Changement d'étape physio : remonter en haut et placer le focus sur le titre.
+  const prevStep = useRef(cstep);
+  useEffect(() => {
+    if (mode !== 'clinician' || prevStep.current === cstep) return;
+    prevStep.current = cstep;
+    if (pendingScroll.current !== null) return;
+    window.scrollTo?.({ top: 0 });
+    document.getElementById('c-title')?.focus({ preventScroll: true });
+  }, [mode, cstep]);
+
+  // Après le rendu qui ouvre une branche : défiler jusqu'à elle et y placer le focus.
   useEffect(() => {
     const id = pendingScroll.current;
     if (id === null) return;
-    pendingScroll.current = null;
     const el = document.getElementById(`tr-${id}`) as HTMLDetailsElement | null;
     if (!el) return;
+    pendingScroll.current = null;
     el.open = true;
     el.scrollIntoView?.({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
     el.querySelector('summary')?.focus({ preventScroll: true });
@@ -63,17 +69,18 @@ export default function App() {
     };
   }, []);
 
+  if (mode === 'welcome') return <Welcome dispatch={dispatch} />;
+  if (mode === 'patient') return <PatientFlow st={st} dispatch={dispatch} />;
+  if (mode === 'done') return <PatientDone dispatch={dispatch} />;
+
+  const p = { c: st.c, X, dispatch };
   return (
-    <>
-      <a className="skip" href="#s-plan">
-        Aller au plan
-      </a>
-      <Hero model={REGION[st.c.region].model} />
-      <StatusBar X={X} onGo={goDomain} />
-      <main className="wrap">
-        <CaseForm c={st.c} dispatch={dispatch} />
-        <RedFlags c={st.c} X={X} dispatch={dispatch} />
-        <DomainForms key={st.c.region} c={st.c} X={X} dispatch={dispatch} />
+    <ClinicianLayout step={cstep} c={st.c} X={X} dispatch={dispatch} onGo={goDomain}>
+      {cstep === 0 && <PatientAnswers {...p} />}
+      {cstep === 1 && <Safety {...p} />}
+      {cstep === 2 && <Questionnaires {...p} />}
+      {cstep === 3 && <Exam {...p} />}
+      {cstep >= PLAN_STEP && (
         <PlanSection
           c={st.c}
           X={X}
@@ -82,11 +89,7 @@ export default function App() {
           dispatch={dispatch}
           onGo={goDomain}
         />
-        <ExportBar c={st.c} />
-        <LimitsSection />
-        <References />
-      </main>
-      <Footer />
-    </>
+      )}
+    </ClinicianLayout>
   );
 }
