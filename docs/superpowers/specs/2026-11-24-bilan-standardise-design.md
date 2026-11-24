@@ -1,7 +1,7 @@
 # Bilan physio standardisé avec IA — document de conception
 
 Date : 24.11.2026 · Auteur : Claude, avec Yassine Bensaid (physiothérapeute, Aquamed Flon, Lausanne)
-Statut : en attente de validation par Yass
+Statut : validé par Yass le 24.11.2026
 
 ## 1. Intention
 
@@ -63,6 +63,7 @@ Fournisseurs de LLM gratuits comparés (le 24.11.2026) :
 - L'app **« Profil des moteurs de douleur » (PDDM) devient un module** du nouvel outil, appelé depuis la section Raisonnement. Son moteur, ses tests et sa parité avec le prototype doivent rester intacts.
 - L'interface est responsive pour ordinateur, téléphone et tablette, et sauvegarde chaque saisie pour qu'aucun changement d'écran ne fasse perdre de données.
 - **Tout le contenu clinique est dans des fichiers de données séparés du code** : sections, champs, tests et leurs propriétés diagnostiques, red flags, pastilles, règles de suggestion, mots-clés. Le but est de pouvoir y verser la littérature puis les formations de Yass sans toucher à la logique.
+- **Modularité exigée par Yass** : tout doit pouvoir évoluer « à la guise » au fil de l'usage. Ajouter, retirer ou réordonner une section, un test, une pastille, une règle ou un questionnaire ne doit demander qu'une modification du fichier de contenu concerné, jamais du code, et chaque élément de contenu porte sa source et sa date d'ajout. L'épaule est la zone pilote.
 
 ### 5.2 Parcours
 1. **Accueil, avant la séance (environ 5 min).** Le patient scanne un QR code, en salle d'attente ou chez lui s'il le reçoit à la prise de rendez-vous, et remplit un court questionnaire :
