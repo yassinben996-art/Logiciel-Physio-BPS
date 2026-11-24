@@ -52,7 +52,7 @@ Usage : **personnel**, non commercial. Un site web d'abord, décliné peut-être
 
 Fournisseurs de LLM gratuits comparés (le 24.11.2026) :
 - **Gemini API** : écarté. Ses conditions interdisent l'usage en pratique clinique et n'autorisent que les services payants pour une app destinée à des utilisateurs en Suisse.
-- **Mistral** : écarté. Dans son offre gratuite, les données peuvent servir à l'entraînement (les sources se contredisent ; écarté par prudence).
+- **Mistral** : écarté au départ parce que son offre gratuite peut entraîner ses modèles sur les données. **Réintégrable** depuis la révision ci-dessous, si ses conditions ne l'interdisent pas pour un usage clinique.
 - **IA dans le navigateur** (modèle local) : reportée. Modèle lourd à télécharger, lent et moins bon sur tablette.
 - **Groq** : **retenu**. Offre gratuite sans carte bancaire ; le contrat interdit l'entraînement sur les données ; « Zero Data Retention » activable. Les données sont traitées aux États-Unis, ce qui reste acceptable puisque l'identité n'est jamais envoyée et que les noms dans les notes sont nettoyés. Modèle : `openai/gpt-oss-120b`.
 
@@ -104,7 +104,7 @@ Deux couches :
   - Les champs d'identité ne sont jamais inclus dans la requête. Les **noms propres, dates et lieux** présents dans les notes sont en plus **nettoyés automatiquement** avant l'envoi.
   - Ses réponses sont structurées. Ses suggestions s'affichent comme celles des règles, avec leur raison, et Yass les accepte ou les refuse.
   - **Quota.** Les limites de l'offre gratuite annoncées, avec une ambiguïté sur l'offre concernée, sont de 30 requêtes par minute, 1 000 par jour, 8 000 tokens par minute et 200 000 tokens par jour, par modèle. Cela correspond à environ 6 bilans complets par jour, à raison d'environ 5 appels de 6 000 tokens par bilan.
-  - **Bascule automatique (demande de Yass, 24.11.2026).** Quand le quota d'une IA est épuisé ou qu'elle est en panne, l'outil passe tout seul à la suivante d'une chaîne configurable : (1) Groq `openai/gpt-oss-120b`, (2) un autre modèle Groq, chacun ayant ses propres quotas, aux mêmes conditions de données, (3) un autre fournisseur gratuit, à condition qu'il n'entraîne pas ses modèles sur les données et qu'il autorise l'usage clinique (Cerebras est à vérifier ; Gemini et Mistral sont exclus, voir §4), (4) les règles seules. Un indicateur affiche l'IA utilisée.
+  - **Bascule automatique (demande de Yass, 24.11.2026).** Quand le quota d'une IA est épuisé ou qu'elle est en panne, l'outil passe tout seul à la suivante d'une chaîne configurable : (1) Groq `openai/gpt-oss-120b`, (2) un autre modèle Groq, chacun ayant ses propres quotas, aux mêmes conditions de données, (3) d'autres fournisseurs gratuits, éventuellement plus performants. **Révision du 24.11.2026 (Yass)** : il accepte qu'ils conservent les données ou s'en servent pour entraîner leurs modèles, puisque l'identité n'est jamais envoyée. Seule condition restante : leurs conditions d'utilisation ne doivent pas interdire l'usage clinique, et le service doit être accessible depuis la Suisse. Gemini reste exclu, parce que ses conditions interdisent la pratique clinique. Candidats à vérifier au plan 2 : Cerebras, Mistral, modèles gratuits d'OpenRouter. (4) les règles seules. Un indicateur affiche l'IA utilisée.
   - Le **fournisseur est interchangeable** par un réglage (Groq gratuit ou Claude Haiku 5.5 payant), avec la même interface côté code.
   - La **clé d'API n'est jamais dans la page** : elle est stockée sur le relais (§5.7).
 - Un bouton **« Copier pour Claude »** génère le bilan anonymisé, accompagné d'une consigne déjà rédigée, à coller manuellement dans Claude pour un avis approfondi. Il n'y a aucun lien technique avec Claude.
@@ -114,6 +114,7 @@ Deux couches :
   - publics (`src/questionnaires/public.ts`) : NDI, QuickDASH, SPADI, CSI-25, TSK, PCS, FABQ, PSEQ ;
   - privés (`private/`, hors git) : painDETECT, STarT MSK, ODI.
 - **À ajouter** : le PSFS, pour l'accueil.
+- **Questionnaire d'épaule par défaut : SPADI** (décision de Yass du 24.11.2026, sur la base de la revue de littérature épaule). Le QuickDASH reste disponible.
 - **Logique de déclenchement**, en exemples :
   - fonction de la zone → QuickDASH, ODI ou NDI, pour avoir une mesure de base ;
   - body chart diffus ou douleur de plus de 3 mois → CSI-25 ;
