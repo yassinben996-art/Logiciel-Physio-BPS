@@ -37,7 +37,7 @@ Usage : **personnel**, non commercial. Un site web d'abord, décliné peut-être
 
 - **Identité du patient (révisé le 24.11.2026, accord d'Aquamed obtenu par Yass).** Nom, prénom et date de naissance peuvent être saisis. Ils sont stockés **uniquement chiffrés** : sur l'appareil, et sur le relais, chiffrés de bout en bout. Ils figurent dans le PDF, mais ne sont **jamais** envoyés à l'IA, ni inclus dans « Copier pour Claude » ou dans les blocs SYSmeta. Le code court (`B-4821`) reste l'identifiant technique, notamment pour les QR codes patients. La tablette est l'appareil personnel de Yass ; l'app reste verrouillée par un code PIN. Cadre suisse : nLPD.
 - **Gratuité.** Hébergement, IA et relais doivent tenir dans des offres gratuites. Un passage au payant reste possible plus tard, par un réglage, sans rien reconstruire.
-- **Sans compte Claude.** L'outil doit tourner sur la tablette du travail, où Yass ne veut pas connecter son compte Claude, ainsi que sur son téléphone et son ordinateur.
+- **Sans compte Claude.** L'outil doit tourner sur la tablette de Yass (appareil personnel, où il ne veut pas connecter son compte Claude), sur son téléphone et sur son ordinateur.
 - **Questionnaires sous licence restrictive** (painDETECT, STarT MSK, ODI) : leurs textes restent hors de git, dans `private/questionnaires.ts`, comme aujourd'hui. Ce fichier n'est pas dans le dépôt : Yass devra le fournir à nouveau.
 - **Rigueur scientifique.** Aucun seuil, chiffre ni référence inventé. Tout contenu clinique est sourcé ou marqué « choix de conception ». C'est la règle du projet de recherche de Yass, déjà appliquée dans le dépôt (voir `DECISIONS.md`).
 
@@ -54,7 +54,7 @@ Fournisseurs de LLM gratuits comparés (le 24.11.2026) :
 - **Gemini API** : écarté. Ses conditions interdisent l'usage en pratique clinique et n'autorisent que les services payants pour une app destinée à des utilisateurs en Suisse.
 - **Mistral** : écarté. Dans son offre gratuite, les données peuvent servir à l'entraînement (les sources se contredisent ; écarté par prudence).
 - **IA dans le navigateur** (modèle local) : reportée. Modèle lourd à télécharger, lent et moins bon sur tablette.
-- **Groq** : **retenu**. Offre gratuite sans carte bancaire ; le contrat interdit l'entraînement sur les données ; « Zero Data Retention » activable. Les données sont traitées aux États-Unis, ce qui reste acceptable puisque tout est anonyme. Modèle : `openai/gpt-oss-120b`.
+- **Groq** : **retenu**. Offre gratuite sans carte bancaire ; le contrat interdit l'entraînement sur les données ; « Zero Data Retention » activable. Les données sont traitées aux États-Unis, ce qui reste acceptable puisque l'identité n'est jamais envoyée et que les noms dans les notes sont nettoyés. Modèle : `openai/gpt-oss-120b`.
 
 ## 5. Ce qui a été décidé
 
