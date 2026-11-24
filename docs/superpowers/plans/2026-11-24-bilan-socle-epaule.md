@@ -1,4 +1,4 @@
-# Socle du bilan standardisé (épaule pilote) — plan d'implémentation 1/5
+# Socle du bilan standardisé (épaule pilote) — plan d'implémentation 1/4
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -428,9 +428,15 @@ Comportement de `BilanRoot` :
 
 ## Plans suivants (rédigés chacun après validation du précédent)
 
-2. **Relais et synchronisation chiffrée** : choix et vérification du fournisseur gratuit hébergé en Europe, appairage des appareils (même clé que le coffre local), synchronisation de bout en bout entre appareils, historique et comparaison au rebilan.
+2. **Relais, synchronisation chiffrée et IA** :
+   - choix et vérification du fournisseur gratuit hébergé en Europe ;
+   - appairage des appareils (même clé que le coffre local) et synchronisation de bout en bout ;
+   - historique et comparaison au rebilan ;
+   - IA Groq `gpt-oss-120b` relayée par le serveur, sans jamais envoyer l'identité, avec nettoyage des noms et des dates dans les notes ;
+   - appel par section, suggestions fusionnées avec celles des règles ;
+   - **bascule automatique** : autre modèle Groq, puis autre fournisseur vérifié, puis règles seules, avec un indicateur ;
+   - bouton « Copier pour Claude ».
 3. **Accueil patient et questionnaires par QR code** : accueil de 5 minutes (body chart, PSFS, dépistage), jetons de QR à usage limité, questionnaires sous licence servis par le relais, retour automatique des scores.
-4. **IA (Groq, `gpt-oss-120b`)** : relais vers l'API, nettoyage des noms et des dates, appel par section, réponses structurées fusionnées avec les suggestions des règles, compteur de quota, bascule sur les règles seules, réglage pour passer à Claude Haiku, bouton « Copier pour Claude ».
-5. **Intégration du PDDM, lombaire et cervical** : préremplissage du PDDM, couche « douleur chronique », PDF final.
+4. **Intégration du PDDM, lombaire et cervical** : préremplissage du PDDM, couche « douleur chronique », PDF final.
 
-**En parallèle, hors code** : la revue de la littérature sur l'épaule, dans le projet « Recherche scientifique ». Elle sert à valider le contenu qui remplacera `provisional: true`.
+**En parallèle, hors code** : revue de la littérature sur l'épaule (document « Bilan de l'épaule : structure et contenu fondés sur les preuves »), à valider par Yass avant de remplacer le contenu marqué `provisional: true`.
