@@ -38,7 +38,7 @@ Usage : **personnel**, non commercial. Un site web d'abord, décliné peut-être
 - **Identité du patient (révisé le 24.11.2026, accord d'Aquamed obtenu par Yass).** Nom, prénom et date de naissance peuvent être saisis. Ils sont stockés **uniquement chiffrés** : sur l'appareil, et sur le relais, chiffrés de bout en bout. Ils figurent dans le PDF, mais ne sont **jamais** envoyés à l'IA, ni inclus dans « Copier pour Claude » ou dans les blocs SYSmeta. Le code court (`B-4821`) reste l'identifiant technique, notamment pour les QR codes patients. La tablette est l'appareil personnel de Yass ; l'app reste verrouillée par un code PIN. Cadre suisse : nLPD.
 - **Gratuité.** Hébergement, IA et relais doivent tenir dans des offres gratuites. Un passage au payant reste possible plus tard, par un réglage, sans rien reconstruire.
 - **Sans compte Claude.** L'outil doit tourner sur la tablette de Yass (appareil personnel, où il ne veut pas connecter son compte Claude), sur son téléphone et sur son ordinateur.
-- **Questionnaires sous licence restrictive** (STarT MSK, ODI, DN4 ; painDETECT est abandonné) : leurs textes restent hors de git, dans `private/questionnaires.ts`, comme aujourd'hui. Ce fichier n'est pas dans le dépôt : Yass devra le fournir à nouveau.
+- **Questionnaires sous licence restrictive** (painDETECT, STarT MSK, ODI) : leurs textes restent hors de git, dans `private/questionnaires.ts`, comme aujourd'hui. Ce fichier n'est pas dans le dépôt : Yass devra le fournir à nouveau.
 - **Rigueur scientifique.** Aucun seuil, chiffre ni référence inventé. Tout contenu clinique est sourcé ou marqué « choix de conception ». C'est la règle du projet de recherche de Yass, déjà appliquée dans le dépôt (voir `DECISIONS.md`).
 
 ## 4. Approches considérées
@@ -112,20 +112,20 @@ Deux couches :
 ### 5.6 Questionnaires
 - La **banque existe** dans le dépôt, avec le calcul des scores et des tests :
   - publics (`src/questionnaires/public.ts`) : NDI, QuickDASH, SPADI, CSI-25, TSK, PCS, FABQ, PSEQ ;
-  - privés (`private/`, hors git) : painDETECT (remplacé par le DN4, voir ci-dessous), STarT MSK, ODI.
+  - privés (`private/`, hors git) : painDETECT, STarT MSK, ODI.
 - **À ajouter** : le PSFS, pour l'accueil.
 - **Questionnaire d'épaule par défaut : SPADI** (décision de Yass du 24.11.2026, sur la base de la revue de littérature épaule). Le QuickDASH reste disponible.
 - **Logique de déclenchement**, en exemples :
   - fonction de la zone → QuickDASH, ODI ou NDI, pour avoir une mesure de base ;
   - body chart diffus ou douleur de plus de 3 mois → CSI-25 ;
-  - irradiation ou douleur d'allure neuropathique → **DN4**, rempli en séance (voir ci-dessous) ;
+  - irradiation ou douleur d'allure neuropathique → painDETECT ;
   - peur du mouvement notée → TSK (FABQ pour les lombaires) ;
   - catastrophisme noté → PCS ;
   - faible confiance → PSEQ.
   Les règles exactes viendront de la revue de la littérature (§5.3).
 - OSPRO-YF et ÖMPSQ-SF ont été évoqués comme alternatives. Ils ne sont pas retenus pour l'instant : pas de version française validée trouvée pour l'OSPRO-YF.
-- **STarT MSK et l'ODI passent aussi par le QR code** (décision de Yass) : leurs textes sont servis par le relais, uniquement à un lien de bilan valide, et ne sont jamais présents dans le site public ni dans git. Yass a fourni les versions françaises le 24.11.2026. Le STarT MSK français inclut la cotation de la question de douleur : EVN 0–4 = 0 point, 5–6 = 1, 7–8 = 2, 9–10 = 3 (complète DECISIONS n° 36).
-- **DN4 à la place de painDETECT** (décision de Yass du 24.11.2026). Aucune version française validée de painDETECT n'a été trouvée, et une traduction maison n'est pas validée. Le DN4 a été conçu en français (Bouhassira 2005, Pain 114:29–36, doi:10.1016/j.pain.2004.12.010). C'est un questionnaire **rempli par le clinicien** : 7 items d'entretien et 3 items d'examen (hypoesthésie au tact, hypoesthésie à la piqûre, douleur provoquée par le frottement). Il se fait donc **en séance**, dans la section Examen, et pas par QR code. Score sur 10, positif à partir de 4 (Se environ 83 %, Sp environ 90 % : chiffres repris de sources secondaires, absents de l'abstract). Son texte va dans le fichier privé, hors git, tant que ses conditions d'utilisation ne sont pas vérifiées.
+- **painDETECT, STarT MSK et l'ODI passent aussi par le QR code** (décision de Yass) : leurs textes sont servis par le relais, uniquement à un lien de bilan valide, et ne sont jamais présents dans le site public ni dans git. Yass a fourni les versions françaises le 24.11.2026. Le STarT MSK français inclut la cotation de la question de douleur : EVN 0–4 = 0 point, 5–6 = 1, 7–8 = 2, 9–10 = 3 (complète DECISIONS n° 36).
+- **painDETECT : on garde la traduction personnelle de Yass**, déjà utilisée dans le PDDM (`private/questionnaires.ts`, DECISIONS n° 28), avec l'avertissement « traduction non validée » affiché à côté du score (décision de Yass du 24.11.2026). Le DN4 (conçu en français, rempli par le clinicien en séance ; Bouhassira 2005, doi:10.1016/j.pain.2004.12.010) reste une option à ajouter plus tard si besoin.
 
 ### 5.7 Relais et stockage
 C'est un petit service gratuit, hébergé en Europe, qui a trois rôles :
@@ -138,7 +138,7 @@ Le fournisseur reste à choisir, après vérification de ses conditions gratuite
 ## 5bis. Décisions prises par Claude, à vérifier par Yass
 - **Protection d'accès sans compte.** Chaque appareil de Yass est appairé une fois au relais par un code PIN, qui lui donne un secret et la clé de chiffrement. Un nouvel appareil s'appaire en scannant un QR code affiché sur un appareil déjà appairé. Le code court du bilan (`B-4821`) sert seulement à l'affichage. Le QR code du patient contient un jeton long, aléatoire et à usage limité, impossible à deviner. Les appels au LLM n'acceptent que les appareils appairés, ce qui empêche un tiers de vider le quota.
 - **Zones.** Épaule, lombaire et cervical (le contenu cervical existe déjà dans le PDDM). **La douleur chronique n'est pas une zone, mais une couche transversale** : elle s'active d'elle-même (douleur de plus de 3 mois, body chart diffus, signaux de sensibilisation) ou sur demande, et ajoute ses sections, ses questionnaires et ses règles à la zone. Un bilan a **une zone principale**, et des zones secondaires peuvent être notées.
-- **Le PDDM dans le nouvel outil.** Le nouvel accueil de 5 minutes remplace, dans le nouvel outil, le parcours patient de 10 minutes du PDDM. L'écran PDDM est prérempli à partir du bilan (douleur, score CSI, yellow flags, comorbidités), et Yass peut corriger ces valeurs. Le volet neuropathique du moteur PDDM utilise des seuils painDETECT : le DN4 ne peut pas le préremplir tel quel. La façon de l'adapter (seuils DN4 sourcés ou saisie séparée) sera décidée à l'étape 4. Le moteur PDDM et ses tests de parité ne changent pas. Le déploiement public actuel du PDDM reste en ligne tel quel jusqu'à la mise en service du nouvel outil.
+- **Le PDDM dans le nouvel outil.** Le nouvel accueil de 5 minutes remplace, dans le nouvel outil, le parcours patient de 10 minutes du PDDM. L'écran PDDM est prérempli à partir du bilan (douleur, scores CSI et painDETECT, yellow flags, comorbidités), et Yass peut corriger ces valeurs. Le score painDETECT préremplit le volet neuropathique. Le moteur PDDM et ses tests de parité ne changent pas. Le déploiement public actuel du PDDM reste en ligne tel quel jusqu'à la mise en service du nouvel outil.
 - **Ordre des étapes (révisé le 24.11.2026 à la demande de Yass)** : 1. socle épaule + sauvegarde locale ; 2. relais + synchronisation chiffrée + IA avec bascule ; 3. accueil patient et QR codes ; 4. PDDM, lombaire, cervical, couche douleur chronique.
 - **Ordre de travail.** La revue de la littérature est faite par Claude, dans le projet de recherche de Yass, en commençant par l'épaule, zone pilote. Le squelette de l'app (structure, saisie, relais, QR code, IA, PDF) est construit **en parallèle** sur un contenu provisoire, clairement marqué comme tel. Le contenu validé remplace ensuite le provisoire, zone par zone.
 
