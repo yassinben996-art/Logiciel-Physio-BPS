@@ -15,7 +15,7 @@ Usage : **personnel**, non commercial. Un site web d'abord, décliné peut-être
 
 **Objectifs**
 - Un bilan structuré par zone, avec la même trame à chaque fois et des mesures chiffrées.
-- Démarrer avec trois zones : épaule, lombaire et douleur chronique (transversal). Le cervical est déjà couvert par le module PDDM.
+- Zones : épaule, lombaire et cervical, plus une couche transversale « douleur chronique » (voir §5bis).
 - Une IA qui suggère, avec la raison de chaque suggestion : tests à ajouter, red flags à creuser, questionnaires à proposer.
 - Des questionnaires **ciblés**, jamais systématiques. Le patient n'en remplit aucun « pour la forme ».
 - Un PDF du bilan, plus des blocs de texte calqués sur les rubriques de SYSmeta, à copier-coller sans double saisie.
@@ -121,7 +121,6 @@ Deux couches :
   - faible confiance → PSEQ.
   Les règles exactes viendront de la revue de la littérature (§5.3).
 - OSPRO-YF et ÖMPSQ-SF ont été évoqués comme alternatives. Ils ne sont pas retenus pour l'instant : pas de version française validée trouvée pour l'OSPRO-YF.
-
 - **painDETECT, STarT MSK et l'ODI passent aussi par le QR code** (décision de Yass) : leurs textes sont servis par le relais, uniquement à un lien de bilan valide, et ne sont jamais présents dans le site public ni dans git.
 
 ### 5.7 Relais et stockage
@@ -150,4 +149,4 @@ Le fournisseur reste à choisir, après vérification de ses conditions gratuite
 - Le format exact des requêtes envoyées au LLM et le schéma de ses réponses.
 - Le dictionnaire de mots-clés initial, à valider par Yass.
 - Le dessin et l'implémentation du body chart.
-- Le mise en page du PDF.
+- La mise en page du PDF.
