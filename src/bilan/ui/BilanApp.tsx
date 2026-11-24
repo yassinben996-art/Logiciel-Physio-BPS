@@ -15,6 +15,8 @@ interface Props {
   onChange?: (s: BilanState) => void;
   /** Contenu affiché dans l'en-tête, à droite (ex. état de la sauvegarde, boutons). */
   toolbar?: React.ReactNode;
+  /** Si fourni (bilan sauvegardé), « Nouveau bilan » l'appelle sans confirmation : rien n'est perdu. */
+  onNew?: () => void;
 }
 
 const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' | 'date' }[] = [
@@ -23,7 +25,7 @@ const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' |
   { field: 'naissance', label: 'Date de naissance', type: 'date' },
 ];
 
-export default function BilanApp({ initial, onChange, toolbar }: Props) {
+export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
   const [s, dispatch] = useReducer(bilanReducer, initial, (i) => i ?? emptyBilan('shoulder'));
   const [confirm, setConfirm] = useState(false);
   const zone = ZONES[s.zone] ?? SHOULDER;
@@ -82,7 +84,11 @@ export default function BilanApp({ initial, onChange, toolbar }: Props) {
         </div>
         <div className="bilan-tools">
           {toolbar}
-          {confirm ? (
+          {onNew ? (
+            <button type="button" className="btn ghost small" onClick={onNew}>
+              Nouveau bilan
+            </button>
+          ) : confirm ? (
             <div className="confirm" role="group" aria-label="Confirmer">
               <span>Effacer ce bilan et en commencer un nouveau ?</span>
               <button

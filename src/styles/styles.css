@@ -1993,7 +1993,11 @@ sup.c a:hover {
 }
 @media (min-width: 900px) {
   .bilan-head {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .bilan-head .bilan-tools {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
   .bilan-layout {
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -2010,4 +2014,100 @@ sup.c a:hover {
   .bilan-sugg.folded .bilan-sugg-body {
     display: block;
   }
+}
+.bilan-lock {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.bilan-lock-card {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.bilan-lock-card h1,
+.bilan-listhead h1 {
+  margin: 0;
+  font-family: var(--f-d);
+  font-size: 26px;
+}
+.bilan-lock-card p {
+  margin: 0;
+}
+.bilan-lock-card input,
+.bilan-search input {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.bilan-lock-card input {
+  font-size: 22px;
+  letter-spacing: 0.3em;
+}
+.bilan-warn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-weight: 600;
+}
+.bilan-head.bilan-listhead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+.bilan-search {
+  margin: 16px 0 8px;
+}
+.bilan-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.bilan-items > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.bilan-item-text {
+  display: grid;
+  min-width: 0;
+}
+.bilan-item-text .note {
+  margin: 0;
+}
+.bilan-save {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 7em;
+}
+.bilan-save.s-saved {
+  color: var(--ok);
+}
+.bilan-save.s-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+.bilan-listpage .note {
+  margin-top: 12px;
 }

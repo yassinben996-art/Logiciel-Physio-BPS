@@ -120,7 +120,7 @@ describe('route', () => {
     const { default: Root } = await import('../src/Root');
     location.hash = '#/bilan';
     const { unmount } = render(<Root />);
-    expect(screen.getByRole('button', { name: 'Nouveau bilan' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Créer le PIN|Déverrouiller/ })).toBeInTheDocument();
     unmount();
     location.hash = '';
     render(<Root />);

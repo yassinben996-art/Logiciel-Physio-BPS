@@ -1,7 +1,7 @@
 // Aiguillage par l'adresse : « #/bilan » ouvre le bilan standardisé, sinon l'app PDDM, inchangée.
 import { useEffect, useState } from 'react';
 import App from './App';
-import BilanApp from './bilan/ui/BilanApp';
+import BilanRoot from './bilan/ui/BilanRoot';
 
 export default function Root() {
   const [hash, setHash] = useState(location.hash);
@@ -10,5 +10,5 @@ export default function Root() {
     window.addEventListener('hashchange', h);
     return () => window.removeEventListener('hashchange', h);
   }, []);
-  return hash === '#/bilan' ? <BilanApp /> : <App />;
+  return hash === '#/bilan' ? <BilanRoot /> : <App />;
 }
