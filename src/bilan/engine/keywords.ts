@@ -24,14 +24,19 @@ interface Token {
   norm: string;
   start: number;
   end: number;
+  /** Numéro de phrase : une négation ne porte pas au-delà de . ; : ! ? ou d'un retour à la ligne. */
+  sentence: number;
 }
 
-const tokenize = (text: string): Token[] =>
-  [...text.matchAll(/[\p{L}\p{N}]+/gu)].map((m) => ({
-    norm: normalize(m[0]),
-    start: m.index,
-    end: m.index + m[0].length,
-  }));
+const tokenize = (text: string): Token[] => {
+  let sentence = 0;
+  let last = 0;
+  return [...text.matchAll(/[\p{L}\p{N}]+/gu)].map((m) => {
+    if (/[.;:!?\n]/.test(text.slice(last, m.index))) sentence++;
+    last = m.index + m[0].length;
+    return { norm: normalize(m[0]), start: m.index, end: last, sentence };
+  });
+};
 
 /**
  * Cherche un mot-clé (un ou plusieurs mots). Chaque mot du mot-clé doit commencer un mot du texte :
@@ -46,7 +51,9 @@ function find(tokens: Token[], text: string, keyword: string): { matched: string
   let negatedHit: { matched: string; negated: boolean } | null = null;
   for (let i = 0; i + kw.length <= tokens.length; i++) {
     if (!kw.every((k, j) => tokens[i + j]!.norm.startsWith(k))) continue;
-    const negated = tokens.slice(Math.max(0, i - NEG_WINDOW), i).some((t) => NEGATIONS.has(t.norm));
+    const negated = tokens
+      .slice(Math.max(0, i - NEG_WINDOW), i)
+      .some((t) => t.sentence === tokens[i]!.sentence && NEGATIONS.has(t.norm));
     const matched = text.slice(tokens[i]!.start, tokens[i + kw.length - 1]!.end);
     if (!negated) return { matched, negated };
     negatedHit ??= { matched, negated };

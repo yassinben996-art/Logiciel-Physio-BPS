@@ -155,4 +155,25 @@ describe('validateZone', () => {
         [],
       ),
     ).toContainEqual(expect.stringContaining('opérateur')));
+  it('identifiant contenant un point (casse le schéma de clés)', () => {
+    const z: ZoneDef = { ...ok, sections: [{ ...first, id: 'a.b' }], rules: [] };
+    expect(validateZone(z, [])).toContainEqual(expect.stringContaining('identifiant invalide'));
+    const z2: ZoneDef = { ...ok, rules: [{ ...ok.rules[0]!, id: 'r.1' }] };
+    expect(validateZone(z2, [])).toContainEqual(expect.stringContaining('identifiant invalide'));
+  });
+  it('option de choix à valeur vide', () => {
+    const z: ZoneDef = {
+      ...ok,
+      sections: [
+        {
+          ...first,
+          fields: [
+            { kind: 'choice', id: 'c', label: 'C', options: [{ value: '', label: 'vide' }], source: src },
+          ],
+        },
+      ],
+      rules: [],
+    };
+    expect(validateZone(z, [])).toContainEqual(expect.stringContaining('valeur vide'));
+  });
 });

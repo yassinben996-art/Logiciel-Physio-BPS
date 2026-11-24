@@ -5,6 +5,7 @@ import { fr } from '../../engine/format';
 import type { SummaryLine } from '../../engine/summary';
 import type { FieldDef, SectionDef, SysmetaRubric, ZoneDef } from '../content/types';
 import type { BilanState, Identity } from '../state/bilan';
+import { withinBounds } from './bounds';
 
 export interface SysmetaBlock {
   rubric: SysmetaRubric;
@@ -53,7 +54,8 @@ function fieldLine(sec: SectionDef, f: FieldDef, s: BilanState): string | null {
 const sectionLines = (sec: SectionDef, s: BilanState): string[] =>
   sec.fields.map((f) => fieldLine(sec, f, s)).filter((x): x is string => x !== null);
 
-export function sysmetaBlocks(z: ZoneDef, s: BilanState): SysmetaBlock[] {
+export function sysmetaBlocks(z: ZoneDef, state: BilanState): SysmetaBlock[] {
+  const s = withinBounds(z, state);
   const byRubric = new Map<SysmetaRubric, string[]>();
   for (const sec of z.sections) {
     if (!sec.sysmeta) continue;
@@ -75,7 +77,8 @@ function patientLine(id: Identity): string | null {
   return parts.length ? `Patient : ${parts.join(', ')}` : null;
 }
 
-export function bilanSummaryLines(z: ZoneDef, s: BilanState, date: Date = new Date()): SummaryLine[] {
+export function bilanSummaryLines(z: ZoneDef, state: BilanState, date: Date = new Date()): SummaryLine[] {
+  const s = withinBounds(z, state);
   const L: SummaryLine[] = [{ t: 't', s: `Bilan : ${z.label}` }];
   const patient = patientLine(s.identity);
   if (patient) L.push({ t: 'p', s: patient });

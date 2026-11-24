@@ -50,7 +50,7 @@ export default function FieldInput({ section, field: f, state: s, dispatch, hits
           onChange={(v) => dispatch({ type: 'num', key: k, value: v, min: f.min, max: f.max })}
         />
       );
-      if (!f.sided) return <div id={domId}>{one(key)}</div>;
+      if (!f.sided) return one(key);
       return (
         <fieldset id={domId} className="bilan-num" tabIndex={-1}>
           <legend>

@@ -33,22 +33,28 @@ export default function BilanRoot() {
     };
   }, []);
 
-  /** Enregistre tout de suite ce qui est en attente. */
-  const flush = useCallback(async () => {
+  /**
+   * Enregistre tout de suite ce qui est en attente, y compris ce qui a été saisi pendant l'enregistrement.
+   * Renvoie false si l'enregistrement a échoué : la saisie reste en attente et l'erreur reste affichée.
+   */
+  const flush = useCallback(async (): Promise<boolean> => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    const b = pending.current;
     const v = vault.current;
-    if (!b || !v) return;
-    try {
-      await v.save(b);
+    while (pending.current && v) {
+      const b = pending.current;
+      try {
+        await v.save(b);
+      } catch {
+        setStatus('error');
+        return false;
+      }
       if (pending.current === b) {
         pending.current = null;
         setStatus('saved');
       }
-    } catch {
-      setStatus('error');
     }
+    return true;
   }, []);
 
   const onChange = useCallback(
@@ -61,28 +67,50 @@ export default function BilanRoot() {
     [flush],
   );
 
-  const showList = useCallback(async () => {
-    await flush();
-    const v = vault.current;
-    if (v) setScreen({ k: 'list', items: await v.list() });
+  const [blocked, setBlocked] = useState(false);
+  /** Avant de quitter le bilan : tout enregistrer, sinon rester sur place avec l'erreur visible. */
+  const leave = useCallback(async () => {
+    const ok = await flush();
+    setBlocked(!ok);
+    return ok;
   }, [flush]);
 
+  const showList = useCallback(async () => {
+    if (!(await leave())) return;
+    const v = vault.current;
+    if (v) setScreen({ k: 'list', items: await v.list() });
+  }, [leave]);
+
   const lock = useCallback(async () => {
-    await flush();
+    if (!(await leave())) return;
     vault.current = null;
     setStatus('idle');
     setScreen({ k: 'unlock' });
-  }, [flush]);
+  }, [leave]);
 
   const newBilan = useCallback(async () => {
-    await flush();
+    if (!(await leave())) return;
     setStatus('idle');
     setScreen({ k: 'edit', bilan: emptyBilan('shoulder') });
+  }, [leave]);
+
+  // App mise en arrière-plan ou fermée (tablette, téléphone) : enregistrer sans attendre le délai.
+  useEffect(() => {
+    const h = () => {
+      if (document.visibilityState === 'hidden') void flush();
+    };
+    const hide = () => void flush();
+    document.addEventListener('visibilitychange', h);
+    window.addEventListener('pagehide', hide);
+    return () => {
+      document.removeEventListener('visibilitychange', h);
+      window.removeEventListener('pagehide', hide);
+    };
   }, [flush]);
 
-  // Confirmation avant de quitter seulement si une sauvegarde est en attente.
+  // Confirmation avant de quitter seulement si une saisie n'est pas encore enregistrée.
   useEffect(() => {
-    if (status !== 'pending') return;
+    if (status !== 'pending' && status !== 'error') return;
     const h = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener('beforeunload', h);
     return () => window.removeEventListener('beforeunload', h);
@@ -158,6 +186,11 @@ export default function BilanRoot() {
                       ? 'Échec de l’enregistrement'
                       : ''}
               </span>
+              {blocked && (
+                <span className="note err" role="alert">
+                  La dernière saisie n’est pas enregistrée : impossible de quitter ce bilan pour l’instant.
+                </span>
+              )}
               <button type="button" className="btn small ghost" onClick={() => void showList()}>
                 Mes bilans
               </button>

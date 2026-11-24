@@ -4,6 +4,7 @@ import { QUESTIONNAIRES } from '@q';
 import type { Condition, Source, SuggestionKind, ZoneDef } from '../content/types';
 import { resolveKey } from '../content/validate';
 import type { BilanState } from '../state/bilan';
+import { withinBounds } from './bounds';
 
 export interface Suggestion {
   ruleId: string;
@@ -57,7 +58,8 @@ function labelOf(z: ZoneDef, kind: SuggestionKind, target: string): string {
   return r.type === 'chip' ? r.chip.label : r.field.label;
 }
 
-export function evaluate(z: ZoneDef, s: BilanState): Suggestion[] {
+export function evaluate(z: ZoneDef, state: BilanState): Suggestion[] {
+  const s = withinBounds(z, state);
   const out: Suggestion[] = [];
   const seen = new Set<string>();
   for (const r of z.rules) {

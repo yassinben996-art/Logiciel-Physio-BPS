@@ -93,4 +93,13 @@ describe('coffre', () => {
   it('déverrouiller sans coffre rejette', async () => {
     await expect(unlockVault('123456')).rejects.toThrow();
   });
+
+  it('deux onglets qui enregistrent en même temps : aucun bilan ne disparaît de la liste', async () => {
+    await createVault('123456');
+    const [t1, t2] = await Promise.all([unlockVault('123456'), unlockVault('123456')]);
+    const a = emptyBilan('shoulder');
+    const b = emptyBilan('shoulder');
+    await Promise.all([t1.save(a), t2.save(b)]);
+    expect((await t1.list()).map((m) => m.id).sort()).toEqual([a.id, b.id].sort());
+  }, 30000);
 });

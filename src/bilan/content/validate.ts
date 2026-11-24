@@ -3,6 +3,8 @@
 import type { ChipDef, Condition, FieldDef, Op, Source, ZoneDef } from './types';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Identifiants : lettres, chiffres, _ et - (le point sépare les niveaux des clés "s.f.chip"). */
+const ID_RE = /^[A-Za-z0-9_-]+$/;
 
 const OPS: Record<FieldDef['kind'], readonly Op[]> = {
   number: ['eq', 'gte', 'lte', 'filled'],
@@ -34,6 +36,10 @@ function isValidDate(d: string): boolean {
 
 export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[]): string[] {
   const errs: string[] = [];
+  const checkId = (what: string, id: string) => {
+    if (!ID_RE.test(id))
+      errs.push(`identifiant invalide (${what}) : « ${id} » (lettres, chiffres, _ ou - seulement)`);
+  };
   const checkSource = (where: string, s: Source) => {
     if (!s.ref.trim()) errs.push(`${where} : source sans référence`);
     if (!isValidDate(s.added))
@@ -44,12 +50,14 @@ export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[])
   for (const sec of z.sections) {
     if (sectionIds.has(sec.id)) errs.push(`id de section en double : ${sec.id}`);
     sectionIds.add(sec.id);
+    checkId('section', sec.id);
     checkSource(`section ${sec.id}`, sec.source);
     const fieldIds = new Set<string>();
     for (const f of sec.fields) {
       const where = `${sec.id}.${f.id}`;
       if (fieldIds.has(f.id)) errs.push(`id de champ en double dans ${sec.id} : ${f.id}`);
       fieldIds.add(f.id);
+      checkId('champ', f.id);
       checkSource(where, f.source);
       if (f.kind === 'number' && !(f.min <= f.max))
         errs.push(`${where} : bornes invalides (min ${f.min} > max ${f.max})`);
@@ -63,6 +71,7 @@ export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[])
       if (f.kind === 'choice') {
         const vals = new Set<string>();
         for (const o of f.options) {
+          if (o.value === '') errs.push(`${where} : option à valeur vide (réservée à « non renseigné »)`);
           if (vals.has(o.value)) errs.push(`${where} : option en double : ${o.value}`);
           vals.add(o.value);
         }
@@ -72,6 +81,7 @@ export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[])
         for (const c of f.chips) {
           if (chipIds.has(c.id)) errs.push(`${where} : pastille en double : ${c.id}`);
           chipIds.add(c.id);
+          checkId('pastille', c.id);
           checkSource(`${where}.${c.id}`, c.source);
         }
       }
@@ -95,6 +105,7 @@ export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[])
   for (const rule of z.rules) {
     if (ruleIds.has(rule.id)) errs.push(`id de règle en double : ${rule.id}`);
     ruleIds.add(rule.id);
+    checkId('règle', rule.id);
     checkSource(`règle ${rule.id}`, rule.source);
     checkCond(rule.id, rule.when);
     if (rule.kind === 'questionnaire') {

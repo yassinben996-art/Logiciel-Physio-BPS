@@ -54,4 +54,10 @@ describe('mots-clés', () => {
       note('anamnese.notes', 'la nuit', { dismissed: ['kw:anamnese.signes.nocturne'] }).map((x) => x.key),
     ).not.toContain('anamnese.signes.nocturne'));
   it('notes vides → []', () => expect(detectKeywords(SHOULDER, e)).toEqual([]));
+  it('la négation ne franchit pas la fin d’une phrase', () => {
+    const h = note('anamnese.notes', 'Pas de fièvre. Fourmillements la nuit');
+    expect(h.find((x) => x.key === 'anamnese.signes.paresthesies')!.possiblyNegated).toBe(false);
+    expect(note('anamnese.notes', 'pas de douleur ; irradiation')[0]!.possiblyNegated).toBe(false);
+    expect(note('anamnese.notes', 'pas de douleur\nirradiation')[0]!.possiblyNegated).toBe(false);
+  });
 });

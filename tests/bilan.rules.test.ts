@@ -69,3 +69,7 @@ describe('moteur de règles', () => {
       )[0]!.label,
     ).toBe('PSFS'));
 });
+
+describe('valeurs hors bornes déjà stockées', () => {
+  it('ignorées par les règles', () => expect(targets(st({ nums: { 'force.re.D': 150 } }))).toEqual([]));
+});

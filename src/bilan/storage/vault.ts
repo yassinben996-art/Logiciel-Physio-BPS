@@ -73,33 +73,42 @@ export async function hasVault(): Promise<boolean> {
 const labelOf = (b: BilanState) =>
   [b.identity.prenom.trim(), b.identity.nom.trim()].filter(Boolean).join(' ') || b.code;
 
+/** Un enregistrement = la fiche de la liste et le bilan, chiffrés séparément (la liste ne déchiffre que les fiches). */
+interface Rec {
+  meta: Box;
+  data: Box;
+}
+
+// Pas d'index partagé : chaque bilan porte sa propre fiche. Deux onglets qui enregistrent en même temps
+// n'écrivent jamais le même enregistrement, donc aucun bilan ne peut disparaître de « Mes bilans ».
 function makeVault(key: CryptoKey): Vault {
-  // Écritures en file : l'index chiffré n'est jamais réécrit en parallèle.
+  // Dans un même onglet, les écritures restent dans l'ordre (une sauvegarde plus ancienne n'écrase pas une plus récente).
   let queue: Promise<unknown> = Promise.resolve();
   const serial = <T>(fn: () => Promise<T>): Promise<T> => {
     const p = queue.then(fn, fn);
     queue = p.catch(() => undefined);
     return p;
   };
-  const readIndex = async (): Promise<BilanMeta[]> => {
-    const box = await getMeta<Box | undefined>('index');
-    return box ? open<BilanMeta[]>(key, box) : [];
-  };
   return {
     async list() {
-      const idx = await readIndex();
-      return [...idx].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    },
-    async load(id) {
-      const box = await tx(
+      const recs = await tx(
         [BILANS],
         'readonly',
-        (t) => req(t.objectStore(BILANS).get(id)) as Promise<Box | undefined>,
+        (t) => req(t.objectStore(BILANS).getAll()) as Promise<Rec[]>,
       );
-      return box ? open<BilanState>(key, box) : null;
+      const metas = await Promise.all(recs.map((r) => open<BilanMeta>(key, r.meta)));
+      return metas.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },
-    save(b) {
-      return serial(async () => {
+    async load(id) {
+      const rec = await tx(
+        [BILANS],
+        'readonly',
+        (t) => req(t.objectStore(BILANS).get(id)) as Promise<Rec | undefined>,
+      );
+      return rec ? open<BilanState>(key, rec.data) : null;
+    },
+    save: (b) =>
+      serial(async () => {
         const next: BilanState = { ...b, updatedAt: new Date().toISOString() };
         const meta: BilanMeta = {
           id: next.id,
@@ -109,26 +118,18 @@ function makeVault(key: CryptoKey): Vault {
           updatedAt: next.updatedAt,
         };
         // Chiffrer avant d'ouvrir la transaction : une transaction IndexedDB se ferme dès qu'on attend autre chose.
-        const idx = [meta, ...(await readIndex()).filter((m) => m.id !== next.id)];
-        const [bilanBox, idxBox] = await Promise.all([seal(key, next), seal(key, idx)]);
-        await tx([META, BILANS], 'readwrite', (t) => {
-          t.objectStore(BILANS).put(bilanBox, next.id);
-          t.objectStore(META).put(idxBox, 'index');
+        const [m, data] = await Promise.all([seal(key, meta), seal(key, next)]);
+        const rec: Rec = { meta: m, data };
+        await tx([BILANS], 'readwrite', (t) => {
+          t.objectStore(BILANS).put(rec, next.id);
         });
-      });
-    },
-    remove(id) {
-      return serial(async () => {
-        const idxBox = await seal(
-          key,
-          (await readIndex()).filter((m) => m.id !== id),
-        );
-        await tx([META, BILANS], 'readwrite', (t) => {
+      }),
+    remove: (id) =>
+      serial(async () => {
+        await tx([BILANS], 'readwrite', (t) => {
           t.objectStore(BILANS).delete(id);
-          t.objectStore(META).put(idxBox, 'index');
         });
-      });
-    },
+      }),
   };
 }
 
@@ -138,12 +139,10 @@ export async function createVault(pin: string): Promise<Vault> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await deriveKey(pin, salt);
   const check = await seal(key, CHECK);
-  const index = await seal(key, []);
   await tx([META], 'readwrite', (t) => {
     const s = t.objectStore(META);
     s.put(toB64(salt), 'salt');
     s.put(check, 'check');
-    s.put(index, 'index');
   });
   return makeVault(key);
 }

@@ -103,4 +103,39 @@ describe('BilanRoot', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verrouiller' }));
     expect(await screen.findByRole('button', { name: 'Déverrouiller' })).toBeInTheDocument();
   }, 30000);
+
+  it('app en arrière-plan : enregistrement immédiat, sans attendre 500 ms', async () => {
+    await createPin();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    const notes = await screen.findByRole('textbox', { name: 'Notes (Anamnèse)' });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    fireEvent.change(notes, { target: { value: 'x' } });
+    expect(screen.getByRole('status')).toHaveTextContent('Enregistrement…');
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    // Le délai de 500 ms ne peut pas s'écouler (setTimeout simulé) : seul l'enregistrement immédiat peut aboutir.
+    // (findByText ne fonctionne pas avec un setTimeout simulé : on attend par setImmediate.)
+    for (let k = 0; k < 200 && screen.getByRole('status').textContent !== 'Enregistré'; k++)
+      await act(() => new Promise<void>((r) => setImmediate(r)));
+    expect(screen.getByRole('status')).toHaveTextContent('Enregistré');
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  }, 30000);
+
+  it('sauvegarde en échec : Verrouiller refuse et garde l’erreur visible', async () => {
+    await createPin();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    const notes = await screen.findByRole('textbox', { name: 'Notes (Anamnèse)' });
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
+      throw new DOMException('Quota dépassé', 'QuotaExceededError');
+    });
+    fireEvent.change(notes, { target: { value: 'saisie importante' } });
+    expect(await screen.findByText('Échec de l’enregistrement', {}, T)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Verrouiller' }));
+    expect(await screen.findByText(/n’est pas enregistrée/, {}, T)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Déverrouiller' })).toBeNull();
+    expect(notes).toHaveValue('saisie importante');
+    put.mockRestore();
+    fireEvent.click(screen.getByRole('button', { name: 'Verrouiller' }));
+    expect(await screen.findByRole('button', { name: 'Déverrouiller' }, T)).toBeInTheDocument();
+  }, 30000);
 });

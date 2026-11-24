@@ -93,3 +93,11 @@ describe('lignes PDF', () => {
     expect(pdfFilename(D)).toBe('profil-douleur-2026-11-24.pdf');
   });
 });
+
+describe('valeurs hors bornes déjà stockées (contenu resserré après coup)', () => {
+  it('ignorées par les exports', () => {
+    const s = st({ nums: { 'mobilite.abd_a.D': 250, 'mobilite.abd_a.G': 170 } });
+    expect(block(s, 'Bilan articulaire')).toBe('Abduction active : G 170°');
+    expect(bilanSummaryLines(SHOULDER, s, D).map((l) => l.s).join('\n')).not.toContain('250');
+  });
+});
