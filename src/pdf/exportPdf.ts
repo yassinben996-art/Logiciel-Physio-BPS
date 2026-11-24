@@ -2,9 +2,9 @@
 import type { SummaryLine } from '../engine/summary';
 import { toLatin1 } from './sanitize';
 
-export const pdfFilename = (d: Date = new Date()): string => {
+export const pdfFilename = (d: Date = new Date(), prefix = 'profil-douleur'): string => {
   const p = (n: number) => String(n).padStart(2, '0');
-  return `profil-douleur-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.pdf`;
+  return `${prefix}-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.pdf`;
 };
 
 type SaveFn = (r: { filename: string; data: Blob }) => Promise<unknown>;
@@ -15,7 +15,11 @@ interface ClaudeHost {
 /** Résultat : « saved » (enregistré), « declined » (refusé par l'utilisateur). */
 export type PdfResult = 'saved' | 'declined';
 
-export async function exportPdf(lines: SummaryLine[], date: Date = new Date()): Promise<PdfResult> {
+export async function exportPdf(
+  lines: SummaryLine[],
+  date: Date = new Date(),
+  prefix = 'profil-douleur',
+): Promise<PdfResult> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 180;
@@ -81,7 +85,7 @@ export async function exportPdf(lines: SummaryLine[], date: Date = new Date()): 
     doc.text(toLatin1('Aide au raisonnement clinique, non validée'), M, 291);
     doc.text(`page ${p}/${n}`, M + W, 291, { align: 'right' });
   }
-  const filename = pdfFilename(date);
+  const filename = pdfFilename(date, prefix);
   // Page hébergée sur claude.ai : le téléchargement direct est bloqué, on passe par la
   // capacité « downloads » (l'utilisateur confirme). Ailleurs : téléchargement classique.
   const host = (globalThis as { claude?: ClaudeHost }).claude;

@@ -6,13 +6,13 @@ import '@fontsource/public-sans/400.css';
 import '@fontsource/public-sans/500.css';
 import '@fontsource/public-sans/600.css';
 import './styles/styles.css';
-import App from './App';
+import Root from './Root';
 
 // La page claude.ai fournit son propre <html> sans attribut lang.
 document.documentElement.lang = 'fr';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );

@@ -121,6 +121,24 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
 29. Textes transcrits fidèlement ; seules des fautes d'orthographe évidentes ont été corrigées, et « cochez /
     entourez » devient « touchez ».
 
+### Bilan standardisé (plan 1/4, 24.11.2026)
+
+38. **Route `#/bilan`** : le bilan standardisé est un écran séparé, isolé dans `src/bilan/`. L'app PDDM reste la
+    page par défaut, inchangée (seul ajout : un préfixe facultatif pour le nom du PDF).
+39. **Contenu provisoire** : les sections, champs, pastilles et règles de l'épaule sont des exemples de mécanique,
+    tous marqués `provisional: true` (« Source provisoire » à l'écran). Aucune propriété diagnostique chiffrée tant
+    qu'il n'y a pas de source validée ; le test d'intégrité le vérifie. La règle de base propose le SPADI
+    (questionnaire d'épaule par défaut, décision du 24.11.2026). Le contenu validé viendra de la revue de la
+    littérature.
+40. **Coffre local chiffré par PIN** : chaque saisie est enregistrée 500 ms après la dernière frappe, dans
+    IndexedDB, en AES-GCM 256 avec une clé dérivée du PIN (PBKDF2-SHA256, 600 000 itérations, sel aléatoire de
+    16 octets). Même la liste « Mes bilans » est chiffrée : en clair, il ne reste que le sel et un vérificateur.
+    Aucun `localStorage`. Un PIN oublié rend les bilans irrécupérables, et c'est écrit à la création du PIN.
+    Verrouillage automatique après 15 minutes d'inactivité.
+41. **Identité du patient** : nom, prénom et date de naissance figurent dans le PDF et dans « Mes bilans »
+    (chiffrés), mais jamais dans les blocs SYSmeta. Les plans suivants l'excluront aussi de l'IA et de
+    « Copier pour Claude ».
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant
