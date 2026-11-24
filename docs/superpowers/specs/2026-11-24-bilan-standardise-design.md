@@ -22,7 +22,7 @@ Usage : **personnel**, non commercial. Un site web d'abord, décliné peut-être
 - Un contenu clinique enrichi petit à petit : d'abord une revue de la littérature, puis les formations de Yass.
 
 **Non-objectifs**
-- Ce n'est pas un dossier patient : aucune identité n'est stockée, et l'outil ne remplace pas SYSmeta.
+- L'outil ne remplace pas SYSmeta, qui reste le dossier patient officiel.
 - Pas de produit commercial ni multi-utilisateur pour l'instant.
 - Ce n'est ni un dispositif médical ni un outil de diagnostic. Le bandeau « aide au raisonnement clinique, non validée » est conservé, comme dans l'app PDDM.
 
@@ -31,11 +31,11 @@ Usage : **personnel**, non commercial. Un site web d'abord, décliné peut-être
 - L'IA coche ou décide à la place du clinicien.
 - Le bilan devient une collection de questionnaires imposés au patient.
 - L'outil dépend d'un abonnement payant, d'un compte Claude ou d'une connexion à Claude.
-- Une donnée permettant d'identifier le patient est stockée ou transmise.
+- Une donnée d'identité du patient est envoyée à l'IA, figure dans « Copier pour Claude », ou devient lisible par le relais.
 
 ## 3. Contraintes
 
-- **Anonymat total.** Aucune donnée identifiante n'est stockée : ni nom, ni e-mail, ni date de naissance. Le lien entre un bilan et le patient se fait par un code court (ex. `B-4821`) que Yass reporte lui-même dans SYSmeta s'il le souhaite. Cadre suisse : nLPD.
+- **Identité du patient (révisé le 24.11.2026, accord d'Aquamed obtenu par Yass).** Nom, prénom et date de naissance peuvent être saisis. Ils sont stockés **uniquement chiffrés** : sur l'appareil, et sur le relais, chiffrés de bout en bout. Ils figurent dans le PDF, mais ne sont **jamais** envoyés à l'IA, ni inclus dans « Copier pour Claude » ou dans les blocs SYSmeta. Le code court (`B-4821`) reste l'identifiant technique, notamment pour les QR codes patients. La tablette est l'appareil personnel de Yass ; l'app reste verrouillée par un code PIN. Cadre suisse : nLPD.
 - **Gratuité.** Hébergement, IA et relais doivent tenir dans des offres gratuites. Un passage au payant reste possible plus tard, par un réglage, sans rien reconstruire.
 - **Sans compte Claude.** L'outil doit tourner sur la tablette du travail, où Yass ne veut pas connecter son compte Claude, ainsi que sur son téléphone et son ordinateur.
 - **Questionnaires sous licence restrictive** (painDETECT, STarT MSK, ODI) : leurs textes restent hors de git, dans `private/questionnaires.ts`, comme aujourd'hui. Ce fichier n'est pas dans le dépôt : Yass devra le fournir à nouveau.
@@ -61,7 +61,7 @@ Fournisseurs de LLM gratuits comparés (le 24.11.2026) :
 ### 5.1 Base technique
 - On étend le dépôt existant **Logiciel-Physio-BPS** (Vite + React 18 + TypeScript strict, Vitest, jsPDF, GitHub Pages).
 - L'app **« Profil des moteurs de douleur » (PDDM) devient un module** du nouvel outil, appelé depuis la section Raisonnement. Son moteur, ses tests et sa parité avec le prototype doivent rester intacts.
-- L'interface est responsive pour ordinateur, téléphone et tablette, et sauvegarde chaque saisie pour qu'aucun changement d'écran ne fasse perdre de données.
+- L'interface est responsive pour ordinateur, téléphone et tablette. **Sauvegarde automatique dès l'étape 1** (demande de Yass) : chaque saisie est enregistrée chiffrée sur l'appareil. La synchronisation entre appareils arrive avec le relais.
 - **Tout le contenu clinique est dans des fichiers de données séparés du code** : sections, champs, tests et leurs propriétés diagnostiques, red flags, pastilles, règles de suggestion, mots-clés. Le but est de pouvoir y verser la littérature puis les formations de Yass sans toucher à la logique.
 - **Modularité exigée par Yass** : tout doit pouvoir évoluer « à la guise » au fil de l'usage. Ajouter, retirer ou réordonner une section, un test, une pastille, une règle ou un questionnaire ne doit demander qu'une modification du fichier de contenu concerné, jamais du code, et chaque élément de contenu porte sa source et sa date d'ajout. L'épaule est la zone pilote.
 
@@ -101,7 +101,7 @@ Deux couches :
 - **Un LLM** (Groq, `openai/gpt-oss-120b`). Il lit les notes libres et les données structurées, puis propose hypothèses, tests et questionnaires complémentaires.
   - Il est **déclenché par section**, ou par un bouton « Suggérer », jamais en continu.
   - On lui envoie un résumé compact du bilan, pas tout l'historique.
-  - Les **noms propres, dates et lieux** sont **nettoyés automatiquement** avant l'envoi.
+  - Les champs d'identité ne sont jamais inclus dans la requête. Les **noms propres, dates et lieux** présents dans les notes sont en plus **nettoyés automatiquement** avant l'envoi.
   - Ses réponses sont structurées. Ses suggestions s'affichent comme celles des règles, avec leur raison, et Yass les accepte ou les refuse.
   - **Quota.** Les limites de l'offre gratuite annoncées, avec une ambiguïté sur l'offre concernée, sont de 30 requêtes par minute, 1 000 par jour, 8 000 tokens par minute et 200 000 tokens par jour. Cela correspond à environ 6 bilans complets par jour, à raison d'environ 5 appels de 6 000 tokens par bilan. Au-delà, ou en cas de panne, l'outil bascule sur les règles seules, et un indicateur le signale.
   - Le **fournisseur est interchangeable** par un réglage (Groq gratuit ou Claude Haiku 5.5 payant), avec la même interface côté code.

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Un écran de bilan clinicien, utilisable en séance, entièrement piloté par des fichiers de contenu modulables : sections et champs chiffrés de l'épaule, pastilles, détection de mots-clés confirmée, suggestions du moteur de règles, export en blocs SYSmeta et en PDF.
+**Goal:** Un écran de bilan clinicien, utilisable en séance, entièrement piloté par des fichiers de contenu modulables : sections et champs chiffrés de l'épaule, pastilles, détection de mots-clés confirmée, suggestions du moteur de règles, export en blocs SYSmeta et en PDF, identité du patient, et sauvegarde automatique chiffrée sur l'appareil, avec la liste de « Mes bilans ».
 
 **Architecture:** Nouveau dossier `src/bilan/`, isolé du module PDDM :
 - `content/` : types et données ;
@@ -10,7 +10,7 @@
 - `state/` : un `useReducer` ;
 - `ui/` : React.
 
-L'écran est accessible par la route `#/bilan`. L'app PDDM existante reste la page par défaut et n'est pas modifiée, hormis un paramètre facultatif ajouté à `exportPdf`. Pas de réseau ni de stockage dans ce plan : le relais et le stockage chiffré arrivent au plan 2.
+L'écran est accessible par la route `#/bilan`. L'app PDDM existante reste la page par défaut et n'est pas modifiée, hormis un paramètre facultatif ajouté à `exportPdf`. Pas de réseau dans ce plan. La sauvegarde est locale, dans IndexedDB, chiffrée par un PIN ; la synchronisation entre appareils via le relais arrive au plan 2.
 
 **Tech Stack:** Vite, React 18, TypeScript strict, Vitest et Testing Library, jsPDF (existant).
 
@@ -25,7 +25,8 @@ L'écran est accessible par la route `#/bilan`. L'app PDDM existante reste la pa
 - Le moteur PDDM, ses données et `tests/parity.test.ts` ne sont pas modifiés. Les tests existants restent verts.
 - Bandeau permanent : réutiliser `DISCLAIMER` (`src/data/text.ts`).
 - `npm run lint` sans aucun avertissement, `npm run typecheck` et `npm test` verts avant chaque commit.
-- Aucune requête réseau, aucun `localStorage` ni `sessionStorage` dans ce plan.
+- Aucune requête réseau dans ce plan. Le seul stockage est IndexedDB, **toujours chiffré** en AES-GCM 256, avec une clé dérivée du PIN par PBKDF2-SHA256 (600 000 itérations, sel aléatoire de 16 octets). Aucun `localStorage` ni `sessionStorage`.
+- Identité du patient (nom, prénom, date de naissance) : elle figure dans le PDF et dans la liste « Mes bilans », mais **jamais** dans les blocs SYSmeta. Les plans suivants l'excluront aussi de l'IA et de « Copier pour Claude ».
 
 ## Review Focus
 
@@ -33,7 +34,7 @@ L'écran est accessible par la route `#/bilan`. L'app PDDM existante reste la pa
 2. **Mots-clés avec majuscules, accents ou pluriel** (« Fourmillements », « fourmillement », « FOURMILLEMENTS », « réveils nocturnes ») : ils doivent être détectés. → test dans la tâche 5.
 3. **Négation** (« pas de fourmillements », « sans irradiation ») : la suggestion est marquée « peut-être nié », et rien n'est coché. → test dans la tâche 5.
 4. **Contenu mal édité** (identifiant en double, règle pointant vers un champ inexistant, propriété diagnostique sans source validée) : le test d'intégrité échoue en CI, plutôt que l'écran plante en séance. → tâches 1 et 2.
-5. **Fermeture ou rechargement de la page avec un bilan en cours** : le navigateur demande une confirmation, puisqu'il n'y a pas de stockage avant le plan 2. Un export d'un bilan vide ne plante pas et indique « non renseigné ». → tâches 6 et 7.
+5. **Rechargement de la page en plein bilan** : le bilan est retrouvé à l'identique après le déverrouillage. Une erreur de PIN affiche « PIN incorrect », sans plantage. Un **PIN oublié** rend les données irrécupérables, et c'est écrit noir sur blanc à la création du PIN. Un export d'un bilan vide ne plante pas et indique « non renseigné ». → tâches 6 et 8.
 
 ---
 
@@ -160,7 +161,12 @@ it('aucun dx chiffré dans le provisoire', () => expect(allTests(SHOULDER).some(
 ```ts
 export type Side = 'G' | 'D';
 export type TestResult = 'pos' | 'neg';
+export interface Identity { nom: string; prenom: string; naissance: string /* AAAA-MM-JJ ou '' */ }
 export interface BilanState {
+  id: string;                                    // crypto.randomUUID()
+  code: string;                                  // "B-" + 4 chiffres, affichage seulement
+  createdAt: string; updatedAt: string;          // ISO
+  identity: Identity;
   zone: ZoneDef['id'];
   nums: Readonly<Record<string, number>>;        // clé "s.f" ou "s.f.G" / "s.f.D" si sided
   invalid: Readonly<Record<string, true>>;       // clés saisies hors bornes
@@ -177,7 +183,9 @@ export type BilanAction =
   | { type: 'test'; key: string; value: TestResult | null }
   | { type: 'chip'; key: string; value: boolean }
   | { type: 'note'; key: string; value: string }
+  | { type: 'identity'; field: keyof Identity; value: string }
   | { type: 'accept'; id: string } | { type: 'dismiss'; id: string }
+  | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 export const emptyBilan: (zone: ZoneDef['id']) => BilanState;
 export function bilanReducer(s: BilanState, a: BilanAction): BilanState;
@@ -192,7 +200,10 @@ export const isDirty: (s: BilanState) => boolean;
   - `chip` `false` → la clé est retirée ;
   - `accept` deux fois → l'identifiant n'apparaît qu'une fois ;
   - `isDirty(emptyBilan('shoulder')) === false`, et devient `true` après une `note` ;
-  - `reset` → l'état est égal à `emptyBilan(zone)`.
+  - `reset` → nouvel `id` et nouveau `code`, contenu vide, même zone ;
+  - `identity` → `isDirty` vaut `true` ;
+  - `code` correspond à `/^B-\d{4}$/` ;
+  - `load` remplace l'état tel quel.
 - [ ] **Step 2: Run** `npx vitest run tests/bilan.state.test.ts`. Attendu : FAIL.
 - [ ] **Step 3: Implement** de façon immuable, sans dépendance à React.
 - [ ] **Step 4: Run.** Attendu : PASS.
@@ -285,13 +296,15 @@ pastille déjà cochée ou 'kw:anamnese.signes.nocturne' dans dismissed → abse
   - les décimales utilisent la virgule, via `fr()` de `src/engine/format.ts`.
 - Seuls les champs remplis apparaissent. Une rubrique vide est omise.
 - Les sections sans `sysmeta` n'apparaissent que dans le PDF.
-- Le PDF commence par le titre `Bilan : <label de la zone>`, la date `fr-CH`, puis une section par titre (`t: 'h'`). Il se termine par une ligne `n` contenant `DISCLAIMER`.
+- L'identité n'apparaît **jamais** dans les blocs SYSmeta.
+- Le PDF commence par le titre `Bilan : <label de la zone>`, puis `Patient : <Prénom> <Nom>, né(e) le JJ.MM.AAAA` si l'identité est renseignée (les parties vides sont omises), le code, la date `fr-CH`, puis une section par titre (`t: 'h'`). Il se termine par une ligne `n` contenant `DISCLAIMER`.
 - Un bilan vide donne `[]` côté SYSmeta. Côté PDF, on obtient le titre, la ligne `Aucune donnée saisie (non renseigné).` et le bandeau.
 
 - [ ] **Step 1: Write the failing tests:**
   - les formats exacts ci-dessus ;
   - une valeur dans `invalid` qui n'est pas dans `nums` n'apparaît pas ;
   - bilan vide côté SYSmeta → `[]` ;
+  - une identité renseignée (`Dupont`, `Marie`, `1980-03-05`) → absente de tous les `text` SYSmeta, et présente dans le PDF sous la forme `Patient : Marie Dupont, né(e) le 05.03.1980` ;
   - bilan vide côté PDF → contient `'Aucune donnée saisie (non renseigné).'` ;
   - `pdfFilename(new Date(2026,10,24), 'bilan') === 'bilan-2026-11-24.pdf'` ;
   - `pdfFilename(new Date(2026,10,24)) === 'profil-douleur-2026-11-24.pdf'`.
@@ -329,7 +342,8 @@ Comportement :
 - **Export** :
   - « Copier pour SYSmeta », un bouton par rubrique, via `navigator.clipboard.writeText`, avec le retour « Copié » ;
   - « PDF », via `exportPdf(bilanSummaryLines(...), new Date(), 'bilan')`.
-- **Confirmation à la fermeture** : un écouteur `beforeunload`, actif seulement si `isDirty`.
+- **En-tête patient** : trois champs (nom, prénom, date de naissance en `type="date"`) et le code `B-xxxx` affiché.
+- Le branchement de la sauvegarde se fait à la tâche 8 : dans cette tâche, `BilanApp` reçoit `initial?: BilanState` et `onChange?: (s: BilanState) => void`.
 - **Réinitialisation** : un bouton « Nouveau bilan » ouvre une confirmation intégrée à la page, comme le « nouveau patient » existant.
 - `DISCLAIMER` est affiché en pied de page.
 
@@ -340,18 +354,81 @@ Comportement :
   - taper « fourmillements la nuit » dans les notes d'anamnèse affiche deux invites ; « Cocher » sur paresthésies coche la pastille correspondante, et l'invite disparaît ;
   - « pas de fièvre » affiche une invite avec la mention « (peut-être nié) », et la pastille n'est pas cochée tant qu'on ne clique pas ;
   - saisir 500 en abduction active D affiche un message d'erreur, et la valeur n'apparaît pas dans le bloc « Bilan articulaire » copié (mock de `navigator.clipboard.writeText`) ;
-  - après une saisie, l'événement `beforeunload` a `defaultPrevented === true` ; sur un bilan vide, il est à `false`.
+  - saisir le nom « Dupont » ne l'ajoute à aucun bloc SYSmeta copié ;
+  - `onChange` est appelé avec le nouvel état après une saisie.
 - [ ] **Step 2: Run** `npx vitest run tests/bilan.ui.test.tsx`. Attendu : FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** `npm test && npm run lint && npm run typecheck && npm run build`. Attendu : tout est vert.
 - [ ] **Step 5: Vérification manuelle.** Lancer `npm run dev`, ouvrir `http://localhost:5173/#/bilan` à 360 px et 1024 px de large (Playwright ou un navigateur), et faire une capture d'écran : rien ne déborde et le panneau de suggestions reste lisible. Vérifier que `/` affiche toujours l'app PDDM, inchangée.
-- [ ] **Step 6: Commit** `feat(bilan): écran de bilan épaule (route #/bilan)`, puis ajouter les entrées 38 à 40 dans `DECISIONS.md` : la route `#/bilan`, le contenu provisoire, et l'absence de stockage avant le plan 2.
+- [ ] **Step 6: Commit** `feat(bilan): écran de bilan épaule (route #/bilan)`.
+
+### Task 8: Sauvegarde automatique chiffrée et « Mes bilans »
+
+**Files:**
+- Create: `src/bilan/storage/crypto.ts`
+- Create: `src/bilan/storage/vault.ts`
+- Create: `src/bilan/ui/LockScreen.tsx`
+- Create: `src/bilan/ui/BilanList.tsx`
+- Create: `src/bilan/ui/BilanRoot.tsx`
+- Modify: `src/main.tsx` : `#/bilan` rend désormais `BilanRoot`
+- Modify: `package.json` : ajouter la dépendance de dev `fake-indexeddb`
+- Modify: `tests/setup.ts` : `import 'fake-indexeddb/auto'`
+- Modify: `DECISIONS.md` : ajouter les entrées 38 à 41 (route `#/bilan`, contenu provisoire, coffre local chiffré par PIN, identité jamais dans SYSmeta ni l'IA)
+- Test: `tests/bilan.vault.test.ts`, `tests/bilan.root.test.tsx`
+
+**Interfaces:**
+- Consumes : `BilanState`, `emptyBilan` (tâche 3) et `BilanApp` avec ses props `initial` et `onChange` (tâche 7).
+- Produces :
+
+```ts
+// crypto.ts — WebCrypto uniquement, aucune dépendance
+export async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey>; // PBKDF2-SHA256, 600 000 itérations, AES-GCM 256
+export async function seal(key: CryptoKey, data: unknown): Promise<{ iv: string; ct: string }>; // base64, iv aléatoire de 12 octets
+export async function open<T>(key: CryptoKey, box: { iv: string; ct: string }): Promise<T>; // rejette si mauvaise clé
+// vault.ts — base IndexedDB « bilan-vault », stores « meta » et « bilans »
+export interface BilanMeta { id: string; code: string; label: string /* "Prénom Nom" ou code */; zone: string; updatedAt: string }
+export interface Vault {
+  list(): Promise<BilanMeta[]>;            // triés par updatedAt décroissant
+  load(id: string): Promise<BilanState | null>;
+  save(b: BilanState): Promise<void>;      // met à jour updatedAt
+  remove(id: string): Promise<void>;
+}
+export async function hasVault(): Promise<boolean>;
+export async function createVault(pin: string): Promise<Vault>;  // PIN de 6 chiffres exactement, sinon rejette
+export async function unlockVault(pin: string): Promise<Vault>;  // rejette Error('PIN incorrect')
+```
+
+Le libellé (`label`) est lui aussi chiffré : la liste est stockée comme un seul enregistrement chiffré, et rien de lisible ne reste en clair dans IndexedDB, à part le sel et un vérificateur chiffré.
+
+Comportement de `BilanRoot` :
+- **Écran de verrouillage** : au premier lancement, on crée un PIN de 6 chiffres, saisi deux fois, avec le texte exact « Si tu oublies ce PIN, tes bilans seront perdus : ils sont chiffrés et personne ne peut les récupérer. ». Ensuite, on saisit simplement le PIN.
+- **« Mes bilans »** : liste avec une recherche sur le libellé, et les boutons « Nouveau bilan », « Ouvrir » et « Supprimer » (confirmation intégrée à la page).
+- **Sauvegarde automatique** : 500 ms après la dernière modification (`onChange`), avec un indicateur « Enregistré » ou « Enregistrement… ». La confirmation `beforeunload` ne s'active que s'il reste une sauvegarde en attente.
+- **Verrouillage automatique** après 15 minutes d'inactivité, et bouton « Verrouiller ».
+
+- [ ] **Step 1: Write the failing tests** (`bilan.vault.test.ts`) :
+  - `createVault('123456')`, puis `save` et `load` → l'état est retrouvé à l'identique ;
+  - `unlockVault('000000')` → rejette avec `'PIN incorrect'` ;
+  - `unlockVault('123456')` → `list()` contient le bilan, avec `label` égal à `'Marie Dupont'` ;
+  - le contenu brut d'IndexedDB ne contient ni `'Dupont'` ni `'fourmillements'` (on lit les stores directement) ;
+  - `createVault('12a')` → rejette ;
+  - `remove` → `load` renvoie `null`.
+- [ ] **Step 2: Write the failing tests** (`bilan.root.test.tsx`) :
+  - premier lancement → l'écran de création du PIN s'affiche, avec le texte exact d'avertissement ;
+  - après la création du PIN → « Mes bilans » est vide, puis « Nouveau bilan » ouvre le bilan ;
+  - après une saisie et 500 ms de faux minuteurs → « Enregistré » s'affiche ;
+  - démonter puis remonter `BilanRoot` et saisir le PIN → le bilan figure dans la liste, et la saisie y est conservée.
+- [ ] **Step 3: Run** `npx vitest run tests/bilan.vault.test.ts tests/bilan.root.test.tsx`. Attendu : FAIL.
+- [ ] **Step 4: Implement.**
+- [ ] **Step 5: Run** `npm test && npm run lint && npm run typecheck && npm run build`. Attendu : tout est vert.
+- [ ] **Step 6: Vérification manuelle.** Lancer `npm run dev`, puis ouvrir `/#/bilan` : créer le PIN, remplir un bilan, recharger la page, déverrouiller, et retrouver le bilan. Faire une capture à 360 px et à 1024 px.
+- [ ] **Step 7: Commit** `feat(bilan): sauvegarde automatique chiffrée et liste des bilans`.
 
 ---
 
 ## Plans suivants (rédigés chacun après validation du précédent)
 
-2. **Relais et stockage chiffré** : choix et vérification du fournisseur gratuit hébergé en Europe, appairage des appareils par code PIN, chiffrement de bout en bout, sauvegarde automatique du bilan, historique et comparaison au rebilan.
+2. **Relais et synchronisation chiffrée** : choix et vérification du fournisseur gratuit hébergé en Europe, appairage des appareils (même clé que le coffre local), synchronisation de bout en bout entre appareils, historique et comparaison au rebilan.
 3. **Accueil patient et questionnaires par QR code** : accueil de 5 minutes (body chart, PSFS, dépistage), jetons de QR à usage limité, questionnaires sous licence servis par le relais, retour automatique des scores.
 4. **IA (Groq, `gpt-oss-120b`)** : relais vers l'API, nettoyage des noms et des dates, appel par section, réponses structurées fusionnées avec les suggestions des règles, compteur de quota, bascule sur les règles seules, réglage pour passer à Claude Haiku, bouton « Copier pour Claude ».
 5. **Intégration du PDDM, lombaire et cervical** : préremplissage du PDDM, couche « douleur chronique », PDF final.
