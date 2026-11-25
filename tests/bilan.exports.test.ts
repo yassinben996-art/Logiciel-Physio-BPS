@@ -98,6 +98,45 @@ describe('valeurs hors bornes déjà stockées (contenu resserré après coup)',
   it('ignorées par les exports', () => {
     const s = st({ nums: { 'mobilite.abd_a.D': 250, 'mobilite.abd_a.G': 170 } });
     expect(block(s, 'Bilan articulaire')).toBe('Abduction active : G 170°');
-    expect(bilanSummaryLines(SHOULDER, s, D).map((l) => l.s).join('\n')).not.toContain('250');
+    expect(
+      bilanSummaryLines(SHOULDER, s, D)
+        .map((l) => l.s)
+        .join('\n'),
+    ).not.toContain('250');
+  });
+});
+
+describe('exports : accueil patient', () => {
+  const intake = {
+    painNow: 6,
+    painWorst: 8,
+    duration: 'gt3m' as const,
+    onset: 'trauma' as const,
+    regions: ['genou_d'],
+    psfs: [{ activity: 'escaliers', score: 3 }],
+    screening: { sommeil: true, peur: false },
+    completedAt: '2026-11-25T10:00:00.000Z',
+  };
+  it('SYSmeta : l’accueil ouvre le bloc Anamnèse, sans identité', async () => {
+    const { sysmetaBlocks } = await import('../src/bilan/engine/exports');
+    const { KNEE } = await import('../src/bilan/content');
+    const { emptyBilan } = await import('../src/bilan/state/bilan');
+    const s = { ...emptyBilan('knee'), identity: { nom: 'Dupont', prenom: 'Marie', naissance: '' }, intake };
+    const a = sysmetaBlocks(KNEE, s).find((b) => b.rubric === 'Anamnèse')!.text;
+    expect(a.split('\n')[0]).toBe(
+      'Accueil (patient) : douleur 6/10, pire 8/10 sur 7 jours ; plus de 3 mois ; après un choc, une chute ou un accident',
+    );
+    expect(a).toContain('Zones douloureuses : Genou (devant), côté droit');
+    expect(a).toContain('PSFS : escaliers 3/10');
+    expect(a).toContain('Dépistage positif : sommeil perturbé');
+    expect(a).not.toMatch(/Dupont|Marie/);
+  });
+  it('PDF : section Accueil', async () => {
+    const { bilanSummaryLines } = await import('../src/bilan/engine/exports');
+    const { KNEE } = await import('../src/bilan/content');
+    const { emptyBilan } = await import('../src/bilan/state/bilan');
+    const L = bilanSummaryLines(KNEE, { ...emptyBilan('knee'), intake }, new Date(2026, 10, 25));
+    expect(L).toContainEqual({ t: 'h', s: 'Accueil (rempli par le patient)' });
+    expect(L.map((l) => l.s)).toContain('PSFS : escaliers 3/10');
   });
 });

@@ -6,6 +6,7 @@ import { detectKeywords } from '../engine/keywords';
 import { evaluate } from '../engine/rules';
 import { bilanReducer, emptyBilan, isDirty, type BilanState, type Identity } from '../state/bilan';
 import { QUESTIONNAIRES } from '@q';
+import IntakeSummary from './IntakeSummary';
 import BilanExport from './BilanExport';
 import FieldInput from './FieldInput';
 import SuggestionsPanel from './SuggestionsPanel';
@@ -114,6 +115,7 @@ export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
       </header>
       <div className="bilan-layout">
         <main className="bilan-main">
+          {s.intake && <IntakeSummary intake={s.intake} />}
           {zone.sections.map((sec) => (
             <details key={sec.id} open className="bilan-sec">
               <summary>{sec.title}</summary>
