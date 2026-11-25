@@ -2245,9 +2245,10 @@ sup.c a:hover {
   color: var(--muted);
 }
 .bc-body {
+  /* Contour de la couleur du remplissage : les régions invisibles ne se voient pas. */
   fill: var(--soft);
-  stroke: var(--line);
-  stroke-width: 1;
+  stroke: var(--soft);
+  stroke-width: 1.5;
 }
 .bc-stroke {
   fill: none;
@@ -2264,4 +2265,45 @@ sup.c a:hover {
   flex-wrap: wrap;
   gap: 4px 14px;
   font-size: 13px;
+}
+/* Section Accueil */
+.intake {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.intake-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.intake-status {
+  margin: 0;
+  font-weight: 600;
+}
+.intake-fields {
+  display: grid;
+  gap: 14px;
+}
+.intake-orig {
+  margin-top: 2px;
+  font-style: italic;
+}
+.psfs-item {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.psfs-item input[type='text'] {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
 }

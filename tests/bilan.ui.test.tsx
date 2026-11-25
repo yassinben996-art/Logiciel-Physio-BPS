@@ -48,9 +48,10 @@ describe('onglets', () => {
 });
 
 describe('écran de bilan', () => {
-  it('affiche les 8 sections dans l’ordre', () => {
+  it('affiche l’accueil puis les 8 sections dans l’ordre', () => {
     const { container } = render(<BilanApp />);
     expect([...container.querySelectorAll('.bilan-sec-title')].map((s) => s.textContent)).toEqual([
+      'Accueil',
       'Anamnèse',
       'Drapeaux',
       'Mobilité',

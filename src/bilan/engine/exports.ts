@@ -2,7 +2,9 @@
 // L'identité du patient n'apparaît JAMAIS dans les blocs SYSmeta.
 import { DISCLAIMER } from '../../data/text';
 import { fr } from '../../engine/format';
-import type { SummaryLine } from '../../engine/summary';
+import type { PdfLine } from '../../pdf/exportPdf';
+import { INTAKE } from '../content/intake';
+import { intakeLines } from './intakeText';
 import type { FieldDef, SectionDef, SysmetaRubric, ZoneDef } from '../content/types';
 import type { BilanState, Identity } from '../state/bilan';
 import { withinBounds } from './bounds';
@@ -57,6 +59,9 @@ const sectionLines = (sec: SectionDef, s: BilanState): string[] =>
 export function sysmetaBlocks(z: ZoneDef, state: BilanState): SysmetaBlock[] {
   const s = withinBounds(z, state);
   const byRubric = new Map<SysmetaRubric, string[]>();
+  // L'accueil ouvre le bloc « Anamnèse ».
+  const intake = intakeLines(INTAKE, s);
+  if (intake.length) byRubric.set('Anamnèse', intake);
   for (const sec of z.sections) {
     if (!sec.sysmeta) continue;
     const lines = sectionLines(sec, s);
@@ -77,14 +82,21 @@ function patientLine(id: Identity): string | null {
   return parts.length ? `Patient : ${parts.join(', ')}` : null;
 }
 
-export function bilanSummaryLines(z: ZoneDef, state: BilanState, date: Date = new Date()): SummaryLine[] {
+export function bilanSummaryLines(z: ZoneDef, state: BilanState, date: Date = new Date()): PdfLine[] {
   const s = withinBounds(z, state);
-  const L: SummaryLine[] = [{ t: 't', s: `Bilan : ${z.label}` }];
+  const L: PdfLine[] = [{ t: 't', s: `Bilan : ${z.label}` }];
   const patient = patientLine(s.identity);
   if (patient) L.push({ t: 'p', s: patient });
   L.push({ t: 'p', s: `Code : ${s.code}` });
   L.push({ t: 'p', s: `Date : ${date.toLocaleDateString('fr-CH')}` });
   let any = false;
+  const intake = intakeLines(INTAKE, s);
+  if (intake.length) {
+    any = true;
+    L.push({ t: 'h', s: 'Accueil' });
+    for (const l of intake) L.push({ t: 'p', s: l });
+    if (s.intake.strokes.length) L.push({ t: 'chart', strokes: s.intake.strokes, pens: INTAKE.pens });
+  }
   for (const sec of z.sections) {
     const lines = sectionLines(sec, s);
     if (!lines.length) continue;
