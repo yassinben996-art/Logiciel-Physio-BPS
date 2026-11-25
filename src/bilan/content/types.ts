@@ -87,7 +87,7 @@ export interface RuleDef {
 }
 
 export interface ZoneDef {
-  id: 'shoulder' | 'lumbar' | 'cervical';
+  id: 'shoulder' | 'knee' | 'lumbar' | 'cervical';
   label: string;
   sections: readonly SectionDef[];
   rules: readonly RuleDef[];
