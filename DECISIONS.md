@@ -155,7 +155,9 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     onglets ne permettent pas d'en sortir. Le reste (changer d'application) relève de l'Accès guidé (iPad) ou de
     l'épinglage d'écran (Android), rappelé à chaque lancement : s'en souvenir exigerait un stockage en clair.
 45. **Body chart à dessiner** (souris, doigt, stylet) : un crayon pour le patient, quatre pour le physio, gomme et
-    annulation. Une silhouette stylisée découpée en régions invisibles (de face, la droite du patient est à
+    annulation. Une silhouette au contour lisse, gris clair et trait gris-bleu (dessin original dans le style du
+    modèle fourni par l'utilisateur le 25.11.2026, qui n'est pas repris lui-même : probable image de banque
+    d'images), découpée en régions invisibles (de face, la droite du patient est à
     gauche) donne la liste des régions par type de symptôme dans SYSmeta et sert aux règles ; le PDF contient le
     dessin.
 

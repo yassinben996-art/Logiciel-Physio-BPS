@@ -1,6 +1,6 @@
 // Body chart à dessiner : souris, doigt ou stylet (Pointer Events). Deux vues, face et dos.
 import { useId, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
-import { SILHOUETTE, VIEW_H, VIEW_W, type Stroke, type View } from '../bodychart/geometry';
+import { DETAILS, SILHOUETTE, VIEW_H, VIEW_W, type Stroke, type View } from '../bodychart/geometry';
 import type { PenDef } from '../content/types';
 
 interface Props {
@@ -136,6 +136,9 @@ export default function BodyChart({ strokes, pens, by, onStroke, onErase, onUndo
               >
                 {SILHOUETTE.map((poly, k) => (
                   <polygon key={k} points={pointsAttr(poly)} className="bc-body" />
+                ))}
+                {DETAILS[v.view].map((d, k) => (
+                  <polyline key={`d${k}`} points={pointsAttr(d)} className="bc-detail" />
                 ))}
                 {strokes.map((s, k) =>
                   s.view === v.view ? (

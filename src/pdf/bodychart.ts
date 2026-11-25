@@ -1,6 +1,6 @@
 // Body chart dans le PDF : les deux silhouettes, les traits et la légende des crayons utilisés.
 import type { jsPDF } from 'jspdf';
-import { SILHOUETTE, VIEW_H, VIEW_W } from '../bilan/bodychart/geometry';
+import { DETAILS, SILHOUETTE, VIEW_H, VIEW_W } from '../bilan/bodychart/geometry';
 import type { PdfLine } from './exportPdf';
 import { toLatin1 } from './sanitize';
 
@@ -50,10 +50,13 @@ export function drawBodyChart(doc: jsPDF, x: number, y: number, w: number, line:
       align: 'center',
     });
     const oy = y + 5;
-    doc.setDrawColor(239, 230, 216);
-    doc.setFillColor(239, 230, 216);
-    doc.setLineWidth(0.2);
+    doc.setDrawColor(138, 155, 166);
+    doc.setFillColor(238, 241, 243);
+    doc.setLineWidth(0.35);
     for (const poly of SILHOUETTE) path(doc, poly, ox, oy, k, true, 'FD');
+    doc.setDrawColor(181, 193, 201);
+    doc.setLineWidth(0.25);
+    for (const d of DETAILS[view]) path(doc, d, ox, oy, k, false, 'S');
     doc.setLineWidth(1.2);
     doc.setLineCap('round');
     doc.setLineJoin('round');

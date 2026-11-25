@@ -1,4 +1,5 @@
 import {
+  DETAILS,
   REGIONS,
   SILHOUETTE,
   VIEW_H,
@@ -69,8 +70,32 @@ describe('géométrie du body chart', () => {
         }
     }
   });
-  it('silhouette : un polygone par région d’une vue', () =>
-    expect(SILHOUETTE.length).toBe(REGIONS.filter((r) => r.view === 'front').length));
+  it('silhouette : un seul contour lisse, symétrique', () => {
+    expect(SILHOUETTE).toHaveLength(1);
+    const o = SILHOUETTE[0]!;
+    expect(o.length / 2).toBeGreaterThan(300);
+    // symétrie : chaque point a son miroir (à 0,2 près)
+    const pts = new Set<string>();
+    for (let i = 0; i < o.length; i += 2) pts.add(`${Math.round(o[i]! * 5)},${Math.round(o[i + 1]! * 5)}`);
+    let mirrored = 0;
+    for (let i = 0; i < o.length; i += 2)
+      if (pts.has(`${Math.round((200 - o[i]!) * 5)},${Math.round(o[i + 1]! * 5)}`)) mirrored++;
+    expect(mirrored / (o.length / 2)).toBeGreaterThan(0.95);
+  });
+  it('chaque région recouvre une partie du corps', () => {
+    const o = SILHOUETTE[0]!;
+    for (const r of REGIONS) {
+      let hit = false;
+      for (let x = 0.37; x < VIEW_W && !hit; x += 2)
+        for (let y = 0.37; y < VIEW_H && !hit; y += 2)
+          hit = pointInPolygon(x, y, r.poly) && pointInPolygon(x, y, o);
+      if (!hit) throw new Error(`région hors du corps : ${r.label}`);
+    }
+  });
+  it('repères anatomiques propres à chaque vue', () => {
+    expect(DETAILS.front.length).toBeGreaterThan(0);
+    expect(DETAILS.back.length).toBeGreaterThan(0);
+  });
   it('regionsOf', () => {
     expect(regionsOf([through('épaule droite (face)')]).map((r) => r.label)).toEqual([
       'épaule droite (face)',
