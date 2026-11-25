@@ -1,4 +1,5 @@
 // État d'un bilan : fonctions pures et immuables, sans dépendance à React.
+import { sanitizeIntake, type Intake } from './intake';
 import type { ZoneDef } from '../content/types';
 
 export type Side = 'G' | 'D';
@@ -35,6 +36,8 @@ export interface BilanState {
   accepted: readonly string[];
   /** Ids de règles refusées, et "kw:<s.f.chip>" pour les mots-clés refusés. */
   dismissed: readonly string[];
+  /** Accueil rempli par le patient. Absent des bilans créés avant le 25.11.2026. */
+  intake?: Intake;
 }
 
 export type BilanAction =
@@ -46,6 +49,7 @@ export type BilanAction =
   | { type: 'identity'; field: keyof Identity; value: string }
   | { type: 'accept'; id: string }
   | { type: 'dismiss'; id: string }
+  | { type: 'intake'; intake: Intake }
   | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 
@@ -110,6 +114,8 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
       return { ...s, accepted: addOnce(s.accepted, a.id) };
     case 'dismiss':
       return { ...s, dismissed: addOnce(s.dismissed, a.id) };
+    case 'intake':
+      return { ...s, intake: sanitizeIntake(a.intake) };
   }
 }
 
@@ -131,4 +137,5 @@ export const isDirty = (s: BilanState): boolean =>
   Object.values(s.notes).some((n) => n.trim() !== '') ||
   Object.values(s.identity).some((v) => v.trim() !== '') ||
   s.accepted.length > 0 ||
-  s.dismissed.length > 0;
+  s.dismissed.length > 0 ||
+  s.intake !== undefined;
