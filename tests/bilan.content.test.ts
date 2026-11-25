@@ -2,6 +2,7 @@ import { QUESTIONNAIRES } from '@q';
 import { SHOULDER, ZONES } from '../src/bilan/content';
 import type { FieldDef, Source, ZoneDef } from '../src/bilan/content/types';
 import { validateZone } from '../src/bilan/content/validate';
+import { INTAKE } from '../src/bilan/content/intake';
 
 const allSources = (z: ZoneDef): Source[] => [
   ...z.sections.flatMap((s) => [
@@ -21,7 +22,7 @@ const allTests = (z: ZoneDef) =>
 
 describe('contenu épaule', () => {
   it('épaule valide', () =>
-    expect(validateZone(SHOULDER, [...QUESTIONNAIRES.map((q) => q.id), 'psfs'])).toEqual([]));
+    expect(validateZone(SHOULDER, [...QUESTIONNAIRES.map((q) => q.id), 'psfs'], INTAKE)).toEqual([]));
   it('tout est marqué provisoire', () =>
     expect(allSources(SHOULDER).every((s) => s.provisional === true)).toBe(true));
   it('ordre des sections', () =>

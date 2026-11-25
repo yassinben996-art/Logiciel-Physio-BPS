@@ -1,6 +1,6 @@
 // Contrôle d'intégrité du contenu : une erreur d'édition doit faire échouer les tests (CI),
 // pas planter l'écran en séance.
-import type { ChipDef, Condition, FieldDef, Op, Source, ZoneDef } from './types';
+import type { ChipDef, Condition, FieldDef, IntakeDef, IntakeQuestion, Op, Source, ZoneDef } from './types';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /** Identifiants : lettres, chiffres, _ et - (le point sépare les niveaux des clés "s.f.chip"). */
@@ -34,7 +34,62 @@ function isValidDate(d: string): boolean {
   return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d;
 }
 
-export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[]): string[] {
+const INTAKE_OPS: Record<IntakeQuestion['kind'], readonly Op[]> = {
+  multi: ['includes', 'filled'],
+  single: ['eq', 'filled'],
+  scale: ['gte', 'lte', 'eq', 'filled'],
+  yesno: ['eq', 'filled'],
+  psfs: ['filled'],
+  bodychart: ['filled'],
+};
+
+/** Clé spéciale : nombre de régions dessinées au crayon « douleur ». */
+export const CHART_REGIONS_KEY = 'accueil.chart.regions';
+
+/** Opérateurs permis pour une clé « accueil.* », ou null si la clé est inconnue. */
+function intakeOps(intake: IntakeDef | undefined, key: string): readonly Op[] | null {
+  if (!intake || !key.startsWith('accueil.')) return null;
+  if (key === CHART_REGIONS_KEY) return ['gte', 'lte'];
+  const q = intake.questions.find((x) => `accueil.${x.id}` === key);
+  return q ? INTAKE_OPS[q.kind] : null;
+}
+
+export function validateIntake(i: IntakeDef): string[] {
+  const errs: string[] = [];
+  const ids = new Set<string>();
+  const count = { psfs: 0, bodychart: 0 };
+  for (const q of i.questions) {
+    if (ids.has(q.id)) errs.push(`id de question en double : ${q.id}`);
+    ids.add(q.id);
+    if (!ID_RE.test(q.id)) errs.push(`identifiant invalide (question) : « ${q.id} »`);
+    if (!isValidDate(q.source.added)) errs.push(`question ${q.id} : date d'ajout invalide`);
+    if (q.kind === 'psfs' || q.kind === 'bodychart') count[q.kind]++;
+    if (q.kind === 'single' && q.showIf) {
+      const target = i.questions.find((x) => x.id === q.showIf!.id);
+      if (!target || target.kind !== 'multi')
+        errs.push(`question ${q.id} : showIf vers une question inconnue ou non « multi » (${q.showIf.id})`);
+      else if (!target.options.some((o) => o.value === q.showIf!.includes))
+        errs.push(`question ${q.id} : showIf vers une option inconnue (${q.showIf.includes})`);
+    }
+  }
+  if (count.psfs > 1) errs.push('plus d’une question PSFS');
+  if (count.bodychart > 1) errs.push('plus d’un body chart');
+  const pens = new Set<string>();
+  for (const p of i.pens) {
+    if (pens.has(p.id)) errs.push(`id de crayon en double : ${p.id}`);
+    pens.add(p.id);
+    if (!ID_RE.test(p.id)) errs.push(`identifiant invalide (crayon) : « ${p.id} »`);
+    if (!isValidDate(p.source.added)) errs.push(`crayon ${p.id} : date d'ajout invalide`);
+  }
+  if (!pens.has(i.patientPen)) errs.push(`crayon du patient inconnu : ${i.patientPen}`);
+  return errs;
+}
+
+export function validateZone(
+  z: ZoneDef,
+  knownQuestionnaires: readonly string[],
+  intake?: IntakeDef,
+): string[] {
   const errs: string[] = [];
   const checkId = (what: string, id: string) => {
     if (!ID_RE.test(id))
@@ -91,9 +146,10 @@ export function validateZone(z: ZoneDef, knownQuestionnaires: readonly string[])
   const checkCond = (ruleId: string, c: Condition) => {
     if ('all' in c) return c.all.forEach((x) => checkCond(ruleId, x));
     if ('any' in c) return c.any.forEach((x) => checkCond(ruleId, x));
-    const r = resolveKey(z, c.key);
-    if (!r) return errs.push(`règle ${ruleId} : clé inconnue « ${c.key} »`);
-    const allowed: readonly Op[] = r.type === 'chip' ? ['checked'] : OPS[r.field.kind];
+    const iops = intakeOps(intake, c.key);
+    const r = iops ? null : resolveKey(z, c.key);
+    if (!iops && !r) return errs.push(`règle ${ruleId} : clé inconnue « ${c.key} »`);
+    const allowed: readonly Op[] = iops ?? (r!.type === 'chip' ? ['checked'] : OPS[r!.field.kind]);
     if (!allowed.includes(c.op))
       errs.push(`règle ${ruleId} : opérateur « ${c.op} » incompatible avec « ${c.key} »`);
     if ((c.op === 'gte' || c.op === 'lte') && typeof c.value !== 'number')

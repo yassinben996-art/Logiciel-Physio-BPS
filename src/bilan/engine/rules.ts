@@ -43,6 +43,8 @@ export function matches(c: Condition, s: BilanState): boolean {
       return typeof value === 'number' && numsOf(s, key).some((v) => v >= value);
     case 'lte':
       return typeof value === 'number' && numsOf(s, key).some((v) => v <= value);
+    case 'includes':
+      return false; // seules les réponses de l'accueil sont des listes (lues à la tâche suivante)
     case 'eq':
       return typeof value === 'number' ? numsOf(s, key).includes(value) : s.choices[key] === value;
   }

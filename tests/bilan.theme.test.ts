@@ -3,7 +3,17 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(resolve(__dirname, '../src/styles/styles.css'), 'utf8');
-const VARS = ['--bg', '--surface', '--ink', '--muted', '--line', '--soft', '--accent', '--accent-ink', '--accent-soft'];
+const VARS = [
+  '--bg',
+  '--surface',
+  '--ink',
+  '--muted',
+  '--line',
+  '--soft',
+  '--accent',
+  '--accent-ink',
+  '--accent-soft',
+];
 
 /** Blocs dont le sélecteur se termine par « .bilan-theme {» : clair puis sombre. */
 function blocks(): Record<string, string>[] {
@@ -19,7 +29,11 @@ function blocks(): Record<string, string>[] {
 
 const lum = (hex: string) => {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  const [r, g, b] = c.map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)) as [number, number, number];
+  const [r, g, b] = c.map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)) as [
+    number,
+    number,
+    number,
+  ];
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 const ratio = (a: string, b: string) => {
