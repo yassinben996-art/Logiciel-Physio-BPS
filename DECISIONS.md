@@ -169,6 +169,25 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     format de la PR #6 sont repris au chargement ; leurs zones touchées (ancien body chart) ne peuvent pas devenir
     des traits et ne sont pas reprises.
 
+### Synchronisation entre appareils (plan 2a, 25.11.2026)
+
+47. **Relais Cloudflare** (choix de Claude, l'utilisateur : « fais comme tu le sens ») : Worker gratuit et base D1
+    créée dans la juridiction UE (repli : emplacement « Europe de l'Ouest »). Supabase écarté (projet gratuit mis
+    en pause après une semaine sans activité). Le relais ne stocke que des boîtes chiffrées, des identifiants
+    aléatoires, des versions et des empreintes de jetons. Un seul compte, créé avec le code d'installation de
+    l'utilisateur ; ensuite plus aucune création. Déployé par GitHub Actions avec le compte de l'utilisateur
+    (`docs/GUIDE-SYNCHRONISATION.md`).
+48. **Clé de coffre commune** : une clé aléatoire (AES-GCM 256) chiffre les bilans ; chaque appareil la garde
+    enveloppée par son propre PIN. Les coffres des plans 1 et 1b sont migrés au premier déverrouillage. Relier un
+    appareil qui a déjà des bilans les fusionne (rechiffrés avec la clé commune), sans rien perdre.
+49. **Appairage** : QR code (lien `#/bilan/relier?c=…`, ouvert par l'appareil photo) ou code de 68 caractères à
+    taper sur un ordinateur, valable 10 minutes et une seule fois. La clé de coffre est dans le code, jamais sur
+    le relais. Le code est retiré de l'adresse dès sa lecture.
+50. **Conflits** : la version attribuée par le relais tranche ; la version perdante est gardée comme « copie en
+    conflit », visible dans « Mes bilans ». Un bilan ouvert à l'écran n'est jamais remplacé pendant qu'on le
+    modifie. Une suppression faite sur un appareil pendant que l'autre modifiait le même bilan laisse revenir la
+    version modifiée (rien n'est perdu).
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant
