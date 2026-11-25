@@ -44,6 +44,7 @@ describe('BilanRoot', () => {
     await createPin();
     expect(screen.getByText('Aucun bilan enregistré.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Épaule' }));
     const notes = await screen.findByRole('textbox', { name: 'Notes (Anamnèse)' });
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
@@ -60,6 +61,7 @@ describe('BilanRoot', () => {
   it('après rechargement : PIN incorrect, puis bon PIN, bilan retrouvé', async () => {
     await createPin();
     fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Épaule' }));
     fireEvent.change(await screen.findByLabelText('Nom'), { target: { value: 'Dupont' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Notes (Anamnèse)' }), {
       target: { value: 'fourmillements la nuit' },
@@ -86,6 +88,7 @@ describe('BilanRoot', () => {
   it('recherche et suppression avec confirmation', async () => {
     await createPin();
     fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Épaule' }));
     fireEvent.change(await screen.findByLabelText('Nom'), { target: { value: 'Dupont' } });
     await screen.findByText('Enregistré', {}, T);
     fireEvent.click(screen.getByRole('button', { name: 'Mes bilans' }));
@@ -107,6 +110,7 @@ describe('BilanRoot', () => {
   it('app en arrière-plan : enregistrement immédiat, sans attendre 500 ms', async () => {
     await createPin();
     fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Épaule' }));
     const notes = await screen.findByRole('textbox', { name: 'Notes (Anamnèse)' });
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     fireEvent.change(notes, { target: { value: 'x' } });
@@ -124,6 +128,7 @@ describe('BilanRoot', () => {
   it('sauvegarde en échec : Verrouiller refuse et garde l’erreur visible', async () => {
     await createPin();
     fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Épaule' }));
     const notes = await screen.findByRole('textbox', { name: 'Notes (Anamnèse)' });
     const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
       throw new DOMException('Quota dépassé', 'QuotaExceededError');
@@ -137,5 +142,45 @@ describe('BilanRoot', () => {
     put.mockRestore();
     fireEvent.click(screen.getByRole('button', { name: 'Verrouiller' }));
     expect(await screen.findByRole('button', { name: 'Déverrouiller' }, T)).toBeInTheDocument();
+  }, 30000);
+
+  it('« Nouveau bilan » propose la zone : Genou ouvre le bilan du genou', async () => {
+    await createPin();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    expect(await screen.findByRole('heading', { name: 'Nouveau bilan' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Genou' }));
+    expect(await screen.findByText('Bilan · Genou')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Lachman' })).toBeInTheDocument();
+  }, 30000);
+
+  it('choix de zone : « Annuler » revient à la liste', async () => {
+    await createPin();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Annuler' }));
+    expect(await screen.findByRole('heading', { name: 'Mes bilans' })).toBeInTheDocument();
+  }, 30000);
+
+  it('accueil patient : remplissage, PIN pour reprendre, réponses visibles dans le bilan', async () => {
+    await createPin();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Genou' }));
+    fireEvent.change(await screen.findByLabelText('Nom'), { target: { value: 'Dupont' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Accueil patient' }));
+    expect(await screen.findByRole('heading', { name: 'Avant votre séance' }, T)).toBeInTheDocument();
+    expect(screen.queryByText('Dupont')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Dupont')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('group', { name: /Votre douleur maintenant/ })).getByLabelText('6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Genou (devant), côté droit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'J’ai terminé' }));
+    expect(await screen.findByRole('heading', { name: 'Merci !' }, T)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('PIN du physiothérapeute'), { target: { value: '000000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre le bilan' }));
+    expect(await screen.findByText('PIN incorrect', {}, T)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('PIN du physiothérapeute'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre le bilan' }));
+    const summary = await screen.findByRole('region', { name: 'Accueil rempli par le patient' }, T);
+    expect(summary).toHaveTextContent('Douleur maintenant : 6/10');
+    expect(summary).toHaveTextContent('Genou (devant), côté droit');
+    expect(screen.getByLabelText('Nom')).toHaveValue('Dupont');
   }, 30000);
 });

@@ -2155,3 +2155,96 @@ sup.c a:hover {
   color: var(--muted);
   margin-top: 4px;
 }
+
+/* ------------------------------------------------------------ Choix de zone, accueil patient */
+.bilan-zones {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 560px;
+}
+.bilan-zones h1 {
+  margin: 0;
+}
+.bilan-zone-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.bilan-zone {
+  min-height: 64px;
+  font-size: 18px;
+}
+.intake {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.intake-head h1 {
+  margin: 4px 0 6px;
+}
+.intake-block {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.intake-block h2 {
+  margin: 0;
+  font-size: 19px;
+}
+.intake-block .note {
+  margin: 0;
+}
+.intake-psfs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+  align-items: end;
+}
+@media (max-width: 480px) {
+  .intake-psfs {
+    grid-template-columns: 1fr;
+  }
+}
+.intake-psfs input,
+.intake-psfs select {
+  width: 100%;
+  min-height: 46px;
+  font-size: 16px;
+}
+.intake-done {
+  min-height: 56px;
+  font-size: 18px;
+}
+.bilan-intake {
+  background: var(--accent-soft);
+  border-radius: var(--r);
+  padding: 14px;
+}
+.bilan-intake h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+.bilan-intake-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-start;
+}
+.bilan-intake-list {
+  margin: 0;
+  padding-left: 18px;
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

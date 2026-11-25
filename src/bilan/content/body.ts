@@ -32,7 +32,7 @@ function pair(view: BodyView, id: string, label: string, left: Shape): BodyRegio
   const right: Shape = [120 - x - w, y, w, h];
   // Face : gauche de l'écran = droite du patient. Dos : gauche de l'écran = gauche du patient.
   const [d, g] = view === 'face' ? [left, right] : [right, left];
-  return [one(view, `${id}_d`, `${label} droit(e)`, d), one(view, `${id}_g`, `${label} gauche`, g)];
+  return [one(view, `${id}_d`, `${label}, côté droit`, d), one(view, `${id}_g`, `${label}, côté gauche`, g)];
 }
 
 const face: BodyRegion[] = [

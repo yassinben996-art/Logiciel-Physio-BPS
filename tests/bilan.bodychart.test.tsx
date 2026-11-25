@@ -26,7 +26,7 @@ describe('body chart', () => {
   it('toucher une zone la sélectionne puis la désélectionne', async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    const knee = screen.getByRole('button', { name: 'Genou (devant) droit(e)' });
+    const knee = screen.getByRole('button', { name: 'Genou (devant), côté droit' });
     expect(knee).toHaveAttribute('aria-pressed', 'false');
     await user.click(knee);
     expect(knee).toHaveAttribute('aria-pressed', 'true');
@@ -44,6 +44,6 @@ describe('body chart', () => {
   it('lecture seule : aucune zone cliquable, liste des zones en texte', () => {
     render(<BodyChart selected={['genou_d', 'bas_dos']} />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
-    expect(screen.getByText('Zones : Genou (devant) droit(e), Bas du dos')).toBeInTheDocument();
+    expect(screen.getByText('Zones : Genou (devant), côté droit, Bas du dos')).toBeInTheDocument();
   });
 });
