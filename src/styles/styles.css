@@ -2307,3 +2307,58 @@ sup.c a:hover {
   background: var(--surface);
   color: var(--ink);
 }
+/* Mode patient */
+.patient-screen {
+  max-width: 760px;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 24px;
+  padding-top: 32px;
+}
+.patient-intake {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.patient-q {
+  margin: 0;
+  font-family: var(--f-d);
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.2;
+}
+.patient-nav {
+  justify-content: space-between;
+}
+.patient-done {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.patient-done h1 {
+  font-family: var(--f-d);
+  font-size: clamp(24px, 4vw, 34px);
+}
+.patient-exit {
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0.8;
+}
+.patient-exit form {
+  align-items: end;
+}
+.patient-exit input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  width: 8em;
+  background: var(--surface);
+  color: var(--ink);
+}
+.patient-confirm {
+  margin: 48px auto;
+}
+.patient-screen .bc-views {
+  max-width: min(460px, 100%);
+}

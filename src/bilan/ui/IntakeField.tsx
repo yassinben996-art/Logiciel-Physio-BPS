@@ -23,7 +23,8 @@ export default function IntakeField({ question: q, intake, state: s, dispatch, a
   const name = useId();
   if (!isVisible(q, s)) return null;
   const patient = audience === 'patient';
-  const label = patient ? q.patient : q.clinician;
+  // Côté patient, la question est déjà le titre de l'écran : la légende reste pour les lecteurs d'écran.
+  const label: ReactNode = patient ? <span className="sr-only">{q.patient}</span> : q.clinician;
   const v = s.intake.answers[q.id];
   const set = (value: IntakeValue | null) => dispatch({ type: 'intake', id: q.id, value, by: audience });
 

@@ -139,6 +139,26 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     (chiffrés), mais jamais dans les blocs SYSmeta. Les plans suivants l'excluront aussi de l'IA et de
     « Copier pour Claude ».
 
+### Accueil patient, onglets, couleurs (plan 1b, 25.11.2026)
+
+42. **Onglets fermés au départ** (demande de l'utilisateur) : chaque section du bilan est un onglet repliable,
+    fermé à l'ouverture ; un onglet ouvert le reste jusqu'à ce qu'on le referme. Le titre affiche l'avancement
+    (champs remplis / champs). « Ajouter » sur une suggestion ouvre l'onglet concerné.
+43. **Palette de l'outil de bilan** (demande de l'utilisateur : blanc, beige/brun, bleu) : fond beige, cartes
+    blanches, texte brun foncé, actions en bleu, avec une version sombre. Contraste du texte ≥ 4,5:1, vérifié par
+    un test. L'app PDDM garde ses couleurs.
+44. **Accueil de 5 minutes** : rempli par le patient sur la tablette en mode verrouillé (une question par écran,
+    vouvoiement), ou par le physio en séance si le patient est en retard (« Passer l'accueil »). Jamais envoyé par
+    QR code. La réponse d'origine du patient est conservée quand le physio la corrige (« patient : … »). Aucun
+    score combiné (PSFS et dépistage question par question). Questions et crayons provisoires, à valider. Le mode
+    patient ne montre que l'accueil ; sortir demande le PIN ; l'adresse, le bouton Précédent et les autres
+    onglets ne permettent pas d'en sortir. Le reste (changer d'application) relève de l'Accès guidé (iPad) ou de
+    l'épinglage d'écran (Android), rappelé à chaque lancement : s'en souvenir exigerait un stockage en clair.
+45. **Body chart à dessiner** (souris, doigt, stylet) : un crayon pour le patient, quatre pour le physio, gomme et
+    annulation. Une silhouette stylisée découpée en régions invisibles (de face, la droite du patient est à
+    gauche) donne la liste des régions par type de symptôme dans SYSmeta et sert aux règles ; le PDF contient le
+    dessin.
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

@@ -1,10 +1,12 @@
 // Racine du bilan : verrouillage par PIN, « Mes bilans », sauvegarde automatique chiffrée.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { emptyBilan, type BilanState } from '../state/bilan';
+import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
+import { bilanReducer, emptyBilan, type BilanState } from '../state/bilan';
 import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '../storage/vault';
 import BilanApp from './BilanApp';
 import BilanList from './BilanList';
 import LockScreen from './LockScreen';
+import PatientScreen from './PatientScreen';
 
 const SAVE_DELAY = 500;
 const LOCK_AFTER = 15 * 60 * 1000;
@@ -14,7 +16,9 @@ type Screen =
   | { k: 'create' }
   | { k: 'unlock' }
   | { k: 'list'; items: BilanMeta[] }
-  | { k: 'edit'; bilan: BilanState };
+  | { k: 'edit'; bilan: BilanState; rev: number; openIntake?: boolean }
+  | { k: 'confirmPatient'; bilan: BilanState }
+  | { k: 'patient'; bilan: BilanState };
 
 type SaveStatus = 'idle' | 'pending' | 'saved' | 'error';
 
@@ -24,6 +28,9 @@ export default function BilanRoot() {
   const vault = useRef<Vault | null>(null);
   const pending = useRef<BilanState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Dernier état connu du bilan ouvert (pour lancer le mode patient sur la saisie à jour). */
+  const current = useRef<BilanState | null>(null);
+  const popGuard = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -59,6 +66,7 @@ export default function BilanRoot() {
 
   const onChange = useCallback(
     (b: BilanState) => {
+      current.current = b;
       pending.current = b;
       setStatus('pending');
       if (timer.current) clearTimeout(timer.current);
@@ -81,6 +89,32 @@ export default function BilanRoot() {
     if (v) setScreen({ k: 'list', items: await v.list() });
   }, [leave]);
 
+  /** Lève la garde du mode patient (après saisie du PIN). */
+  const releasePatient = useCallback(() => {
+    setPatientLocked(false);
+    if (popGuard.current) window.removeEventListener('popstate', popGuard.current);
+    popGuard.current = null;
+  }, []);
+
+  const edit = useCallback((bilan: BilanState, openIntake = false) => {
+    current.current = bilan;
+    setScreen((sc) => ({ k: 'edit', bilan, rev: (sc.k === 'edit' ? sc.rev : 0) + 1, openIntake }));
+  }, []);
+
+  const startPatient = useCallback(async () => {
+    if (!(await leave())) return;
+    const b = current.current;
+    if (!b) return;
+    setPatientLocked(true);
+    // Le bouton Précédent du navigateur ne fait pas sortir du parcours.
+    history.pushState(null, '', location.href);
+    const pop = () => history.pushState(null, '', location.href);
+    window.addEventListener('popstate', pop);
+    popGuard.current = pop;
+    void document.documentElement.requestFullscreen?.().catch(() => undefined);
+    setScreen({ k: 'patient', bilan: b });
+  }, [leave]);
+
   const lock = useCallback(async () => {
     if (!(await leave())) return;
     vault.current = null;
@@ -91,8 +125,11 @@ export default function BilanRoot() {
   const newBilan = useCallback(async () => {
     if (!(await leave())) return;
     setStatus('idle');
-    setScreen({ k: 'edit', bilan: emptyBilan('shoulder') });
-  }, [leave]);
+    edit(emptyBilan('shoulder'));
+  }, [leave, edit]);
+
+  // Un autre onglet lance le mode patient : celui-ci se verrouille.
+  useEffect(() => onRemoteLock(() => void lock()), [lock]);
 
   // App mise en arrière-plan ou fermée (tablette, téléphone) : enregistrer sans attendre le délai.
   useEffect(() => {
@@ -117,7 +154,8 @@ export default function BilanRoot() {
   }, [status]);
 
   // Verrouillage automatique après 15 minutes d'inactivité.
-  const unlocked = screen.k === 'list' || screen.k === 'edit';
+  const unlocked =
+    screen.k === 'list' || screen.k === 'edit' || screen.k === 'confirmPatient' || screen.k === 'patient';
   useEffect(() => {
     if (!unlocked) return;
     let t = setTimeout(() => void lock(), LOCK_AFTER);
@@ -150,6 +188,7 @@ export default function BilanRoot() {
             mode={screen.k}
             onSubmit={async (pin) => {
               vault.current = screen.k === 'create' ? await createVault(pin) : await unlockVault(pin);
+              if (isPatientLocked()) releasePatient();
               await showList();
             }}
           />
@@ -164,20 +203,67 @@ export default function BilanRoot() {
               void vault.current?.load(id).then((b) => {
                 if (b) {
                   setStatus('saved');
-                  setScreen({ k: 'edit', bilan: b });
+                  edit(b);
                 }
               })
             }
             onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
           />
         );
+      case 'confirmPatient':
+        return (
+          <div className="bilan">
+            <div className="bilan-lock-card patient-confirm">
+              <h1>Accueil patient</h1>
+              <p>
+                Tu vas tendre la tablette au patient. Il ne verra que ses questions ; ton PIN sera demandé
+                pour revenir.
+              </p>
+              <p className="bilan-warn">
+                Pour empêcher de quitter le navigateur, active l’Accès guidé (iPad) ou l’épinglage d’écran
+                (Android).
+              </p>
+              <div className="row">
+                <button type="button" className="btn" onClick={() => void startPatient()}>
+                  Commencer l’accueil
+                </button>
+                <button type="button" className="btn ghost" onClick={() => edit(screen.bilan, true)}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      case 'patient':
+        return (
+          <PatientScreen
+            initial={screen.bilan}
+            onChange={onChange}
+            verifyPin={async (pin) => {
+              await unlockVault(pin);
+            }}
+            onExit={(b, finished) => {
+              releasePatient();
+              const next =
+                finished || b.intake.status === 'patient'
+                  ? b
+                  : bilanReducer(b, { type: 'intakeStatus', status: 'physio' });
+              if (next !== b) onChange(next);
+              edit(next, true);
+            }}
+          />
+        );
       case 'edit':
         return (
           <BilanApp
-            key={screen.bilan.id}
+            key={`${screen.bilan.id}-${screen.rev}`}
             initial={screen.bilan}
+            openIntake={screen.openIntake}
             onChange={onChange}
             onNew={() => void newBilan()}
+            onStartPatient={() =>
+              current.current && setScreen({ k: 'confirmPatient', bilan: current.current })
+            }
             toolbar={
               <>
                 <span className={`bilan-save s-${status}`} role="status">
