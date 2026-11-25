@@ -1,5 +1,5 @@
 // « Mes bilans » : recherche, ouverture, suppression (avec confirmation intégrée).
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { normalize } from '../engine/keywords';
 import type { BilanMeta } from '../storage/vault';
 
@@ -9,9 +9,18 @@ interface Props {
   onNew: () => void;
   onRemove: (id: string) => void;
   onLock: () => void;
+  /** Affiché sous la liste (section Synchronisation). */
+  footer?: ReactNode;
 }
 
-export default function BilanList({ items, onOpen, onNew, onRemove, onLock }: Props) {
+/** « 25.11 à 14:03 » (heure de Lausanne). */
+const conflictDate = (iso: string) => {
+  const d = new Date(iso);
+  const p = (o: Intl.DateTimeFormatOptions) => d.toLocaleString('fr-CH', { ...o, timeZone: 'Europe/Zurich' });
+  return `${p({ day: '2-digit', month: '2-digit' })} à ${p({ hour: '2-digit', minute: '2-digit' })}`;
+};
+
+export default function BilanList({ items, onOpen, onNew, onRemove, onLock, footer }: Props) {
   const [q, setQ] = useState('');
   const [confirm, setConfirm] = useState<string | null>(null);
   const nq = normalize(q.trim());
@@ -50,6 +59,9 @@ export default function BilanList({ items, onOpen, onNew, onRemove, onLock }: Pr
                       timeStyle: 'short',
                     })}
                   </span>
+                  {m.conflictOf && m.conflictAt && (
+                    <span className="note err">copie en conflit, du {conflictDate(m.conflictAt)}</span>
+                  )}
                 </div>
                 {confirm === m.id ? (
                   <div className="confirm" role="group" aria-label="Confirmer">
@@ -94,6 +106,7 @@ export default function BilanList({ items, onOpen, onNew, onRemove, onLock }: Pr
           {shown.length === 0 && <p className="note">Aucun bilan ne correspond.</p>}
         </>
       )}
+      {footer}
     </div>
   );
 }

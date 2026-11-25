@@ -35,7 +35,8 @@ export async function activateSync(
     const cfg: SyncConfig = { relayUrl, deviceId: r.deviceId, deviceName, token: r.token, cursor: 0 };
     await v.setSyncConfig(cfg);
   } catch (e) {
-    if (e instanceof RelayError && e.status === 403) throw new Error('Code d’installation incorrect', { cause: e });
+    if (e instanceof RelayError && e.status === 403)
+      throw new Error('Code d’installation incorrect', { cause: e });
     throw e;
   }
 }
@@ -62,7 +63,8 @@ export async function linkDevice(
   try {
     r = await relayApi(relayUrl, null, f).redeem(b64url(p.ticket), deviceName);
   } catch (e) {
-    if (e instanceof RelayError && e.status === 410) throw new Error('Code expiré ou déjà utilisé', { cause: e });
+    if (e instanceof RelayError && e.status === 410)
+      throw new Error('Code expiré ou déjà utilisé', { cause: e });
     throw e;
   }
   // Ticket valide : on adopte la clé commune (les bilans déjà présents sont rechiffrés, rien n'est perdu).
