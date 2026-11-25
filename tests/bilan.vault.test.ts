@@ -102,4 +102,14 @@ describe('coffre', () => {
     await Promise.all([t1.save(a), t2.save(b)]);
     expect((await t1.list()).map((m) => m.id).sort()).toEqual([a.id, b.id].sort());
   }, 30000);
+
+  it('un bilan enregistré au plan 1 (sans accueil) se recharge avec l’accueil vide', async () => {
+    const v = await createVault('123456');
+    const { intake: _i, ...old } = emptyBilan('shoulder');
+    void _i;
+    await v.save(old as unknown as BilanState);
+    const loaded = await v.load(old.id);
+    expect(loaded!.intake.status).toBe('none');
+    expect(loaded!.intake.answers).toEqual({});
+  }, 20000);
 });

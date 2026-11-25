@@ -73,3 +73,43 @@ describe('moteur de règles', () => {
 describe('valeurs hors bornes déjà stockées', () => {
   it('ignorées par les règles', () => expect(targets(st({ nums: { 'force.re.D': 150 } }))).toEqual([]));
 });
+
+describe('règles sur l’accueil', () => {
+  const withIntake = (
+    answers: BilanState['intake']['answers'],
+    strokes: BilanState['intake']['strokes'] = [],
+  ) => st({ intake: { ...e.intake, answers, strokes } });
+  it('plus de 3 mois → CSI', () =>
+    expect(evaluate(SHOULDER, withIntake({ duree: 'gt3m' }))).toContainEqual(
+      expect.objectContaining({ kind: 'questionnaire', target: 'csi' }),
+    ));
+  it('includes', () => {
+    expect(
+      matches(
+        { key: 'accueil.zones', op: 'includes', value: 'shoulder' },
+        withIntake({ zones: ['shoulder'] }),
+      ),
+    ).toBe(true);
+    expect(
+      matches({ key: 'accueil.zones', op: 'includes', value: 'lumbar' }, withIntake({ zones: ['shoulder'] })),
+    ).toBe(false);
+  });
+  it('échelle', () =>
+    expect(matches({ key: 'accueil.douleur', op: 'gte', value: 6 }, withIntake({ douleur: 7 }))).toBe(true));
+  it('régions dessinées au crayon douleur', () => {
+    const s = withIntake({}, [
+      { pen: 'douleur', view: 'front', by: 'patient', pts: [60, 90, 61, 91] },
+      { pen: 'douleur', view: 'front', by: 'patient', pts: [55, 130, 56, 131] },
+      { pen: 'fourmillements', view: 'front', by: 'physio', pts: [100, 30, 101, 31] },
+    ]);
+    expect(matches({ key: 'accueil.chart.regions', op: 'gte', value: 2 }, s)).toBe(true);
+    expect(matches({ key: 'accueil.chart.regions', op: 'gte', value: 3 }, s)).toBe(false);
+    expect(matches({ key: 'accueil.chart', op: 'filled' }, s)).toBe(true);
+  });
+  it('PSFS sans activité → vide', () =>
+    expect(
+      matches({ key: 'accueil.psfs', op: 'filled' }, withIntake({ psfs: [{ activity: '', score: null }] })),
+    ).toBe(false));
+  it('liste vide → vide', () =>
+    expect(matches({ key: 'accueil.zones', op: 'filled' }, withIntake({ zones: [] }))).toBe(false));
+});

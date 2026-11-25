@@ -1,4 +1,5 @@
 // État d'un bilan : fonctions pures et immuables, sans dépendance à React.
+import type { Stroke } from '../bodychart/geometry';
 import type { ZoneDef } from '../content/types';
 
 export type Side = 'G' | 'D';
@@ -10,6 +11,39 @@ export interface Identity {
   /** AAAA-MM-JJ ou ''. */
   naissance: string;
 }
+
+export interface PsfsItem {
+  activity: string;
+  score: number | null;
+}
+/** yesno : 'oui' | 'non' ; multi : liste ; scale : nombre ; psfs : liste d'activités. */
+export type IntakeValue = string | readonly string[] | number | readonly PsfsItem[];
+export type IntakeStatus = 'none' | 'patient' | 'physio';
+
+export interface IntakeState {
+  status: IntakeStatus;
+  /** ISO, '' si jamais rempli par le patient. */
+  patientAt: string;
+  /** Valeurs retenues. */
+  answers: Readonly<Record<string, IntakeValue>>;
+  /** Réponses telles que données par le patient (conservées quand le physio corrige). */
+  original: Readonly<Record<string, IntakeValue>>;
+  strokes: readonly Stroke[];
+}
+
+export const LABEL_STATUS: Readonly<Record<IntakeStatus, string>> = {
+  none: 'non fait',
+  patient: 'rempli par le patient',
+  physio: 'rempli par le physio en séance',
+};
+
+export const emptyIntake = (): IntakeState => ({
+  status: 'none',
+  patientAt: '',
+  answers: {},
+  original: {},
+  strokes: [],
+});
 
 export interface BilanState {
   /** crypto.randomUUID() */
@@ -35,6 +69,7 @@ export interface BilanState {
   accepted: readonly string[];
   /** Ids de règles refusées, et "kw:<s.f.chip>" pour les mots-clés refusés. */
   dismissed: readonly string[];
+  intake: IntakeState;
 }
 
 export type BilanAction =
@@ -46,6 +81,11 @@ export type BilanAction =
   | { type: 'identity'; field: keyof Identity; value: string }
   | { type: 'accept'; id: string }
   | { type: 'dismiss'; id: string }
+  | { type: 'intake'; id: string; value: IntakeValue | null; by: 'patient' | 'physio' }
+  | { type: 'stroke'; stroke: Stroke }
+  | { type: 'eraseStroke'; index: number }
+  | { type: 'undoStroke' }
+  | { type: 'intakeStatus'; status: IntakeStatus }
   | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 
@@ -71,8 +111,16 @@ export const emptyBilan = (zone: ZoneDef['id']): BilanState => {
     notes: {},
     accepted: [],
     dismissed: [],
+    intake: emptyIntake(),
   };
 };
+
+/** Complète un bilan enregistré par une version antérieure (plan 1 : pas d'accueil). */
+export function normalizeBilan(b: unknown): BilanState {
+  const x = b as Partial<BilanState> & Pick<BilanState, 'id' | 'zone'>;
+  const base = emptyBilan(x.zone);
+  return { ...base, ...x, intake: { ...emptyIntake(), ...(x.intake ?? {}) } };
+}
 
 function without<T>(r: Readonly<Record<string, T>>, key: string): Record<string, T> {
   if (!(key in r)) return r as Record<string, T>;
@@ -110,6 +158,34 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
       return { ...s, accepted: addOnce(s.accepted, a.id) };
     case 'dismiss':
       return { ...s, dismissed: addOnce(s.dismissed, a.id) };
+    case 'intake': {
+      const i = s.intake;
+      return {
+        ...s,
+        intake: {
+          ...i,
+          answers: set(i.answers, a.id, a.value),
+          original: a.by === 'patient' ? set(i.original, a.id, a.value) : i.original,
+        },
+      };
+    }
+    case 'stroke':
+      return { ...s, intake: { ...s.intake, strokes: [...s.intake.strokes, a.stroke] } };
+    case 'eraseStroke':
+      return { ...s, intake: { ...s.intake, strokes: s.intake.strokes.filter((_, k) => k !== a.index) } };
+    case 'undoStroke':
+      return s.intake.strokes.length
+        ? { ...s, intake: { ...s.intake, strokes: s.intake.strokes.slice(0, -1) } }
+        : s;
+    case 'intakeStatus':
+      return {
+        ...s,
+        intake: {
+          ...s.intake,
+          status: a.status,
+          patientAt: a.status === 'patient' ? new Date().toISOString() : s.intake.patientAt,
+        },
+      };
   }
 }
 
@@ -131,4 +207,7 @@ export const isDirty = (s: BilanState): boolean =>
   Object.values(s.notes).some((n) => n.trim() !== '') ||
   Object.values(s.identity).some((v) => v.trim() !== '') ||
   s.accepted.length > 0 ||
-  s.dismissed.length > 0;
+  s.dismissed.length > 0 ||
+  nonEmpty(s.intake.answers) ||
+  s.intake.strokes.length > 0 ||
+  s.intake.status !== 'none';
