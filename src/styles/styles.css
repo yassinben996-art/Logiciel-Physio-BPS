@@ -2175,3 +2175,93 @@ sup.c a:hover {
 .bilan-listpage .note {
   margin-top: 12px;
 }
+/* Body chart */
+.bc {
+  display: grid;
+  gap: 8px;
+}
+.bc-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.bc-pens {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bc-pens legend {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.bc-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.bc-views {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 560px;
+}
+.bc-view {
+  margin: 0;
+  text-align: center;
+}
+.bc-view figcaption {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.bc-frame {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bc-frame svg {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  cursor: crosshair;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.bc-frame svg.erasing {
+  cursor: pointer;
+}
+.bc-side {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.bc-body {
+  fill: var(--soft);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.bc-stroke {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}
+.bc-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 13px;
+}
