@@ -2111,3 +2111,47 @@ sup.c a:hover {
 .bilan-listpage .note {
   margin-top: 12px;
 }
+
+/* ------------------------------------------------------------ Body chart */
+.bodychart-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  justify-content: center;
+}
+.bodychart-view {
+  margin: 0;
+  width: min(44vw, 220px);
+}
+.bodychart.readonly .bodychart-view {
+  width: min(40vw, 150px);
+}
+.bodychart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.bodychart rect {
+  fill: var(--soft);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.bodychart rect[role='button'] {
+  cursor: pointer;
+}
+.bodychart rect[role='button']:focus-visible {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+.bodychart rect.on {
+  fill: var(--danger);
+  stroke: var(--danger);
+}
+.bodychart figcaption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
