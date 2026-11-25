@@ -45,7 +45,7 @@ export default function LockScreen({ mode, onSubmit }: Props) {
     </div>
   );
   return (
-    <div className="bilan-lock">
+    <div className="bilan-lock bilan-theme">
       <form onSubmit={(e) => void submit(e)} className="bilan-lock-card">
         <p className="eyebrow">Bilan standardisé</p>
         <h1>{mode === 'create' ? 'Crée ton PIN' : 'Déverrouiller'}</h1>

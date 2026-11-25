@@ -136,70 +136,74 @@ export default function BilanRoot() {
   // Démontage (changement de route) : ne pas perdre la dernière saisie.
   useEffect(() => () => void flush(), [flush]);
 
-  switch (screen.k) {
-    case 'loading':
-      return <p className="bilan note">Chargement…</p>;
-    case 'create':
-    case 'unlock':
-      return (
-        <LockScreen
-          key={screen.k}
-          mode={screen.k}
-          onSubmit={async (pin) => {
-            vault.current = screen.k === 'create' ? await createVault(pin) : await unlockVault(pin);
-            await showList();
-          }}
-        />
-      );
-    case 'list':
-      return (
-        <BilanList
-          items={screen.items}
-          onNew={() => void newBilan()}
-          onLock={() => void lock()}
-          onOpen={(id) =>
-            void vault.current?.load(id).then((b) => {
-              if (b) {
-                setStatus('saved');
-                setScreen({ k: 'edit', bilan: b });
-              }
-            })
-          }
-          onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
-        />
-      );
-    case 'edit':
-      return (
-        <BilanApp
-          key={screen.bilan.id}
-          initial={screen.bilan}
-          onChange={onChange}
-          onNew={() => void newBilan()}
-          toolbar={
-            <>
-              <span className={`bilan-save s-${status}`} role="status">
-                {status === 'pending'
-                  ? 'Enregistrement…'
-                  : status === 'saved'
-                    ? 'Enregistré'
-                    : status === 'error'
-                      ? 'Échec de l’enregistrement'
-                      : ''}
-              </span>
-              {blocked && (
-                <span className="note err" role="alert">
-                  La dernière saisie n’est pas enregistrée : impossible de quitter ce bilan pour l’instant.
+  return <div className="bilan-theme">{renderScreen()}</div>;
+
+  function renderScreen() {
+    switch (screen.k) {
+      case 'loading':
+        return <p className="bilan note bilan-theme">Chargement…</p>;
+      case 'create':
+      case 'unlock':
+        return (
+          <LockScreen
+            key={screen.k}
+            mode={screen.k}
+            onSubmit={async (pin) => {
+              vault.current = screen.k === 'create' ? await createVault(pin) : await unlockVault(pin);
+              await showList();
+            }}
+          />
+        );
+      case 'list':
+        return (
+          <BilanList
+            items={screen.items}
+            onNew={() => void newBilan()}
+            onLock={() => void lock()}
+            onOpen={(id) =>
+              void vault.current?.load(id).then((b) => {
+                if (b) {
+                  setStatus('saved');
+                  setScreen({ k: 'edit', bilan: b });
+                }
+              })
+            }
+            onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
+          />
+        );
+      case 'edit':
+        return (
+          <BilanApp
+            key={screen.bilan.id}
+            initial={screen.bilan}
+            onChange={onChange}
+            onNew={() => void newBilan()}
+            toolbar={
+              <>
+                <span className={`bilan-save s-${status}`} role="status">
+                  {status === 'pending'
+                    ? 'Enregistrement…'
+                    : status === 'saved'
+                      ? 'Enregistré'
+                      : status === 'error'
+                        ? 'Échec de l’enregistrement'
+                        : ''}
                 </span>
-              )}
-              <button type="button" className="btn small ghost" onClick={() => void showList()}>
-                Mes bilans
-              </button>
-              <button type="button" className="btn small ghost" onClick={() => void lock()}>
-                Verrouiller
-              </button>
-            </>
-          }
-        />
-      );
+                {blocked && (
+                  <span className="note err" role="alert">
+                    La dernière saisie n’est pas enregistrée : impossible de quitter ce bilan pour l’instant.
+                  </span>
+                )}
+                <button type="button" className="btn small ghost" onClick={() => void showList()}>
+                  Mes bilans
+                </button>
+                <button type="button" className="btn small ghost" onClick={() => void lock()}>
+                  Verrouiller
+                </button>
+              </>
+            }
+          />
+        );
+    }
   }
 }

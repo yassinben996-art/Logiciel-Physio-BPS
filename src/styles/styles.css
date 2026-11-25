@@ -1776,6 +1776,34 @@ sup.c a:hover {
 }
 
 /* ---------- Bilan standardisé (#/bilan) ---------- */
+/* Palette de l'outil de bilan : beige, blanc, brun, bleu (l'app PDDM garde la sienne). */
+.bilan-theme {
+  --bg: #f5efe6;
+  --surface: #ffffff;
+  --ink: #3b2a20;
+  --muted: #6e5a4b;
+  --line: #e4d8c8;
+  --soft: #efe6d8;
+  --accent: #1f5fa8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3edf8;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .bilan-theme {
+    --bg: #1b1612;
+    --surface: #241d18;
+    --ink: #f1e8dd;
+    --muted: #bfae9c;
+    --line: #3a2f27;
+    --soft: #2e251f;
+    --accent: #7fb0f0;
+    --accent-ink: #0d1b2e;
+    --accent-soft: #1d2a3b;
+  }
+}
 .bilan {
   max-width: 1280px;
   margin: 0 auto;
@@ -1857,7 +1885,6 @@ sup.c a:hover {
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: rotate(-45deg);
-  transition: transform 0.15s;
   flex: none;
 }
 .bilan-sec[open] > summary::before {

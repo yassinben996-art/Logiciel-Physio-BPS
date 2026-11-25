@@ -64,7 +64,7 @@ export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
   }, [dirty, onChange]);
 
   return (
-    <div className="bilan">
+    <div className="bilan bilan-theme">
       <header className="bilan-head">
         <div className="bilan-title">
           <p className="eyebrow">Bilan · {zone.label}</p>

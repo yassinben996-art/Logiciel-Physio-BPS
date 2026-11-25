@@ -17,7 +17,7 @@ export default function BilanList({ items, onOpen, onNew, onRemove, onLock }: Pr
   const nq = normalize(q.trim());
   const shown = items.filter((m) => !nq || normalize(`${m.label} ${m.code}`).includes(nq));
   return (
-    <div className="bilan bilan-listpage">
+    <div className="bilan bilan-listpage bilan-theme">
       <header className="bilan-head bilan-listhead">
         <h1>Mes bilans</h1>
         <div className="bilan-tools">
