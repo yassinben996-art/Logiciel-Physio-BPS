@@ -171,4 +171,9 @@ describe('accueil dans les exports', () => {
         (l) => l.t === 'chart',
       ),
     ).toBe(false));
+
+  it('côté ignoré si l’épaule n’est plus cochée', () => {
+    const s = intakeState({ status: 'physio', answers: { zones: ['cervical'], cote: 'droite' } });
+    expect(intakeLines(INTAKE, s).join('\n')).not.toContain('Côté');
+  });
 });

@@ -32,7 +32,7 @@ export default function BodyChart({ strokes, pens, by, onStroke, onErase, onUndo
   const [pen, setPen] = useState(pens[0]?.id ?? '');
   const [erasing, setErasing] = useState(false);
   const [live, setLive] = useState<{ view: View; pts: number[] } | null>(null);
-  const drawing = useRef<{ view: View; pts: number[] } | null>(null);
+  const drawing = useRef<{ view: View; pts: number[]; id: number } | null>(null);
   const color = (id: string) => pens.find((p) => p.id === id)?.color ?? '#555';
 
   const toView = (e: RPointerEvent<SVGSVGElement>) => {
@@ -43,15 +43,16 @@ export default function BodyChart({ strokes, pens, by, onStroke, onErase, onUndo
     ] as const;
   };
   const down = (view: View) => (e: RPointerEvent<SVGSVGElement>) => {
-    if (erasing) return;
+    // Un seul trait à la fois : un deuxième doigt (ou la paume) est ignoré.
+    if (erasing || drawing.current) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     const [x, y] = toView(e);
-    drawing.current = { view, pts: [x, y] };
-    setLive({ ...drawing.current });
+    drawing.current = { view, pts: [x, y], id: e.pointerId };
+    setLive({ view, pts: [x, y] });
   };
   const move = (e: RPointerEvent<SVGSVGElement>) => {
     const d = drawing.current;
-    if (!d) return;
+    if (!d || e.pointerId !== d.id) return;
     const [x, y] = toView(e);
     const lx = d.pts[d.pts.length - 2]!;
     const ly = d.pts[d.pts.length - 1]!;
@@ -59,12 +60,13 @@ export default function BodyChart({ strokes, pens, by, onStroke, onErase, onUndo
     d.pts.push(x, y);
     setLive({ view: d.view, pts: [...d.pts] });
   };
-  const up = () => {
+  const up = (e: RPointerEvent<SVGSVGElement>) => {
     const d = drawing.current;
+    if (!d || e.pointerId !== d.id) return;
     drawing.current = null;
     setLive(null);
     // Un trait d'un seul point (simple clic ou toucher) n'est pas enregistré.
-    if (d && d.pts.length >= 4) onStroke({ pen, view: d.view, by, pts: d.pts });
+    if (d.pts.length >= 4) onStroke({ pen, view: d.view, by, pts: d.pts });
   };
 
   return (
@@ -103,7 +105,12 @@ export default function BodyChart({ strokes, pens, by, onStroke, onErase, onUndo
           </button>
         )}
         {onUndo && (
-          <button type="button" className="btn small ghost" disabled={strokes.length === 0} onClick={onUndo}>
+          <button
+            type="button"
+            className="btn small ghost"
+            disabled={!strokes.some((s) => s.by === 'physio')}
+            onClick={onUndo}
+          >
             Annuler le dernier trait
           </button>
         )}
@@ -135,9 +142,9 @@ export default function BodyChart({ strokes, pens, by, onStroke, onErase, onUndo
                     <polyline
                       key={k}
                       points={pointsAttr(s.pts)}
-                      className="bc-stroke"
+                      className={`bc-stroke${s.by === 'patient' ? ' by-patient' : ''}`}
                       stroke={color(s.pen)}
-                      onPointerDown={erasing && onErase ? () => onErase(k) : undefined}
+                      onPointerDown={erasing && onErase && s.by === 'physio' ? () => onErase(k) : undefined}
                     />
                   ) : null,
                 )}

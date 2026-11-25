@@ -171,12 +171,17 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
     }
     case 'stroke':
       return { ...s, intake: { ...s.intake, strokes: [...s.intake.strokes, a.stroke] } };
+    // Les traits du patient sont sa réponse d'origine : seuls ceux du physio s'effacent ou s'annulent.
     case 'eraseStroke':
-      return { ...s, intake: { ...s.intake, strokes: s.intake.strokes.filter((_, k) => k !== a.index) } };
-    case 'undoStroke':
-      return s.intake.strokes.length
-        ? { ...s, intake: { ...s.intake, strokes: s.intake.strokes.slice(0, -1) } }
+      return s.intake.strokes[a.index]?.by === 'physio'
+        ? { ...s, intake: { ...s.intake, strokes: s.intake.strokes.filter((_, k) => k !== a.index) } }
         : s;
+    case 'undoStroke': {
+      const k = s.intake.strokes.map((x) => x.by).lastIndexOf('physio');
+      return k < 0
+        ? s
+        : { ...s, intake: { ...s.intake, strokes: s.intake.strokes.filter((_, j) => j !== k) } };
+    }
     case 'intakeStatus':
       return {
         ...s,

@@ -3,6 +3,8 @@
 import { QUESTIONNAIRES } from '@q';
 import type { Condition, Op, Source, SuggestionKind, ZoneDef } from '../content/types';
 import { regionsOf } from '../bodychart/geometry';
+import { INTAKE } from '../content/intake';
+import { isVisible } from './intakeText';
 import { CHART_REGIONS_KEY, resolveKey } from '../content/validate';
 import type { BilanState, IntakeValue } from '../state/bilan';
 import { withinBounds } from './bounds';
@@ -43,6 +45,9 @@ function matchIntake(id: string, op: Op, value: number | string | undefined, s: 
     return typeof value === 'number' && (op === 'gte' ? n >= value : op === 'lte' ? n <= value : false);
   }
   if (id === 'chart' && op === 'filled') return s.intake.strokes.length > 0;
+  // Une question masquée par showIf ne compte pas, même si une ancienne réponse est stockée.
+  const q = INTAKE.questions.find((x) => x.id === id);
+  if (q && !isVisible(q, s)) return false;
   const v = s.intake.answers[id];
   switch (op) {
     case 'filled':

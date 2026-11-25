@@ -99,7 +99,6 @@ describe('bilanReducer', () => {
 });
 
 describe('accueil', () => {
-  const stroke = { pen: 'douleur', view: 'front' as const, by: 'patient' as const, pts: [60, 90, 62, 92] };
   it('vide au départ', () =>
     expect(emptyBilan('shoulder').intake).toEqual({
       status: 'none',
@@ -124,7 +123,8 @@ describe('accueil', () => {
     expect(s.intake.status).toBe('patient');
     expect(s.intake.patientAt).not.toBe('');
   });
-  it('traits : ajout, annulation, gomme', () => {
+  it('traits du physio : ajout, annulation, gomme', () => {
+    const stroke = { pen: 'douleur', view: 'front' as const, by: 'physio' as const, pts: [60, 90, 62, 92] };
     const two = bilanReducer(bilanReducer(e, { type: 'stroke', stroke }), {
       type: 'stroke',
       stroke: { ...stroke, pen: 'irradiation' },
@@ -152,5 +152,18 @@ describe('accueil', () => {
     expect(n.intake.strokes).toEqual([]);
     expect(n.notes).toEqual({ 'a.notes': 'x' });
     expect(n.id).toBe(old.id);
+  });
+});
+
+describe('traits du patient protégés', () => {
+  const ps = { pen: 'douleur', view: 'front' as const, by: 'patient' as const, pts: [60, 90, 62, 92] };
+  const ph = { ...ps, by: 'physio' as const, pen: 'irradiation' };
+  const two = bilanReducer(bilanReducer(e, { type: 'stroke', stroke: ps }), { type: 'stroke', stroke: ph });
+  it('la gomme n’efface pas un trait du patient', () =>
+    expect(bilanReducer(two, { type: 'eraseStroke', index: 0 }).intake.strokes).toEqual([ps, ph]));
+  it('annuler retire le dernier trait du physio, jamais celui du patient', () => {
+    const a = bilanReducer(two, { type: 'undoStroke' });
+    expect(a.intake.strokes).toEqual([ps]);
+    expect(bilanReducer(a, { type: 'undoStroke' }).intake.strokes).toEqual([ps]);
   });
 });

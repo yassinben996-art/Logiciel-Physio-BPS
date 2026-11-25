@@ -103,4 +103,39 @@ describe('BodyChart', () => {
     expect(screen.queryByRole('button', { name: 'Gomme' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Annuler le dernier trait' })).toBeNull();
   });
+
+  it('un deuxième doigt ne perd pas le trait en cours', () => {
+    const onStroke = vi.fn();
+    render(<BodyChart strokes={[]} pens={INTAKE.pens} by="physio" onStroke={onStroke} />);
+    fireEvent.pointerDown(front(), { clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(front(), { clientX: 20, clientY: 20, pointerId: 1 });
+    fireEvent.pointerDown(front(), { clientX: 150, clientY: 300, pointerId: 2 });
+    fireEvent.pointerMove(front(), { clientX: 155, clientY: 305, pointerId: 2 });
+    fireEvent.pointerUp(front(), { pointerId: 2 });
+    fireEvent.pointerMove(front(), { clientX: 30, clientY: 30, pointerId: 1 });
+    fireEvent.pointerUp(front(), { pointerId: 1 });
+    expect(onStroke).toHaveBeenCalledTimes(1);
+    expect(onStroke).toHaveBeenCalledWith(expect.objectContaining({ pts: [10, 10, 20, 20, 30, 30] }));
+  });
+  it('les traits du patient ne sont pas effaçables', () => {
+    const onErase = vi.fn();
+    const { container } = render(
+      <BodyChart
+        strokes={[{ ...S, by: 'patient' }]}
+        pens={INTAKE.pens}
+        by="physio"
+        onStroke={() => {}}
+        onErase={onErase}
+        onUndo={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Gomme' }));
+    fireEvent.pointerDown(container.querySelector('polyline.bc-stroke')!, {
+      clientX: 20,
+      clientY: 20,
+      pointerId: 1,
+    });
+    expect(onErase).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Annuler le dernier trait' })).toBeDisabled();
+  });
 });

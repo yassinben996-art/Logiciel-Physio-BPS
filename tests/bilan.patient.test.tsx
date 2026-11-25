@@ -68,10 +68,14 @@ describe('mode patient', () => {
     expect(await screen.findByText('PIN incorrect', {}, T)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('PIN'), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Revenir au bilan' }));
-    expect(await screen.findByText('Statut : rempli par le patient', { exact: false }, T)).toBeInTheDocument();
+    expect(
+      await screen.findByText('Statut : rempli par le patient', { exact: false }, T),
+    ).toBeInTheDocument();
     expect(isPatientLocked()).toBe(false);
     const a = accueil();
-    expect(within(a.getByRole('group', { name: 'Zones douloureuses' })).getByLabelText('L’épaule')).toBeChecked();
+    expect(
+      within(a.getByRole('group', { name: 'Zones douloureuses' })).getByLabelText('L’épaule'),
+    ).toBeChecked();
     expect(a.queryByText(/^patient :/)).toBeNull();
     expect(screen.getByLabelText('Nom')).toHaveValue('Dupont');
   }, 30000);
@@ -112,11 +116,22 @@ describe('mode patient', () => {
 
   it('un autre onglet déverrouillé se verrouille', async () => {
     render(<BilanRoot />);
-    fireEvent.change(await screen.findByLabelText('PIN (6 chiffres)', {}, T), { target: { value: '123456' } });
+    fireEvent.change(await screen.findByLabelText('PIN (6 chiffres)', {}, T), {
+      target: { value: '123456' },
+    });
     fireEvent.change(screen.getByLabelText('Confirme le PIN'), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Créer le PIN' }));
     await screen.findByRole('heading', { name: 'Mes bilans' }, T);
     act(() => simulateRemoteLock());
     expect(await screen.findByRole('button', { name: 'Déverrouiller' }, T)).toBeInTheDocument();
+  }, 30000);
+
+  it('une adresse modifiée en mode patient est remise sur le bilan (un rechargement ne mène pas à l’app PDDM)', async () => {
+    await startPatient(<Root />);
+    act(() => {
+      location.hash = '#/';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(location.hash).toBe('#/bilan');
   }, 30000);
 });

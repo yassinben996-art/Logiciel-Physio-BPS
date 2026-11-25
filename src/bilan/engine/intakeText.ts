@@ -54,6 +54,8 @@ export function intakeLines(intake: IntakeDef, s: BilanState): string[] {
       }
       continue;
     }
+    // Une question masquée (ex. côté alors que l'épaule n'est plus cochée) n'est pas exportée.
+    if (!isVisible(q, s)) continue;
     const text = formatIntakeValue(q, i.answers[q.id]);
     if (!text) continue;
     const orig = i.original[q.id];
