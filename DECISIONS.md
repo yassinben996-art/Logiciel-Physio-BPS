@@ -139,6 +139,36 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     (chiffrés), mais jamais dans les blocs SYSmeta. Les plans suivants l'excluront aussi de l'IA et de
     « Copier pour Claude ».
 
+### Accueil patient, onglets, couleurs (plan 1b, 25.11.2026)
+
+42. **Onglets fermés au départ** (demande de l'utilisateur) : chaque section du bilan est un onglet repliable,
+    fermé à l'ouverture ; un onglet ouvert le reste jusqu'à ce qu'on le referme. Le titre affiche l'avancement
+    (champs remplis / champs). « Ajouter » sur une suggestion ouvre l'onglet concerné.
+43. **Palette de l'outil de bilan** (demande de l'utilisateur : blanc, beige/brun, bleu) : fond beige, cartes
+    blanches, texte brun foncé, actions en bleu, avec une version sombre. Contraste du texte ≥ 4,5:1, vérifié par
+    un test. L'app PDDM garde ses couleurs.
+44. **Accueil de 5 minutes** : rempli par le patient sur la tablette en mode verrouillé (une question par écran,
+    vouvoiement), ou par le physio en séance si le patient est en retard (« Passer l'accueil »). Jamais envoyé par
+    QR code. La réponse d'origine du patient est conservée quand le physio la corrige (« patient : … »). Aucun
+    score combiné (PSFS et dépistage question par question). Questions et crayons provisoires, à valider. Le mode
+    patient ne montre que l'accueil ; sortir demande le PIN ; l'adresse, le bouton Précédent et les autres
+    onglets ne permettent pas d'en sortir. Le reste (changer d'application) relève de l'Accès guidé (iPad) ou de
+    l'épinglage d'écran (Android), rappelé à chaque lancement : s'en souvenir exigerait un stockage en clair.
+45. **Body chart à dessiner** (souris, doigt, stylet) : un crayon pour le patient, quatre pour le physio, gomme et
+    annulation. Une silhouette au contour lisse, gris clair et trait gris-bleu (dessin original dans le style du
+    modèle fourni par l'utilisateur le 25.11.2026, qui n'est pas repris lui-même : probable image de banque
+    d'images), découpée en régions invisibles (de face, la droite du patient est à
+    gauche) donne la liste des régions par type de symptôme dans SYSmeta et sert aux règles ; le PDF contient le
+    dessin.
+46. **Fusion avec la PR #6** (décision de l'utilisateur, 25.11.2026) : deux sessions avaient construit l'accueil
+    en parallèle. Sont gardés le choix de la zone à la création et la zone genou (PR #6), et l'accueil de la PR #7
+    (body chart à dessiner, mode patient verrouillé, remplissage par le physio, réponse d'origine conservée).
+    Questions validées par l'utilisateur : douleur actuelle et pire sur 7 jours (0–10) ; dépistage : peur que
+    bouger aggrave, attentes de guérison (0–10), sommeil, arrêt de travail, pression au travail ou au quotidien
+    (oui/non). Le genou s'ajoute aux zones de l'accueil et à la question du côté. Les accueils déjà enregistrés au
+    format de la PR #6 sont repris au chargement ; leurs zones touchées (ancien body chart) ne peuvent pas devenir
+    des traits et ne sont pas reprises.
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

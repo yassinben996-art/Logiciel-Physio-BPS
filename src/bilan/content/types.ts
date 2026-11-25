@@ -64,7 +64,7 @@ export interface SectionDef {
   source: Source;
 }
 
-export type Op = 'eq' | 'gte' | 'lte' | 'checked' | 'positive' | 'negative' | 'filled';
+export type Op = 'eq' | 'gte' | 'lte' | 'checked' | 'positive' | 'negative' | 'filled' | 'includes';
 
 export interface Atom {
   /** "section.field" ou "section.field.chip". */
@@ -91,4 +91,48 @@ export interface ZoneDef {
   label: string;
   sections: readonly SectionDef[];
   rules: readonly RuleDef[];
+}
+
+// ---------- Accueil patient ----------
+
+interface QBase {
+  id: string;
+  /** Texte au patient (vouvoiement). */
+  patient: string;
+  /** Libellé côté physio. */
+  clinician: string;
+  source: Source;
+}
+
+export interface IntakeOption {
+  value: string;
+  label: string;
+}
+
+export type IntakeQuestion =
+  | (QBase & { kind: 'multi'; options: readonly IntakeOption[] })
+  | (QBase & {
+      kind: 'single';
+      options: readonly IntakeOption[]; /** Posée seulement si la question « multi » id contient l'une de ces valeurs. */
+      showIf?: { id: string; includes: readonly string[] };
+    })
+  /** Échelle de 0 à 10. */
+  | (QBase & { kind: 'scale'; lo: string; hi: string })
+  /** Valeurs 'oui' / 'non'. */
+  | (QBase & { kind: 'yesno' })
+  | (QBase & { kind: 'psfs'; max: number; lo: string; hi: string })
+  | (QBase & { kind: 'bodychart' });
+
+export interface PenDef {
+  id: string;
+  label: string;
+  color: string;
+  source: Source;
+}
+
+export interface IntakeDef {
+  questions: readonly IntakeQuestion[];
+  pens: readonly PenDef[];
+  /** Le seul crayon proposé au patient. */
+  patientPen: string;
 }

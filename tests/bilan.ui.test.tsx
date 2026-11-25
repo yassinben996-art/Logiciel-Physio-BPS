@@ -15,10 +15,43 @@ const copiedTexts = () => writeText.mock.calls.map((c) => c[0]);
 const copyAll = () =>
   screen.getAllByRole('button', { name: /^Copier : / }).forEach((b) => fireEvent.click(b));
 
-describe('écran de bilan', () => {
-  it('affiche les 8 sections dans l’ordre', () => {
+describe('onglets', () => {
+  it('fermés au départ, restent ouverts, compteur', () => {
     const { container } = render(<BilanApp />);
-    expect([...container.querySelectorAll('details > summary')].map((s) => s.textContent)).toEqual([
+    const secs = [...container.querySelectorAll<HTMLDetailsElement>('details.bilan-sec')];
+    expect(secs.length).toBeGreaterThan(0);
+    expect(secs.every((d) => !d.open)).toBe(true);
+    const sec = (title: string) =>
+      secs.find((d) => d.querySelector('.bilan-sec-title')?.textContent === title)!;
+    fireEvent.click(sec('Force').querySelector('summary')!);
+    expect(sec('Force').open).toBe(true);
+    fireEvent.click(sec('Mobilité').querySelector('summary')!);
+    expect(sec('Force').open).toBe(true);
+    expect(sec('Mobilité').open).toBe(true);
+    const count = () => sec('Tests spécifiques').querySelector('.bilan-sec-count')!;
+    expect(count()).toHaveTextContent('0/10');
+    fireEvent.click(within(screen.getByRole('group', { name: 'Full can' })).getByLabelText('positif'));
+    expect(count()).toHaveTextContent('1/10');
+    expect(count()).toHaveAttribute('aria-label', '1 champs remplis sur 10');
+  });
+
+  it('Ajouter ouvre l’onglet fermé du test suggéré', () => {
+    const { container } = render(<BilanApp />);
+    fireEvent.click(within(screen.getByRole('group', { name: 'Full can' })).getByLabelText('positif'));
+    fireEvent.click(suggestions().getByRole('button', { name: 'Ajouter ER lag sign' }));
+    const tests = [...container.querySelectorAll<HTMLDetailsElement>('details.bilan-sec')].find(
+      (d) => d.querySelector('.bilan-sec-title')?.textContent === 'Tests spécifiques',
+    )!;
+    expect(tests.open).toBe(true);
+    expect(document.activeElement).toBe(screen.getByRole('group', { name: 'ER lag sign' }));
+  });
+});
+
+describe('écran de bilan', () => {
+  it('affiche l’accueil puis les 8 sections dans l’ordre', () => {
+    const { container } = render(<BilanApp />);
+    expect([...container.querySelectorAll('.bilan-sec-title')].map((s) => s.textContent)).toEqual([
+      'Accueil',
       'Anamnèse',
       'Drapeaux',
       'Mobilité',

@@ -1,14 +1,17 @@
 import { SHOULDER } from '../src/bilan/content';
 import { bilanSummaryLines, sysmetaBlocks } from '../src/bilan/engine/exports';
+import { intakeLines } from '../src/bilan/engine/intakeText';
+import { INTAKE } from '../src/bilan/content/intake';
 import { emptyBilan, type BilanState } from '../src/bilan/state/bilan';
 import { DISCLAIMER } from '../src/data/text';
-import { pdfFilename } from '../src/pdf/exportPdf';
+import { pdfFilename, type PdfLine } from '../src/pdf/exportPdf';
 
 const e = { ...emptyBilan('shoulder'), code: 'B-0042' };
 const st = (p: Partial<BilanState>): BilanState => ({ ...e, ...p });
 const block = (s: BilanState, rubric: string) =>
   sysmetaBlocks(SHOULDER, s).find((b) => b.rubric === rubric)?.text;
 const D = new Date(2026, 10, 24);
+const txt = (l: PdfLine) => ('s' in l ? l.s : '');
 
 describe('blocs SYSmeta', () => {
   it('nombre latéralisé, côtés saisis seulement', () => {
@@ -44,7 +47,7 @@ describe('blocs SYSmeta', () => {
   it('sections sans rubrique : seulement dans le PDF', () => {
     const s = st({ notes: { 'raisonnement.notes': 'Tendinopathie probable' } });
     expect(sysmetaBlocks(SHOULDER, s)).toEqual([]);
-    expect(bilanSummaryLines(SHOULDER, s, D).map((l) => l.s)).toContain('Tendinopathie probable');
+    expect(bilanSummaryLines(SHOULDER, s, D).map(txt)).toContain('Tendinopathie probable');
   });
   it('deux sections de même rubrique → un seul bloc', () => {
     const b = sysmetaBlocks(SHOULDER, st({ tests: { 'tests.neer': 'pos', 'modif.scap_assist': 'neg' } }));
@@ -73,15 +76,15 @@ describe('lignes PDF', () => {
   it('structure', () => {
     const L = bilanSummaryLines(SHOULDER, st({ tests: { 'tests.neer': 'pos' } }), D);
     expect(L[0]).toEqual({ t: 't', s: 'Bilan : Épaule' });
-    expect(L.map((l) => l.s)).toEqual(expect.arrayContaining(['Code : B-0042', 'Date : 24.11.2026']));
+    expect(L.map(txt)).toEqual(expect.arrayContaining(['Code : B-0042', 'Date : 24.11.2026']));
     expect(L).toContainEqual({ t: 'h', s: 'Tests spécifiques' });
     expect(L).toContainEqual({ t: 'p', s: 'Neer : positif' });
     expect(L.at(-1)).toEqual({ t: 'n', s: DISCLAIMER });
-    expect(L.some((l) => l.s.startsWith('Patient'))).toBe(false);
+    expect(L.some((l) => txt(l).startsWith('Patient'))).toBe(false);
   });
   it('bilan vide', () => {
     const L = bilanSummaryLines(SHOULDER, e, D);
-    expect(L.map((l) => l.s)).toContain('Aucune donnée saisie (non renseigné).');
+    expect(L.map(txt)).toContain('Aucune donnée saisie (non renseigné).');
     expect(L.some((l) => l.t === 'h')).toBe(false);
   });
   it('identité partielle', () =>
@@ -98,45 +101,85 @@ describe('valeurs hors bornes déjà stockées (contenu resserré après coup)',
   it('ignorées par les exports', () => {
     const s = st({ nums: { 'mobilite.abd_a.D': 250, 'mobilite.abd_a.G': 170 } });
     expect(block(s, 'Bilan articulaire')).toBe('Abduction active : G 170°');
-    expect(
-      bilanSummaryLines(SHOULDER, s, D)
-        .map((l) => l.s)
-        .join('\n'),
-    ).not.toContain('250');
+    expect(bilanSummaryLines(SHOULDER, s, D).map(txt).join('\n')).not.toContain('250');
   });
 });
 
-describe('exports : accueil patient', () => {
-  const intake = {
-    painNow: 6,
-    painWorst: 8,
-    duration: 'gt3m' as const,
-    onset: 'trauma' as const,
-    regions: ['genou_d'],
-    psfs: [{ activity: 'escaliers', score: 3 }],
-    screening: { sommeil: true, peur: false },
-    completedAt: '2026-11-25T10:00:00.000Z',
-  };
-  it('SYSmeta : l’accueil ouvre le bloc Anamnèse, sans identité', async () => {
-    const { sysmetaBlocks } = await import('../src/bilan/engine/exports');
-    const { KNEE } = await import('../src/bilan/content');
-    const { emptyBilan } = await import('../src/bilan/state/bilan');
-    const s = { ...emptyBilan('knee'), identity: { nom: 'Dupont', prenom: 'Marie', naissance: '' }, intake };
-    const a = sysmetaBlocks(KNEE, s).find((b) => b.rubric === 'Anamnèse')!.text;
-    expect(a.split('\n')[0]).toBe(
-      'Accueil (patient) : douleur 6/10, pire 8/10 sur 7 jours ; plus de 3 mois ; après un choc, une chute ou un accident',
-    );
-    expect(a).toContain('Zones douloureuses : Genou (devant), côté droit');
-    expect(a).toContain('PSFS : escaliers 3/10');
-    expect(a).toContain('Dépistage positif : sommeil perturbé');
-    expect(a).not.toMatch(/Dupont|Marie/);
+describe('accueil dans les exports', () => {
+  const intakeState = (p: Partial<BilanState['intake']>): BilanState => st({ intake: { ...e.intake, ...p } });
+  const chartStrokes = [
+    { pen: 'douleur', view: 'front' as const, by: 'patient' as const, pts: [63, 88, 64, 89] },
+    { pen: 'fourmillements', view: 'back' as const, by: 'physio' as const, pts: [145, 130, 146, 131] },
+  ];
+  const sample = intakeState({
+    status: 'physio',
+    answers: {
+      zones: ['shoulder', 'cervical'],
+      duree: 'gt3m',
+      douleur_actuelle: 6,
+      sommeil: 'oui',
+      psfs: [
+        { activity: 'porter un sac', score: 3 },
+        { activity: 's’habiller', score: 5 },
+        { activity: '', score: null },
+      ],
+    },
+    original: { douleur_actuelle: 7 },
+    strokes: chartStrokes,
   });
-  it('PDF : section Accueil', async () => {
-    const { bilanSummaryLines } = await import('../src/bilan/engine/exports');
-    const { KNEE } = await import('../src/bilan/content');
-    const { emptyBilan } = await import('../src/bilan/state/bilan');
-    const L = bilanSummaryLines(KNEE, { ...emptyBilan('knee'), intake }, new Date(2026, 10, 25));
-    expect(L).toContainEqual({ t: 'h', s: 'Accueil (rempli par le patient)' });
-    expect(L.map((l) => l.s)).toContain('PSFS : escaliers 3/10');
+  it('intakeLines', () =>
+    expect(intakeLines(INTAKE, sample)).toEqual([
+      'Accueil : rempli par le physio en séance',
+      'Zones douloureuses : L’épaule, La nuque',
+      'Durée : Plus de 3 mois',
+      'Douleur actuelle (0–10) : 6 (patient : 7)',
+      'Douleur : épaule droite (face)',
+      'Fourmillements : bras droit (dos)',
+      'PSFS : porter un sac 3/10 ; s’habiller 5/10',
+      'Sommeil perturbé par la douleur : oui',
+    ]));
+  it('date si rempli par le patient', () =>
+    expect(
+      intakeLines(
+        INTAKE,
+        intakeState({
+          status: 'patient',
+          patientAt: '2026-11-25T08:00:00.000Z',
+          answers: { douleur_actuelle: 4 },
+        }),
+      )[0],
+    ).toBe('Accueil : rempli par le patient le 25.11.2026'));
+  it('accueil vide → aucune ligne', () => expect(intakeLines(INTAKE, e)).toEqual([]));
+  it('bloc Anamnèse commence par l’accueil, sans identité', () => {
+    const s = { ...sample, identity: { nom: 'Dupont', prenom: 'Marie', naissance: '1980-03-05' } };
+    const b = sysmetaBlocks(SHOULDER, s).find((x) => x.rubric === 'Anamnèse')!;
+    expect(b.text.split('\n')[0]).toBe('Accueil : rempli par le physio en séance');
+    expect(
+      sysmetaBlocks(SHOULDER, s)
+        .map((x) => x.text)
+        .join('\n'),
+    ).not.toMatch(/Dupont|Marie/);
+  });
+  it('PDF : section Accueil puis le dessin', () => {
+    const L = bilanSummaryLines(SHOULDER, sample, D);
+    const h = L.findIndex((l) => l.t === 'h' && 's' in l && l.s === 'Accueil');
+    expect(h).toBeGreaterThan(0);
+    const chart = L.findIndex((l) => l.t === 'chart');
+    expect(chart).toBe(h + 1 + intakeLines(INTAKE, sample).length);
+    const c = L[chart]!;
+    expect(c.t === 'chart' && c.strokes).toHaveLength(2);
+  });
+  it('PDF sans trait : pas de dessin', () =>
+    expect(
+      bilanSummaryLines(
+        SHOULDER,
+        intakeState({ answers: { douleur_actuelle: 3 }, status: 'physio' }),
+        D,
+      ).some((l) => l.t === 'chart'),
+    ).toBe(false));
+
+  it('côté ignoré si l’épaule n’est plus cochée', () => {
+    const s = intakeState({ status: 'physio', answers: { zones: ['cervical'], cote: 'droite' } });
+    expect(intakeLines(INTAKE, s).join('\n')).not.toContain('Côté');
   });
 });

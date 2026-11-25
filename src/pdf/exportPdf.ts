@@ -1,6 +1,11 @@
 // Génération du PDF (A4) avec jsPDF, chargé dynamiquement au clic.
 import type { SummaryLine } from '../engine/summary';
+import type { Stroke } from '../bilan/bodychart/geometry';
+import type { PenDef } from '../bilan/content/types';
 import { toLatin1 } from './sanitize';
+
+/** Lignes du PDF : celles du résumé, plus le dessin du body chart (bilan standardisé). */
+export type PdfLine = SummaryLine | { t: 'chart'; strokes: readonly Stroke[]; pens: readonly PenDef[] };
 
 export const pdfFilename = (d: Date = new Date(), prefix = 'profil-douleur'): string => {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -16,7 +21,7 @@ interface ClaudeHost {
 export type PdfResult = 'saved' | 'declined';
 
 export async function exportPdf(
-  lines: SummaryLine[],
+  lines: PdfLine[],
   date: Date = new Date(),
   prefix = 'profil-douleur',
 ): Promise<PdfResult> {
@@ -35,6 +40,13 @@ export async function exportPdf(
   const ink = () => doc.setTextColor(18, 33, 46);
   ink();
   for (const l of lines) {
+    if (l.t === 'chart') {
+      const { drawBodyChart, chartHeight } = await import('./bodychart');
+      need(chartHeight(W));
+      y += drawBodyChart(doc, M, y, W, l) + 3;
+      ink();
+      continue;
+    }
     const txt = toLatin1(l.s);
     if (l.t === 't') {
       need(10);

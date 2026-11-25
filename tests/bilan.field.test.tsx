@@ -15,7 +15,13 @@ const sec: SectionDef = {
 describe('FieldInput', () => {
   it('nombre non latéralisé : un seul id, champ nommé par son libellé', () => {
     const { container } = render(
-      <FieldInput section={sec} field={sec.fields[0]!} state={emptyBilan('shoulder')} dispatch={() => {}} hits={[]} />,
+      <FieldInput
+        section={sec}
+        field={sec.fields[0]!}
+        state={emptyBilan('shoulder')}
+        dispatch={() => {}}
+        hits={[]}
+      />,
     );
     const ids = [...container.querySelectorAll('[id]')].map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);

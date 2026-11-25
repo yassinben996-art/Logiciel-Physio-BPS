@@ -159,28 +159,4 @@ describe('BilanRoot', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Annuler' }));
     expect(await screen.findByRole('heading', { name: 'Mes bilans' })).toBeInTheDocument();
   }, 30000);
-
-  it('accueil patient : remplissage, PIN pour reprendre, réponses visibles dans le bilan', async () => {
-    await createPin();
-    fireEvent.click(screen.getByRole('button', { name: 'Nouveau bilan' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Genou' }));
-    fireEvent.change(await screen.findByLabelText('Nom'), { target: { value: 'Dupont' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Accueil patient' }));
-    expect(await screen.findByRole('heading', { name: 'Avant votre séance' }, T)).toBeInTheDocument();
-    expect(screen.queryByText('Dupont')).not.toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Dupont')).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole('group', { name: /Votre douleur maintenant/ })).getByLabelText('6'));
-    fireEvent.click(screen.getByRole('button', { name: 'Genou (devant), côté droit' }));
-    fireEvent.click(screen.getByRole('button', { name: 'J’ai terminé' }));
-    expect(await screen.findByRole('heading', { name: 'Merci !' }, T)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('PIN du physiothérapeute'), { target: { value: '000000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Reprendre le bilan' }));
-    expect(await screen.findByText('PIN incorrect', {}, T)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('PIN du physiothérapeute'), { target: { value: '123456' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Reprendre le bilan' }));
-    const summary = await screen.findByRole('region', { name: 'Accueil rempli par le patient' }, T);
-    expect(summary).toHaveTextContent('Douleur maintenant : 6/10');
-    expect(summary).toHaveTextContent('Genou (devant), côté droit');
-    expect(screen.getByLabelText('Nom')).toHaveValue('Dupont');
-  }, 30000);
 });

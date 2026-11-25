@@ -3,12 +3,15 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { DISCLAIMER } from '../../data/text';
 import { SHOULDER, ZONES } from '../content';
 import { detectKeywords } from '../engine/keywords';
+import { intakeProgress, sectionProgress } from '../engine/progress';
+import { INTAKE } from '../content/intake';
 import { evaluate } from '../engine/rules';
 import { bilanReducer, emptyBilan, isDirty, type BilanState, type Identity } from '../state/bilan';
 import { QUESTIONNAIRES } from '@q';
-import IntakeSummary from './IntakeSummary';
 import BilanExport from './BilanExport';
 import FieldInput from './FieldInput';
+import IntakeSection from './IntakeSection';
+import SectionSummary from './SectionSummary';
 import SuggestionsPanel from './SuggestionsPanel';
 
 interface Props {
@@ -18,6 +21,10 @@ interface Props {
   toolbar?: React.ReactNode;
   /** Si fourni (bilan sauvegardé), « Nouveau bilan » l'appelle sans confirmation : rien n'est perdu. */
   onNew?: () => void;
+  /** Si fourni, la section Accueil propose « Accueil patient » (mode patient verrouillé). */
+  onStartPatient?: () => void;
+  /** Ouvrir l'onglet Accueil dès l'affichage (retour du mode patient). */
+  openIntake?: boolean;
 }
 
 const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' | 'date' }[] = [
@@ -26,7 +33,7 @@ const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' |
   { field: 'naissance', label: 'Date de naissance', type: 'date' },
 ];
 
-export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
+export default function BilanApp({ initial, onChange, toolbar, onNew, onStartPatient, openIntake }: Props) {
   const [s, dispatch] = useReducer(bilanReducer, initial, (i) => i ?? emptyBilan('shoulder'));
   const [confirm, setConfirm] = useState(false);
   const zone = ZONES[s.zone] ?? SHOULDER;
@@ -63,7 +70,7 @@ export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
   }, [dirty, onChange]);
 
   return (
-    <div className="bilan">
+    <div className="bilan bilan-theme">
       <header className="bilan-head">
         <div className="bilan-title">
           <p className="eyebrow">Bilan · {zone.label}</p>
@@ -115,10 +122,19 @@ export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
       </header>
       <div className="bilan-layout">
         <main className="bilan-main">
-          {s.intake && <IntakeSummary intake={s.intake} />}
+          <details className="bilan-sec bilan-intake" open={openIntake || undefined}>
+            <SectionSummary title="Accueil" {...intakeProgress(INTAKE, s)} />
+            <IntakeSection
+              intake={INTAKE}
+              zone={zone}
+              state={s}
+              dispatch={dispatch}
+              onStartPatient={onStartPatient}
+            />
+          </details>
           {zone.sections.map((sec) => (
-            <details key={sec.id} open className="bilan-sec">
-              <summary>{sec.title}</summary>
+            <details key={sec.id} className="bilan-sec">
+              <SectionSummary title={sec.title} {...sectionProgress(sec, s)} />
               <div className="bilan-fields">
                 {sec.fields.map((f) => (
                   <FieldInput key={f.id} section={sec} field={f} state={s} dispatch={dispatch} hits={hits} />

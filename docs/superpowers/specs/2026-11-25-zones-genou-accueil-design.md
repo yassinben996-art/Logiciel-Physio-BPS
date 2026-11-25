@@ -2,6 +2,10 @@
 
 Statut : approche validée par Yass le 25.11.2026 (« Parfait »). Complète la spec du 24.11.2026.
 
+> **Fusion du 25.11.2026** : l'accueil décrit ici (body chart à zones, questions, écran patient) est remplacé par
+> celui de `2026-11-25-accueil-onglets-couleurs-design.md`. Restent valables : le choix de la zone et le genou.
+> Voir DECISIONS n° 46.
+
 ## Intention
 Yass teste l'étape 1. Il attend (1) de choisir la zone au moment de « Nouveau bilan », (2) le genou,
 (3) la partie que le patient remplit lui-même avec un body chart. L'accueil par QR code demande le relais

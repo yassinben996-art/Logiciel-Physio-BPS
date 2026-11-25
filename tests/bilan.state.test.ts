@@ -1,4 +1,4 @@
-import { bilanReducer, emptyBilan, isDirty } from '../src/bilan/state/bilan';
+import { LABEL_STATUS, bilanReducer, emptyBilan, isDirty, normalizeBilan } from '../src/bilan/state/bilan';
 
 const e = emptyBilan('shoulder');
 
@@ -96,4 +96,123 @@ describe('bilanReducer', () => {
     );
     expect(s.updatedAt).not.toBe('2000-01-01T00:00:00.000Z');
   });
+});
+
+describe('accueil', () => {
+  it('vide au départ', () =>
+    expect(emptyBilan('shoulder').intake).toEqual({
+      status: 'none',
+      patientAt: '',
+      answers: {},
+      original: {},
+      strokes: [],
+    }));
+  it('réponse du patient puis correction du physio', () => {
+    const a = bilanReducer(e, { type: 'intake', id: 'douleur', value: 7, by: 'patient' });
+    expect(a.intake.answers.douleur).toBe(7);
+    expect(a.intake.original.douleur).toBe(7);
+    const b = bilanReducer(a, { type: 'intake', id: 'douleur', value: 5, by: 'physio' });
+    expect(b.intake.answers.douleur).toBe(5);
+    expect(b.intake.original.douleur).toBe(7);
+    const c = bilanReducer(b, { type: 'intake', id: 'douleur', value: null, by: 'physio' });
+    expect('douleur' in c.intake.answers).toBe(false);
+    expect(c.intake.original.douleur).toBe(7);
+  });
+  it('statut patient renseigne la date', () => {
+    const s = bilanReducer(e, { type: 'intakeStatus', status: 'patient' });
+    expect(s.intake.status).toBe('patient');
+    expect(s.intake.patientAt).not.toBe('');
+  });
+  it('traits du physio : ajout, annulation, gomme', () => {
+    const stroke = { pen: 'douleur', view: 'front' as const, by: 'physio' as const, pts: [60, 90, 62, 92] };
+    const two = bilanReducer(bilanReducer(e, { type: 'stroke', stroke }), {
+      type: 'stroke',
+      stroke: { ...stroke, pen: 'irradiation' },
+    });
+    expect(bilanReducer(two, { type: 'undoStroke' }).intake.strokes).toEqual([stroke]);
+    expect(bilanReducer(two, { type: 'eraseStroke', index: 0 }).intake.strokes.map((x) => x.pen)).toEqual([
+      'irradiation',
+    ]);
+    expect(isDirty(bilanReducer(e, { type: 'stroke', stroke }))).toBe(true);
+  });
+  it('isDirty après une réponse', () =>
+    expect(isDirty(bilanReducer(e, { type: 'intake', id: 'duree', value: 'gt3m', by: 'physio' }))).toBe(
+      true,
+    ));
+  it('libellés des statuts', () => {
+    expect(LABEL_STATUS.none).toBe('non fait');
+    expect(LABEL_STATUS.patient).toBe('rempli par le patient');
+    expect(LABEL_STATUS.physio).toBe('rempli par le physio en séance');
+  });
+  it('normalizeBilan complète un bilan du plan 1', () => {
+    const { intake: _drop, ...old } = { ...emptyBilan('shoulder'), notes: { 'a.notes': 'x' } };
+    void _drop;
+    const n = normalizeBilan(old);
+    expect(n.intake.status).toBe('none');
+    expect(n.intake.strokes).toEqual([]);
+    expect(n.notes).toEqual({ 'a.notes': 'x' });
+    expect(n.id).toBe(old.id);
+  });
+});
+
+describe('traits du patient protégés', () => {
+  const ps = { pen: 'douleur', view: 'front' as const, by: 'patient' as const, pts: [60, 90, 62, 92] };
+  const ph = { ...ps, by: 'physio' as const, pen: 'irradiation' };
+  const two = bilanReducer(bilanReducer(e, { type: 'stroke', stroke: ps }), { type: 'stroke', stroke: ph });
+  it('la gomme n’efface pas un trait du patient', () =>
+    expect(bilanReducer(two, { type: 'eraseStroke', index: 0 }).intake.strokes).toEqual([ps, ph]));
+  it('annuler retire le dernier trait du physio, jamais celui du patient', () => {
+    const a = bilanReducer(two, { type: 'undoStroke' });
+    expect(a.intake.strokes).toEqual([ps]);
+    expect(bilanReducer(a, { type: 'undoStroke' }).intake.strokes).toEqual([ps]);
+  });
+});
+
+describe('bilans enregistrés avec l’accueil de la PR #6', () => {
+  it('les réponses sont reprises dans le nouveau format', () => {
+    const old = {
+      ...emptyBilan('knee'),
+      intake: {
+        painNow: 4,
+        painWorst: 7,
+        duration: 'gt3m',
+        onset: 'trauma',
+        regions: ['genou_d'],
+        psfs: [{ activity: 'monter les escaliers', score: 3 }],
+        screening: { sommeil: true, arret: false, travail: true, peur: true, isole: false },
+        completedAt: '2026-11-25T16:00:00.000Z',
+      },
+    };
+    const n = normalizeBilan(old);
+    expect(n.intake.answers).toEqual({
+      douleur_actuelle: 4,
+      douleur_pire: 7,
+      duree: 'gt3m',
+      debut: 'trauma',
+      psfs: [{ activity: 'monter les escaliers', score: 3 }],
+      sommeil: 'oui',
+      arret: 'non',
+      pression: 'oui',
+    });
+    expect(n.intake.original).toEqual(n.intake.answers);
+    expect(n.intake.status).toBe('patient');
+    expect(n.intake.patientAt).toBe('2026-11-25T16:00:00.000Z');
+    expect(n.intake.strokes).toEqual([]);
+  });
+  it('accueil de la PR #6 non terminé → statut « non fait »', () =>
+    expect(
+      normalizeBilan({
+        ...emptyBilan('knee'),
+        intake: {
+          painNow: 2,
+          painWorst: null,
+          duration: null,
+          onset: null,
+          regions: [],
+          psfs: [],
+          screening: {},
+          completedAt: '',
+        },
+      }).intake.status,
+    ).toBe('none'));
 });

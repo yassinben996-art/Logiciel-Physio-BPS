@@ -208,6 +208,14 @@ const rules: readonly RuleDef[] = [
     source: P,
   },
   {
+    id: 'duree-csi',
+    when: { key: 'accueil.duree', op: 'eq', value: 'gt3m' },
+    kind: 'questionnaire',
+    target: 'csi',
+    reason: 'Douleur depuis plus de 3 mois : dépister une sensibilisation centrale.',
+    source: P,
+  },
+  {
     id: 'fonction-spadi',
     when: { key: 'anamnese.notes', op: 'filled' },
     kind: 'questionnaire',

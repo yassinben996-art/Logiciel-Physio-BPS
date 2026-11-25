@@ -1,5 +1,7 @@
 import type { SectionDef, ZoneDef } from '../src/bilan/content/types';
-import { validateZone } from '../src/bilan/content/validate';
+import { validateIntake, validateZone } from '../src/bilan/content/validate';
+import { INTAKE } from '../src/bilan/content/intake';
+import type { IntakeDef } from '../src/bilan/content/types';
 
 const src = { ref: 'test', added: '2026-11-24' };
 
@@ -176,4 +178,51 @@ describe('validateZone', () => {
     };
     expect(validateZone(z, [])).toContainEqual(expect.stringContaining('valeur vide'));
   });
+});
+
+describe('validateIntake', () => {
+  const base: IntakeDef = INTAKE;
+  it('crayon du patient inconnu', () =>
+    expect(validateIntake({ ...base, patientPen: 'nope' })).toContainEqual(
+      expect.stringContaining('crayon'),
+    ));
+  it('showIf vers une question inconnue', () =>
+    expect(
+      validateIntake({
+        ...base,
+        questions: base.questions.map((q) =>
+          q.id === 'cote' && q.kind === 'single' ? { ...q, showIf: { id: 'zz', includes: ['x'] } } : q,
+        ),
+      }),
+    ).toContainEqual(expect.stringContaining('showIf')));
+  it('crayon en double', () =>
+    expect(validateIntake({ ...base, pens: [...base.pens, base.pens[0]!] })).toContainEqual(
+      expect.stringContaining('en double'),
+    ));
+  it('clé accueil sans intake → inconnue', () =>
+    expect(
+      validateZone(
+        { ...ok, rules: [{ ...ok.rules[1]!, when: { key: 'accueil.duree', op: 'eq', value: 'gt3m' } }] },
+        ['tsk'],
+      ),
+    ).toContainEqual(expect.stringContaining('clé inconnue')));
+  it('opérateur incompatible avec une question', () =>
+    expect(
+      validateZone(
+        {
+          ...ok,
+          rules: [{ ...ok.rules[1]!, when: { key: 'accueil.douleur_actuelle', op: 'includes', value: 'x' } }],
+        },
+        ['tsk'],
+        INTAKE,
+      ),
+    ).toContainEqual(expect.stringContaining('opérateur')));
+  it('accueil.chart.regions accepte gte', () =>
+    expect(
+      validateZone(
+        { ...ok, rules: [{ ...ok.rules[1]!, when: { key: 'accueil.chart.regions', op: 'gte', value: 2 } }] },
+        ['tsk'],
+        INTAKE,
+      ),
+    ).toEqual([]));
 });

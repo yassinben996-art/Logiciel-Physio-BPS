@@ -1,7 +1,7 @@
 // Coffre local des bilans : IndexedDB « bilan-vault », tout est chiffré.
 // En clair, il ne reste que le sel et un vérificateur chiffré (pour reconnaître un mauvais PIN).
 // Un PIN oublié rend les bilans irrécupérables : c'est voulu.
-import type { BilanState } from '../state/bilan';
+import { normalizeBilan, type BilanState } from '../state/bilan';
 import { deriveKey, fromB64, open, seal, toB64, type Box } from './crypto';
 
 const DB = 'bilan-vault';
@@ -105,7 +105,7 @@ function makeVault(key: CryptoKey): Vault {
         'readonly',
         (t) => req(t.objectStore(BILANS).get(id)) as Promise<Rec | undefined>,
       );
-      return rec ? open<BilanState>(key, rec.data) : null;
+      return rec ? normalizeBilan(await open<unknown>(key, rec.data)) : null;
     },
     save: (b) =>
       serial(async () => {

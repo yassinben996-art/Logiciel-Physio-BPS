@@ -1,9 +1,12 @@
 // Moteur de règles déterministe : suggestions de tests, de questionnaires et de drapeaux à vérifier.
 // Il ne fait que suggérer ; rien n'est coché ni accepté sans le clinicien.
 import { QUESTIONNAIRES } from '@q';
-import type { Condition, Source, SuggestionKind, ZoneDef } from '../content/types';
-import { resolveKey } from '../content/validate';
-import type { BilanState } from '../state/bilan';
+import type { Condition, Op, Source, SuggestionKind, ZoneDef } from '../content/types';
+import { regionsOf } from '../bodychart/geometry';
+import { INTAKE } from '../content/intake';
+import { isVisible } from './intakeText';
+import { CHART_REGIONS_KEY, resolveKey } from '../content/validate';
+import type { BilanState, IntakeValue } from '../state/bilan';
 import { withinBounds } from './bounds';
 
 export interface Suggestion {
@@ -26,10 +29,47 @@ const filled = (s: BilanState, key: string): boolean =>
   (s.notes[key] ?? '').trim() !== '' ||
   Object.keys(s.chips).some((k) => k.startsWith(key + '.'));
 
+const intakeFilled = (v: IntakeValue | undefined): boolean => {
+  if (v === undefined || v === '') return false;
+  if (Array.isArray(v))
+    return v.some((x: string | { activity: string }) =>
+      typeof x === 'string' ? true : x.activity.trim() !== '',
+    );
+  return true;
+};
+
+/** Condition sur une réponse de l'accueil (clé « accueil.<id> »). */
+function matchIntake(id: string, op: Op, value: number | string | undefined, s: BilanState): boolean {
+  if (`accueil.${id}` === CHART_REGIONS_KEY) {
+    const n = regionsOf(s.intake.strokes, 'douleur').length;
+    return typeof value === 'number' && (op === 'gte' ? n >= value : op === 'lte' ? n <= value : false);
+  }
+  if (id === 'chart' && op === 'filled') return s.intake.strokes.length > 0;
+  // Une question masquée par showIf ne compte pas, même si une ancienne réponse est stockée.
+  const q = INTAKE.questions.find((x) => x.id === id);
+  if (q && !isVisible(q, s)) return false;
+  const v = s.intake.answers[id];
+  switch (op) {
+    case 'filled':
+      return intakeFilled(v);
+    case 'includes':
+      return Array.isArray(v) && (v as readonly unknown[]).includes(value);
+    case 'eq':
+      return v === value;
+    case 'gte':
+      return typeof v === 'number' && typeof value === 'number' && v >= value;
+    case 'lte':
+      return typeof v === 'number' && typeof value === 'number' && v <= value;
+    default:
+      return false;
+  }
+}
+
 export function matches(c: Condition, s: BilanState): boolean {
   if ('all' in c) return c.all.every((x) => matches(x, s));
   if ('any' in c) return c.any.some((x) => matches(x, s));
   const { key, op, value } = c;
+  if (key.startsWith('accueil.')) return matchIntake(key.slice('accueil.'.length), op, value, s);
   switch (op) {
     case 'checked':
       return s.chips[key] === true;
@@ -43,6 +83,8 @@ export function matches(c: Condition, s: BilanState): boolean {
       return typeof value === 'number' && numsOf(s, key).some((v) => v >= value);
     case 'lte':
       return typeof value === 'number' && numsOf(s, key).some((v) => v <= value);
+    case 'includes':
+      return false; // seules les réponses de l'accueil sont des listes
     case 'eq':
       return typeof value === 'number' ? numsOf(s, key).includes(value) : s.choices[key] === value;
   }

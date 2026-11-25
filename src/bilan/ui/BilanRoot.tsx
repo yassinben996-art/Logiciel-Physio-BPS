@@ -1,16 +1,14 @@
 // Racine du bilan : verrouillage par PIN, « Mes bilans », sauvegarde automatique chiffrée.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZoneDef } from '../content/types';
-import { ZONES } from '../content';
+import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
 import { bilanReducer, emptyBilan, type BilanState } from '../state/bilan';
-import type { Intake } from '../state/intake';
 import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '../storage/vault';
 import BilanApp from './BilanApp';
 import BilanList from './BilanList';
-import Handback from './Handback';
-import IntakeForm from './IntakeForm';
 import LockScreen from './LockScreen';
 import ZonePicker from './ZonePicker';
+import PatientScreen from './PatientScreen';
 
 const SAVE_DELAY = 500;
 const LOCK_AFTER = 15 * 60 * 1000;
@@ -21,9 +19,9 @@ type Screen =
   | { k: 'unlock' }
   | { k: 'list'; items: BilanMeta[] }
   | { k: 'zone' }
-  | { k: 'edit'; bilan: BilanState }
-  | { k: 'intake'; bilan: BilanState }
-  | { k: 'handback'; bilan: BilanState; saved: boolean };
+  | { k: 'edit'; bilan: BilanState; rev: number; openIntake?: boolean }
+  | { k: 'confirmPatient'; bilan: BilanState }
+  | { k: 'patient'; bilan: BilanState };
 
 type SaveStatus = 'idle' | 'pending' | 'saved' | 'error';
 
@@ -33,8 +31,9 @@ export default function BilanRoot() {
   const vault = useRef<Vault | null>(null);
   const pending = useRef<BilanState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Dernier état connu du bilan ouvert (pour l'accueil patient). */
-  const latest = useRef<BilanState | null>(null);
+  /** Dernier état connu du bilan ouvert (pour lancer le mode patient sur la saisie à jour). */
+  const current = useRef<BilanState | null>(null);
+  const popGuard = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -70,7 +69,7 @@ export default function BilanRoot() {
 
   const onChange = useCallback(
     (b: BilanState) => {
-      latest.current = b;
+      current.current = b;
       pending.current = b;
       setStatus('pending');
       if (timer.current) clearTimeout(timer.current);
@@ -93,6 +92,32 @@ export default function BilanRoot() {
     if (v) setScreen({ k: 'list', items: await v.list() });
   }, [leave]);
 
+  /** Lève la garde du mode patient (après saisie du PIN). */
+  const releasePatient = useCallback(() => {
+    setPatientLocked(false);
+    if (popGuard.current) window.removeEventListener('popstate', popGuard.current);
+    popGuard.current = null;
+  }, []);
+
+  const edit = useCallback((bilan: BilanState, openIntake = false) => {
+    current.current = bilan;
+    setScreen((sc) => ({ k: 'edit', bilan, rev: (sc.k === 'edit' ? sc.rev : 0) + 1, openIntake }));
+  }, []);
+
+  const startPatient = useCallback(async () => {
+    if (!(await leave())) return;
+    const b = current.current;
+    if (!b) return;
+    setPatientLocked(true);
+    // Le bouton Précédent du navigateur ne fait pas sortir du parcours.
+    history.pushState(null, '', location.href);
+    const pop = () => history.pushState(null, '', location.href);
+    window.addEventListener('popstate', pop);
+    popGuard.current = pop;
+    void document.documentElement.requestFullscreen?.().catch(() => undefined);
+    setScreen({ k: 'patient', bilan: b });
+  }, [leave]);
+
   const lock = useCallback(async () => {
     if (!(await leave())) return;
     vault.current = null;
@@ -105,29 +130,8 @@ export default function BilanRoot() {
     setScreen({ k: 'zone' });
   }, [leave]);
 
-  const openBilan = useCallback((b: BilanState, st: SaveStatus) => {
-    latest.current = b;
-    setStatus(st);
-    setScreen({ k: 'edit', bilan: b });
-  }, []);
-
-  /** Accueil patient : enregistrer, puis tendre la tablette (aucune donnée d'identité à l'écran). */
-  const startIntake = useCallback(async () => {
-    if (!(await leave())) return;
-    const b = latest.current;
-    if (b) setScreen({ k: 'intake', bilan: b });
-  }, [leave]);
-
-  const finishIntake = useCallback(
-    async (b: BilanState, intake: Intake) => {
-      const next = bilanReducer(b, { type: 'intake', intake });
-      latest.current = next;
-      pending.current = next;
-      const saved = await flush();
-      setScreen({ k: 'handback', bilan: next, saved });
-    },
-    [flush],
-  );
+  // Un autre onglet lance le mode patient : celui-ci se verrouille.
+  useEffect(() => onRemoteLock(() => void lock()), [lock]);
 
   // App mise en arrière-plan ou fermée (tablette, téléphone) : enregistrer sans attendre le délai.
   useEffect(() => {
@@ -152,7 +156,12 @@ export default function BilanRoot() {
   }, [status]);
 
   // Verrouillage automatique après 15 minutes d'inactivité.
-  const unlocked = screen.k === 'list' || screen.k === 'edit' || screen.k === 'zone';
+  const unlocked =
+    screen.k === 'list' ||
+    screen.k === 'zone' ||
+    screen.k === 'edit' ||
+    screen.k === 'confirmPatient' ||
+    screen.k === 'patient';
   useEffect(() => {
     if (!unlocked) return;
     let t = setTimeout(() => void lock(), LOCK_AFTER);
@@ -171,98 +180,132 @@ export default function BilanRoot() {
   // Démontage (changement de route) : ne pas perdre la dernière saisie.
   useEffect(() => () => void flush(), [flush]);
 
-  switch (screen.k) {
-    case 'loading':
-      return <p className="bilan note">Chargement…</p>;
-    case 'create':
-    case 'unlock':
-      return (
-        <LockScreen
-          key={screen.k}
-          mode={screen.k}
-          onSubmit={async (pin) => {
-            vault.current = screen.k === 'create' ? await createVault(pin) : await unlockVault(pin);
-            await showList();
-          }}
-        />
-      );
-    case 'list':
-      return (
-        <BilanList
-          items={screen.items}
-          onNew={() => void newBilan()}
-          onLock={() => void lock()}
-          onOpen={(id) =>
-            void vault.current?.load(id).then((b) => {
-              if (b) openBilan(b, 'saved');
-            })
-          }
-          onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
-        />
-      );
-    case 'zone':
-      return (
-        <ZonePicker
-          onPick={(zone: ZoneDef['id']) => openBilan(emptyBilan(zone), 'idle')}
-          onCancel={() => void showList()}
-        />
-      );
-    case 'intake':
-      return (
-        <IntakeForm
-          zoneLabel={ZONES[screen.bilan.zone]?.label ?? ''}
-          initial={screen.bilan.intake}
-          onDraft={(i) => onChange(bilanReducer(screen.bilan, { type: 'intake', intake: i }))}
-          onDone={(i) => void finishIntake(screen.bilan, i)}
-        />
-      );
-    case 'handback':
-      return (
-        <Handback
-          saved={screen.saved}
-          onResume={async (pin) => {
-            await unlockVault(pin);
-            // Nouvel essai d'enregistrement si le premier a échoué ; l'erreur reste visible sinon.
-            const ok = screen.saved || (await flush());
-            openBilan(screen.bilan, ok ? 'saved' : 'error');
-          }}
-        />
-      );
-    case 'edit':
-      return (
-        <BilanApp
-          key={screen.bilan.id}
-          initial={screen.bilan}
-          onChange={onChange}
-          onNew={() => void newBilan()}
-          toolbar={
-            <>
-              <span className={`bilan-save s-${status}`} role="status">
-                {status === 'pending'
-                  ? 'Enregistrement…'
-                  : status === 'saved'
-                    ? 'Enregistré'
-                    : status === 'error'
-                      ? 'Échec de l’enregistrement'
-                      : ''}
-              </span>
-              {blocked && (
-                <span className="note err" role="alert">
-                  La dernière saisie n’est pas enregistrée : impossible de quitter ce bilan pour l’instant.
+  return <div className="bilan-theme">{renderScreen()}</div>;
+
+  function renderScreen() {
+    switch (screen.k) {
+      case 'loading':
+        return <p className="bilan note bilan-theme">Chargement…</p>;
+      case 'create':
+      case 'unlock':
+        return (
+          <LockScreen
+            key={screen.k}
+            mode={screen.k}
+            onSubmit={async (pin) => {
+              vault.current = screen.k === 'create' ? await createVault(pin) : await unlockVault(pin);
+              if (isPatientLocked()) releasePatient();
+              await showList();
+            }}
+          />
+        );
+      case 'list':
+        return (
+          <BilanList
+            items={screen.items}
+            onNew={() => void newBilan()}
+            onLock={() => void lock()}
+            onOpen={(id) =>
+              void vault.current?.load(id).then((b) => {
+                if (b) {
+                  setStatus('saved');
+                  edit(b);
+                }
+              })
+            }
+            onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
+          />
+        );
+      case 'zone':
+        return (
+          <ZonePicker
+            onPick={(zone: ZoneDef['id']) => {
+              setStatus('idle');
+              edit(emptyBilan(zone));
+            }}
+            onCancel={() => void showList()}
+          />
+        );
+      case 'confirmPatient':
+        return (
+          <div className="bilan">
+            <div className="bilan-lock-card patient-confirm">
+              <h1>Accueil patient</h1>
+              <p>
+                Tu vas tendre la tablette au patient. Il ne verra que ses questions ; ton PIN sera demandé
+                pour revenir.
+              </p>
+              <p className="bilan-warn">
+                Pour empêcher de quitter le navigateur, active l’Accès guidé (iPad) ou l’épinglage d’écran
+                (Android).
+              </p>
+              <div className="row">
+                <button type="button" className="btn" onClick={() => void startPatient()}>
+                  Commencer l’accueil
+                </button>
+                <button type="button" className="btn ghost" onClick={() => edit(screen.bilan, true)}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      case 'patient':
+        return (
+          <PatientScreen
+            initial={screen.bilan}
+            onChange={onChange}
+            verifyPin={async (pin) => {
+              await unlockVault(pin);
+            }}
+            onExit={(b, finished) => {
+              releasePatient();
+              const next =
+                finished || b.intake.status === 'patient'
+                  ? b
+                  : bilanReducer(b, { type: 'intakeStatus', status: 'physio' });
+              if (next !== b) onChange(next);
+              edit(next, true);
+            }}
+          />
+        );
+      case 'edit':
+        return (
+          <BilanApp
+            key={`${screen.bilan.id}-${screen.rev}`}
+            initial={screen.bilan}
+            openIntake={screen.openIntake}
+            onChange={onChange}
+            onNew={() => void newBilan()}
+            onStartPatient={() =>
+              current.current && setScreen({ k: 'confirmPatient', bilan: current.current })
+            }
+            toolbar={
+              <>
+                <span className={`bilan-save s-${status}`} role="status">
+                  {status === 'pending'
+                    ? 'Enregistrement…'
+                    : status === 'saved'
+                      ? 'Enregistré'
+                      : status === 'error'
+                        ? 'Échec de l’enregistrement'
+                        : ''}
                 </span>
-              )}
-              <button type="button" className="btn small" onClick={() => void startIntake()}>
-                Accueil patient
-              </button>
-              <button type="button" className="btn small ghost" onClick={() => void showList()}>
-                Mes bilans
-              </button>
-              <button type="button" className="btn small ghost" onClick={() => void lock()}>
-                Verrouiller
-              </button>
-            </>
-          }
-        />
-      );
+                {blocked && (
+                  <span className="note err" role="alert">
+                    La dernière saisie n’est pas enregistrée : impossible de quitter ce bilan pour l’instant.
+                  </span>
+                )}
+                <button type="button" className="btn small ghost" onClick={() => void showList()}>
+                  Mes bilans
+                </button>
+                <button type="button" className="btn small ghost" onClick={() => void lock()}>
+                  Verrouiller
+                </button>
+              </>
+            }
+          />
+        );
+    }
   }
 }

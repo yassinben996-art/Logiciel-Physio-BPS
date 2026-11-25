@@ -16,6 +16,8 @@ function goTo(target: string) {
   const el =
     document.getElementById(fieldDomId(target)) ??
     document.getElementById(fieldDomId(parts.slice(0, 2).join('.')));
+  const details = el?.closest('details');
+  if (details) details.open = true;
   el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   el?.focus({ preventScroll: true });
 }
