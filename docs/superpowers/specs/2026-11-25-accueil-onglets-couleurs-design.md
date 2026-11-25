@@ -9,7 +9,7 @@ Complète : `2026-11-24-bilan-standardise-design.md` (« la conception principal
 Yass a utilisé le socle du bilan (plan 1, fusionné le 24.11.2026). C'est « une bonne base », mais il manque l'**accueil de 5 minutes** prévu dans la conception principale (§5.2), et l'écran est trop long : toutes les sections sont ouvertes d'emblée. Il veut aussi un aspect plus chaleureux.
 
 Trois demandes de Yass, avec ses mots :
-1. « Une étape de 5 min que le patient peut compléter avant la séance s'il arrive à l'heure, mais que l'on peut passer au cas où il arrive trop tard, et qu'il retrouvera dans le QR code. »
+1. « Une étape de 5 min que le patient peut compléter avant la séance s'il arrive à l'heure, mais que l'on peut passer au cas où il arrive trop tard. » Révision du 25.11.2026 (Yass) : un accueil passé n'est pas envoyé par QR code ; **le physio le remplit lui-même en séance**.
 2. Les sections (anamnèse, mobilité, force, modification des symptômes…) dans des **onglets fermés au départ** ; « quand j'en ouvre un, si je ne le ferme pas, il reste ouvert ».
 3. Couleurs : **blanc et brun/beige, avec du bleu**.
 
@@ -19,12 +19,13 @@ Le contenu clinique sera largement revu plus tard (revue de la littérature) : c
 
 **Objectifs**
 - Un accueil patient de 5 minutes environ, rempli **sur la tablette de Yass** avant la séance, qui alimente une section « Accueil » en tête du bilan.
-- Un bouton pour **passer** l'accueil (patient en retard) ; l'accueil est alors marqué « à envoyer par QR code ».
+- Un bouton pour **passer** l'accueil (patient en retard) ; le physio remplit alors la section Accueil lui-même en séance.
+- Un **body chart à dessiner** au doigt, au stylet ou à la souris.
 - Des onglets repliables, fermés au départ, qui restent ouverts tant qu'on ne les ferme pas, avec l'avancement visible sur le titre.
 - La palette blanc, beige/brun et bleu sur tout l'outil de bilan.
 
 **Non-objectifs (pour ce plan)**
-- L'envoi réel par QR code et le remplissage sur le téléphone du patient : ils arrivent avec le relais (plan suivant). Ici, « Passer » ne fait que marquer l'accueil « à envoyer ».
+- L'accueil n'est **pas** envoyé par QR code (révision de Yass du 25.11.2026) : le QR code ne servira qu'aux questionnaires ciblés de fin de séance (relais, plan suivant).
 - Changer les couleurs de l'app PDDM : elle garde les siennes jusqu'à son intégration (étape 4).
 - Revoir le contenu clinique des sections d'examen.
 
@@ -47,11 +48,11 @@ S'ajoutent :
 
 | Approche | Résumé | Verdict |
 |---|---|---|
-| **A. Accueil sur tablette + nouvel aspect, avant le relais** | Onglets et couleurs d'abord, puis l'accueil en mode patient verrouillé ; « Passer » marque l'accueil « à envoyer par QR code » ; l'envoi réel vient avec le relais | **Retenue par Yass** (25.11.2026) : utilisable en séance tout de suite ; les écrans de l'accueil serviront tels quels au QR code |
+| **A. Accueil sur tablette + nouvel aspect, avant le relais** | Onglets et couleurs d'abord, puis l'accueil en mode patient verrouillé ; un accueil passé est rempli par le physio en séance | **Retenue par Yass** (25.11.2026) : utilisable en séance tout de suite, sans attendre le relais |
 | B. Relais d'abord, puis accueil complet (tablette + QR) | Plus cohérent techniquement | Écartée : Yass attend plus longtemps l'accueil et le nouvel aspect |
 | C. Deux petits plans (aspect seul, puis accueil) | Couleurs visibles un peu plus tôt | Écartée : plus de va-et-vient pour le même résultat que A |
 
-**Conséquence sur la conception principale** : l'ordre des étapes (§5bis) devient 1. socle épaule (fait) ; **1b. accueil sur tablette, onglets, couleurs (ce document)** ; 2. relais, synchronisation, IA, et envoi de l'accueil et des questionnaires par QR code ; 3. questionnaires sous licence servis par le relais, retour des scores ; 4. PDDM, lombaire, cervical, couche douleur chronique.
+**Conséquence sur la conception principale** : l'ordre des étapes (§5bis) devient 1. socle épaule (fait) ; **1b. accueil sur tablette, onglets, couleurs (ce document)** ; 2. relais, synchronisation, IA, et envoi des questionnaires ciblés par QR code ; 3. questionnaires sous licence servis par le relais, retour des scores ; 4. PDDM, lombaire, cervical, couche douleur chronique.
 
 ## 5. Ce qui a été décidé
 
@@ -77,9 +78,9 @@ S'ajoutent :
 4. Écran final : « Merci, vous pouvez rendre la tablette. »
 5. Pour quitter le mode patient, Yass saisit son PIN. Le bilan se rouvre avec la section **Accueil** remplie.
 
-**« Passer l'accueil »** : un bouton dans le bilan marque l'accueil « à envoyer par QR code ». L'envoi réel arrive avec le relais. Un accueil commencé puis interrompu garde ses réponses et peut être repris.
+**« Passer l'accueil »** (décision de Yass, 25.11.2026) : le patient arrivé en retard ne remplit rien ; **le physio remplit la section Accueil en séance**, avec les mêmes champs formulés pour lui (tutoiement côté clinicien). Rien n'est envoyé par QR code pour l'accueil. Un accueil commencé par le patient puis interrompu garde ses réponses ; le physio complète le reste.
 
-**Statut de l'accueil**, affiché en tête de la section Accueil : « non fait », « rempli sur la tablette » (avec la date), ou « à envoyer par QR code ».
+**Statut de l'accueil**, affiché en tête de la section Accueil : « non fait », « rempli par le patient » (avec la date), ou « rempli par le physio en séance » (formulation de Yass).
 
 **Contenu** (conception principale §5.2, ordre proposé par Claude). Tout est dans un fichier de contenu, modifiable sans toucher au code, et marqué provisoire :
 - **Zone(s) douloureuse(s)** : épaule, nuque, bas du dos ; **plusieurs choix possibles**. La réponse est **enregistrée**, elle ne change pas la zone du bilan. La zone principale reste choisie par Yass (pour l'instant, l'épaule, seule zone dont le contenu existe) ; les autres zones cochées sont affichées comme zones secondaires (conception principale §5bis). Si le patient n'a pas coché la zone du bilan, la section Accueil le signale à Yass. *Décision de Claude.*
@@ -87,7 +88,11 @@ S'ajoutent :
 - **Depuis quand** : moins de 6 semaines, 6 semaines à 3 mois, plus de 3 mois (mêmes catégories que le PDDM).
 - **Début** : petit à petit sans cause précise, après un choc ou une chute, après une opération (mêmes catégories que le PDDM).
 - **Douleur moyenne** de 0 à 10.
-- **Body chart** : le patient touche les zones douloureuses sur une silhouette de face et de dos. Plusieurs zones possibles.
+- **Body chart à dessiner** (décisions de Yass, 25.11.2026) : une silhouette de face et de dos, sur laquelle on **dessine** la zone de douleur, au doigt, au stylet **ou à la souris**.
+  - **Patient** (mode patient) : **un seul crayon**, « là où vous avez mal ».
+  - **Physio** (section Accueil du bilan) : **plusieurs crayons de couleur**, chacun pour un type de symptôme. Liste provisoire, dans le fichier de contenu : douleur, irradiation, fourmillements, engourdissement. Le tracé du patient apparaît avec le crayon « douleur ».
+  - Une gomme et « Annuler le dernier trait » ; le dessin reste modifiable après coup.
+  - Le dessin est enregistré chiffré, comme le reste du bilan.
 - **PSFS** : jusqu'à 3 activités que la douleur rend difficiles, chacune notée de 0 (impossible) à 10 (comme avant le problème). Instrument publié : formulation à reprendre d'une source citée (version française), sinon marquée provisoire. Seules les **notes de chaque activité** sont affichées et exportées : **aucune moyenne ni score combiné** (aucun chiffre sans source). *Décision de Claude.*
 - **Dépistage**, 5 questions, construites maintenant et **marquées provisoires** en attendant la validation de Yass (*décision de Claude*) :
   - trois échelles de 0 à 10 reprises telles quelles du parcours PDDM (`src/data/items.ts`, « repères maison, non validés ») : attentes de guérison (`exp`), peur que bouger aggrave (`fear`), inquiétude (`worry`) ;
@@ -98,7 +103,7 @@ S'ajoutent :
 - Elles remplissent la section **Accueil** du bilan, que Yass peut **corriger** (même principe que le préremplissage du PDDM, conception principale §5bis). **La réponse d'origine du patient est conservée** : quand Yass corrige, l'écran et le PDF montrent la valeur retenue et la mention « patient : <réponse d'origine> ». Cela garde la trace pour le rebilan et évite de devoir migrer les bilans stockés plus tard. *Décision de Claude.*
 - Elles alimentent le moteur de règles comme n'importe quel champ : les règles du fichier de contenu peuvent s'appuyer sur la durée, le body chart, le dépistage, etc. (ex. du §5.6 : « douleur de plus de 3 mois → CSI-25 »). Les seuils exacts viendront de la revue de la littérature ; ce plan n'ajoute que des règles d'exemple, provisoires.
 - **« Yellow flags préremplis depuis l'accueil »** (conception principale §5.3) s'entend comme des **suggestions** de cocher, jamais des cases cochées d'office : *interprétation de Claude, conforme à l'anti-objectif « l'outil décide à la place du clinicien »*.
-- Exports : l'accueil apparaît dans le PDF et dans le bloc SYSmeta « Anamnèse » (PSFS et scores compris). Le body chart y figure sous forme de liste de zones (ex. « Zones douloureuses : épaule droite (face), bras droit (dos) »).
+- Exports : l'accueil apparaît dans le PDF et dans le bloc SYSmeta « Anamnèse » (réponses et notes PSFS comprises). Le **PDF contient le dessin** du body chart, avec la légende des crayons. Le bloc SYSmeta, qui n'est que du texte, en donne la **liste des régions touchées par le dessin** par type de symptôme (ex. « Douleur : épaule droite (face), bras droit (dos) ») ; ces régions sont calculées à partir d'un découpage invisible de la silhouette, qui sert aussi aux règles (ex. body chart diffus). *Décision de Claude.*
 
 ### 5.4 Mode patient (proposition de Claude, non refusée par Yass)
 - Pendant l'accueil, la tablette n'affiche **que** l'accueil de ce bilan : ni en-tête du bilan, ni « Mes bilans », ni suggestions, ni identité saisie par Yass.
@@ -114,7 +119,7 @@ S'ajoutent :
 
 ## 6. Ce qui est laissé au constructeur
 
-- Le dessin du body chart (nombre et découpage des zones, silhouette), dans le respect de 5.3 : face et dos, touchable au doigt sur tablette et téléphone.
+- Le dessin de la silhouette, la technique de dessin et de stockage des traits, et le découpage invisible en régions, dans le respect de 5.3 : face et dos, utilisable au doigt, au stylet et à la souris sur tablette, téléphone et ordinateur.
 - Les valeurs exactes des couleurs, dans le respect de 5.2 ; validées par Yass sur captures.
 - Le schéma de données de l'accueil dans `BilanState` et la façon dont les règles y font référence, en gardant la modularité (contenu de l'accueil dans `src/bilan/content/`).
 - La mise en page de la section Accueil côté clinicien et dans le PDF.
