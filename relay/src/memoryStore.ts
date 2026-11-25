@@ -48,6 +48,7 @@ export class MemoryStore implements RelayStore {
     return r ? { ...r } : null;
   }
   async putRecord(r: Omit<RecordRow, 'seq'>) {
+    if (r.version !== (this.records.get(r.id)?.version ?? 0) + 1) return null;
     const seq = ++this.seq;
     this.records.set(r.id, { ...r, seq });
     return seq;

@@ -87,11 +87,14 @@ export function storeContract(make: () => RelayStore | Promise<RelayStore>) {
   });
   it('contrat : enregistrements et séquence', async () => {
     const s = await make();
-    const a = await s.putRecord({ id: 'a', meta: 'm', data: 'd', version: 1, deleted: false });
-    const b = await s.putRecord({ id: 'b', meta: 'm', data: 'd', version: 1, deleted: false });
-    const a2 = await s.putRecord({ id: 'a', meta: 'm2', data: 'd2', version: 2, deleted: false });
+    const a = (await s.putRecord({ id: 'a', meta: 'm', data: 'd', version: 1, deleted: false }))!;
+    const b = (await s.putRecord({ id: 'b', meta: 'm', data: 'd', version: 1, deleted: false }))!;
+    const a2 = (await s.putRecord({ id: 'a', meta: 'm2', data: 'd2', version: 2, deleted: false }))!;
     expect(b).toBeGreaterThan(a);
     expect(a2).toBeGreaterThan(b);
+    // version qui ne suit pas la courante → conflit, rien n'est écrit
+    expect(await s.putRecord({ id: 'a', meta: 'x', data: 'x', version: 2, deleted: false })).toBeNull();
+    expect(await s.putRecord({ id: 'c', meta: 'x', data: 'x', version: 3, deleted: false })).toBeNull();
     expect(await s.getRecord('a')).toMatchObject({
       id: 'a',
       meta: 'm2',

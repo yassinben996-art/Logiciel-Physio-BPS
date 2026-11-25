@@ -202,6 +202,11 @@ export async function handle(
         version: version + 1,
         deleted: b.deleted === true,
       });
+      if (seq === null) {
+        // Un autre appareil a écrit entre la lecture et l'écriture.
+        const latest = await store.getRecord(id);
+        return reply(409, { current: latest ? toWire(latest) : null });
+      }
       return reply(200, { version: version + 1, seq });
     }
     return reply(404, { error: 'introuvable' });

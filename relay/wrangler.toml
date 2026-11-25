@@ -1,0 +1,15 @@
+# Relais du bilan (Cloudflare Workers + D1). Déployé par .github/workflows/relay.yml.
+name = "bilan-relay"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGIN = "https://yassinben996-art.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bilan-relay"
+# Remplacé par le workflow au déploiement (la base est créée au premier déploiement).
+database_id = "__D1_ID__"
+migrations_dir = "migrations"

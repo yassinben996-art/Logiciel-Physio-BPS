@@ -21,6 +21,9 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # Adresse du relais de synchronisation (variable du dépôt ; vide = synchronisation pas encore installée).
+          VITE_RELAY_URL: ${{ vars.RELAY_URL }}
       - name: Publier dist/ sur la branche gh-pages
         run: |
           cd dist

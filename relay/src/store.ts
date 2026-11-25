@@ -35,7 +35,10 @@ export interface RelayStore {
   /** Vrai une seule fois, et seulement avant l'expiration. */
   useTicket(hash: string, now: string): Promise<boolean>;
   getRecord(id: string): Promise<RecordRow | null>;
-  /** Renvoie le nouveau seq. */
-  putRecord(r: Omit<RecordRow, 'seq'>): Promise<number>;
+  /**
+   * Écrit l'enregistrement si sa version vaut exactement la version courante + 1 (1 s'il n'existe pas),
+   * en une seule opération atomique. Renvoie le nouveau seq, ou null en cas de conflit.
+   */
+  putRecord(r: Omit<RecordRow, 'seq'>): Promise<number | null>;
   recordsSince(seq: number, limit: number): Promise<RecordRow[]>;
 }

@@ -1,0 +1,62 @@
+# Déploie le relais de synchronisation sur Cloudflare (compte de Yass).
+# Secrets nécessaires (Settings → Secrets and variables → Actions) :
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, RELAY_SETUP_CODE
+name: Relais
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'relay/**'
+      - '.github/workflows/relay.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: relay
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RELAY_SETUP_CODE: ${{ secrets.RELAY_SETUP_CODE }}
+      WRANGLER: npx --yes wrangler@4.20.0
+    defaults:
+      run:
+        working-directory: relay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vérifier les secrets
+        run: |
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID RELAY_SETUP_CODE; do
+            if [ -z "${!v}" ]; then echo "::error::Secret manquant : $v (voir docs/GUIDE-SYNCHRONISATION.md)"; exit 1; fi
+          done
+      - name: Base de données (créée au premier déploiement, dans l'UE si possible)
+        run: |
+          id=$($WRANGLER d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="bilan-relay");process.stdout.write(d?d.uuid:"")})')
+          if [ -z "$id" ]; then
+            $WRANGLER d1 create bilan-relay --jurisdiction=eu || $WRANGLER d1 create bilan-relay --location=weur
+            id=$($WRANGLER d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);process.stdout.write(l.find(x=>x.name==="bilan-relay").uuid)})')
+          fi
+          sed -i "s/__D1_ID__/$id/" wrangler.toml
+      - name: Tables
+        run: $WRANGLER d1 migrations apply bilan-relay --remote
+      - name: Déploiement
+        id: deploy
+        run: |
+          $WRANGLER deploy | tee deploy.log
+          url=$(grep -o 'https://[a-zA-Z0-9.-]*workers.dev' deploy.log | head -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Code d'installation
+        run: printf '%s' "$RELAY_SETUP_CODE" | $WRANGLER secret put RELAY_SETUP_CODE
+      - name: Adresse du relais
+        run: |
+          echo "### Adresse du relais" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${{ steps.deploy.outputs.url }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Copie-la dans la variable **RELAY_URL** (voir le guide)." >> "$GITHUB_STEP_SUMMARY"
