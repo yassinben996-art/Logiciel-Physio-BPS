@@ -50,9 +50,9 @@ describe('blocs SYSmeta', () => {
     expect(bilanSummaryLines(SHOULDER, s, D).map(txt)).toContain('Tendinopathie probable');
   });
   it('deux sections de même rubrique → un seul bloc', () => {
-    const b = sysmetaBlocks(SHOULDER, st({ tests: { 'tests.neer': 'pos', 'modif.scap_assist': 'neg' } }));
+    const b = sysmetaBlocks(SHOULDER, st({ tests: { 'tests.neer': 'pos', 'instable.apprehension': 'neg' } }));
     expect(b).toEqual([
-      { rubric: "Test / Echelle d'évaluation", text: 'Neer : positif\nAssistance scapulaire : négatif' },
+      { rubric: "Test / Echelle d'évaluation", text: 'Appréhension : négatif\nNeer : positif' },
     ]);
   });
   it('identité jamais dans SYSmeta, présente dans le PDF', () => {
@@ -77,7 +77,7 @@ describe('lignes PDF', () => {
     const L = bilanSummaryLines(SHOULDER, st({ tests: { 'tests.neer': 'pos' } }), D);
     expect(L[0]).toEqual({ t: 't', s: 'Bilan : Épaule' });
     expect(L.map(txt)).toEqual(expect.arrayContaining(['Code : B-0042', 'Date : 24.11.2026']));
-    expect(L).toContainEqual({ t: 'h', s: 'Tests spécifiques' });
+    expect(L).toContainEqual({ t: 'h', s: '5. Sous-acromial et coiffe' });
     expect(L).toContainEqual({ t: 'p', s: 'Neer : positif' });
     expect(L.at(-1)).toEqual({ t: 'n', s: DISCLAIMER });
     expect(L.some((l) => txt(l).startsWith('Patient'))).toBe(false);

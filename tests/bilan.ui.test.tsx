@@ -28,7 +28,7 @@ describe('onglets', () => {
     fireEvent.click(sec('Mobilité').querySelector('summary')!);
     expect(sec('Force').open).toBe(true);
     expect(sec('Mobilité').open).toBe(true);
-    const count = () => sec('Tests spécifiques').querySelector('.bilan-sec-count')!;
+    const count = () => sec('5. Sous-acromial et coiffe').querySelector('.bilan-sec-count')!;
     expect(count()).toHaveTextContent('0/10');
     fireEvent.click(within(screen.getByRole('group', { name: 'Full can' })).getByLabelText('positif'));
     expect(count()).toHaveTextContent('1/10');
@@ -40,7 +40,7 @@ describe('onglets', () => {
     fireEvent.click(within(screen.getByRole('group', { name: 'Full can' })).getByLabelText('positif'));
     fireEvent.click(suggestions().getByRole('button', { name: 'Ajouter ER lag sign' }));
     const tests = [...container.querySelectorAll<HTMLDetailsElement>('details.bilan-sec')].find(
-      (d) => d.querySelector('.bilan-sec-title')?.textContent === 'Tests spécifiques',
+      (d) => d.querySelector('.bilan-sec-title')?.textContent === '5. Sous-acromial et coiffe',
     )!;
     expect(tests.open).toBe(true);
     expect(document.activeElement).toBe(screen.getByRole('group', { name: 'ER lag sign' }));
@@ -48,16 +48,20 @@ describe('onglets', () => {
 });
 
 describe('écran de bilan', () => {
-  it('affiche l’accueil puis les 8 sections dans l’ordre', () => {
+  it('affiche l’accueil puis les 12 sections dans l’ordre de l’algorithme', () => {
     const { container } = render(<BilanApp />);
     expect([...container.querySelectorAll('.bilan-sec-title')].map((s) => s.textContent)).toEqual([
       'Accueil',
       'Anamnèse',
       'Drapeaux',
       'Mobilité',
+      '1. Épaule raide ?',
+      '2. Épaule instable ?',
+      '3. Origine cervicale ?',
+      '4. Acromio-claviculaire ?',
+      '5. Sous-acromial et coiffe',
+      '6. Modification des symptômes',
       'Force',
-      'Tests spécifiques',
-      'Tests de modification des symptômes',
       'Raisonnement',
       'Plan',
     ]);

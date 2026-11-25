@@ -36,66 +36,91 @@ const kg = (id: string, label: string): FieldDef => ({
 });
 const test = (id: string, label: string): FieldDef => ({ kind: 'test', id, label, source: P });
 
+const choice = (id: string, label: string, options: readonly [string, string][]): FieldDef => ({
+  kind: 'choice',
+  id,
+  label,
+  options: options.map(([value, l]) => ({ value, label: l })),
+  source: P,
+});
+const modif = (id: string, label: string): FieldDef =>
+  choice(id, label, [
+    ['mieux', 'mieux'],
+    ['pareil', 'pareil'],
+    ['pire', 'pire'],
+  ]);
+const chips = (id: string, label: string, list: readonly ChipDef[]): FieldDef => ({
+  kind: 'chips',
+  id,
+  label,
+  chips: list,
+  source: P,
+});
+const section = (
+  id: string,
+  title: string,
+  fields: readonly FieldDef[],
+  sysmeta?: SectionDef['sysmeta'],
+): SectionDef => (sysmeta ? { id, title, sysmeta, fields, source: P } : { id, title, fields, source: P });
+
+// Ordre de raisonnement (formations EBPratique et Training Thérapie, document « Bilan de l'épaule ») :
+// drapeaux rouges → épaule raide → instable → cervicale → acromio-claviculaire → sous-acromiale par
+// élimination → modification des symptômes → porte d'entrée vers le traitement actif.
 const sections: readonly SectionDef[] = [
-  {
-    id: 'anamnese',
-    title: 'Anamnèse',
-    sysmeta: 'Anamnèse',
-    source: P,
-    fields: [
-      {
-        kind: 'chips',
-        id: 'signes',
-        label: 'Signes',
-        source: P,
-        chips: [
-          chip('nocturne', 'nocturne', ['nuit', 'nocturne', 'réveil']),
-          chip('irradiation', 'irradiation', ['irradie', 'irradiation', 'descend']),
-          chip('paresthesies', 'paresthésies', ['fourmillement', 'picotement', 'paresthésie']),
-          chip('traumatisme', 'traumatisme', ['chute', 'choc', 'trauma']),
-          chip('raideur', 'raideur', ['raide', 'raideur', 'bloqué']),
-        ],
-      },
+  section(
+    'anamnese',
+    'Anamnèse',
+    [
+      chips('signes', 'Signes', [
+        chip('nocturne', 'nocturne', ['nuit', 'nocturne', 'réveil']),
+        chip('irradiation', 'irradiation', ['irradie', 'irradiation', 'descend']),
+        chip('paresthesies', 'paresthésies', ['fourmillement', 'picotement', 'paresthésie']),
+        chip('traumatisme', 'traumatisme', ['chute', 'choc', 'trauma']),
+        chip('raideur', 'raideur', ['raide', 'raideur', 'bloqué']),
+        chip('luxation', 'luxation ou subluxation', ['luxation', 'déboîté', 'sorti', 'subluxation']),
+        chip('douleur_post_charge', 'douleur postérieure en charge (pompes, développé)', [
+          'pompes',
+          'développé',
+        ]),
+        chip('cervicalgie', 'douleur cervicale associée', ['nuque', 'cou', 'cervical']),
+        chip('sous_coude', 'douleur sous le coude', ['avant-bras', 'jusqu’à la main', 'main']),
+        chip('debut_repetitif', 'début répétitif (au-dessus de 90°, port de charge)', [
+          'répétitif',
+          'musculation',
+        ]),
+        chip('douleur_ac', 'douleur localisée sur l’acromio-claviculaire', ['acromio', 'clavicule']),
+      ]),
+      choice('irritabilite', 'Irritabilité (approche STAR)', [
+        ['elevee', 'élevée'],
+        ['moderee', 'modérée'],
+        ['faible', 'faible'],
+      ]),
       notes(),
     ],
-  },
-  {
-    id: 'drapeaux',
-    title: 'Drapeaux',
-    sysmeta: 'Red flags / Yellow flags',
-    source: P,
-    fields: [
-      {
-        kind: 'chips',
-        id: 'rouges',
-        label: 'Red flags',
-        source: P,
-        chips: [
-          chip('perte_poids', 'perte de poids inexpliquée', ['perte de poids', 'maigri'], true),
-          chip('fievre', 'fièvre', ['fièvre'], true),
-          chip('atcd_cancer', 'antécédent de cancer', ['cancer'], true),
-          chip('deficit_neuro', 'déficit neurologique', ['faiblesse soudaine', 'paralysie'], true),
-        ],
-      },
-      {
-        kind: 'chips',
-        id: 'jaunes',
-        label: 'Yellow flags',
-        source: P,
-        chips: [
-          chip('peur_mvt', 'peur du mouvement', ['peur', 'appréhension']),
-          chip('catastrophisme', 'catastrophisme', ['catastrophe', 'jamais guérir']),
-        ],
-      },
+    'Anamnèse',
+  ),
+  section(
+    'drapeaux',
+    'Drapeaux',
+    [
+      chips('rouges', 'Red flags', [
+        chip('perte_poids', 'perte de poids inexpliquée', ['perte de poids', 'maigri'], true),
+        chip('fievre', 'fièvre', ['fièvre'], true),
+        chip('atcd_cancer', 'antécédent de cancer', ['cancer'], true),
+        chip('deficit_neuro', 'déficit neurologique', ['faiblesse soudaine', 'paralysie'], true),
+      ]),
+      chips('jaunes', 'Yellow flags', [
+        chip('peur_mvt', 'peur du mouvement', ['peur', 'appréhension']),
+        chip('catastrophisme', 'catastrophisme', ['catastrophe', 'jamais guérir']),
+      ]),
       notes(),
     ],
-  },
-  {
-    id: 'mobilite',
-    title: 'Mobilité',
-    sysmeta: 'Bilan articulaire',
-    source: P,
-    fields: [
+    'Red flags / Yellow flags',
+  ),
+  section(
+    'mobilite',
+    'Mobilité',
+    [
       deg('flex_a', 'Flexion active'),
       deg('abd_a', 'Abduction active'),
       deg('re1_a', 'Rotation externe (RE1) active'),
@@ -106,20 +131,74 @@ const sections: readonly SectionDef[] = [
       deg('ri_p', 'Rotation interne passive'),
       notes(),
     ],
-  },
-  {
-    id: 'force',
-    title: 'Force',
-    sysmeta: 'Bilan musculaire',
-    source: P,
-    fields: [kg('re', 'Rotation externe'), kg('ri', 'Rotation interne'), kg('abd', 'Abduction'), notes()],
-  },
-  {
-    id: 'tests',
-    title: 'Tests spécifiques',
-    sysmeta: "Test / Echelle d'évaluation",
-    source: P,
-    fields: [
+    'Bilan articulaire',
+  ),
+  section(
+    'raide',
+    '1. Épaule raide ?',
+    [
+      choice('passif_complet', 'Mobilités passives complètes ?', [
+        ['oui', 'oui'],
+        ['non', 'non, limitées'],
+      ]),
+      test('shrug', 'Shrug sign'),
+      notes('Notes (capsulite, arthrose, autre)'),
+    ],
+    "Test / Echelle d'évaluation",
+  ),
+  section(
+    'instable',
+    '2. Épaule instable ?',
+    [
+      test('apprehension', 'Appréhension'),
+      test('relocation', 'Relocation'),
+      test('surprise', 'Surprise (release)'),
+      test('tiroir_ant', 'Tiroir antérieur'),
+      test('jerk', 'Jerk test'),
+      test('kim', 'Kim test'),
+      test('post_impingement', 'Posterior impingement sign'),
+      test('sulcus', 'Sulcus'),
+      test('gagey', 'Hyperabduction (Gagey)'),
+      test('hyper_re', 'Hyper-rotation externe'),
+      notes('Notes (sens, mécanisme, laxité, Beighton)'),
+    ],
+    "Test / Echelle d'évaluation",
+  ),
+  section(
+    'cervical',
+    '3. Origine cervicale ?',
+    [
+      test('modif_rachis', 'Symptômes modifiés en agissant sur le rachis'),
+      test('ultt_combines', 'Tests neuro-dynamiques combinés (ULTT)'),
+      test('spurling', 'Spurling'),
+      test('distraction', 'Distraction cervicale'),
+      test('abduction_relief', 'Soulagement en abduction (shoulder abduction relief)'),
+      notes('Examen neurologique (moteur, sensibilité, réflexes)'),
+    ],
+    "Test / Echelle d'évaluation",
+  ),
+  section(
+    'ac',
+    '4. Acromio-claviculaire ?',
+    [
+      chips('cadogan', 'Faisceau de Cadogan (critères présents)', [
+        chip('repetitif', 'début répétitif', []),
+        chip('pas_sous_coude', 'pas de douleur sous le coude', []),
+        chip('ac_epaissie', 'AC épaissie ou gonflée', []),
+        chip('abd_passive_indolore', 'abduction passive gléno-humérale non douloureuse', []),
+        chip('re_passive_indolore', 'rotation externe passive non douloureuse', []),
+      ]),
+      test('paxinos', 'Paxinos'),
+      test('obrien', 'O’Brien (compression active)'),
+      test('cross_body', 'Adduction horizontale (cross-body)'),
+      notes(),
+    ],
+    "Test / Echelle d'évaluation",
+  ),
+  section(
+    'tests',
+    '5. Sous-acromial et coiffe',
+    [
       test('full_can', 'Full can'),
       test('empty_can', 'Empty can'),
       test('er_lag', 'ER lag sign'),
@@ -131,31 +210,44 @@ const sections: readonly SectionDef[] = [
       test('drop_arm', 'Drop arm'),
       notes(),
     ],
-  },
-  {
-    id: 'modif',
-    title: 'Tests de modification des symptômes',
-    sysmeta: "Test / Echelle d'évaluation",
-    source: P,
-    fields: [
-      test('scap_assist', 'Assistance scapulaire'),
-      test('scap_retraction', 'Rétraction scapulaire'),
-      notes(),
+    "Test / Echelle d'évaluation",
+  ),
+  section(
+    'modif',
+    '6. Modification des symptômes',
+    [
+      modif('scap_assist', 'Assistance scapulaire'),
+      modif('scap_retraction', 'Rétraction scapulaire'),
+      modif('levier_court', 'Bras de levier court (décharge)'),
+      modif('activation_coiffe', 'Activation de la coiffe'),
+      modif('tilt_post', 'Tilt postérieur (trapèze inférieur)'),
+      notes('Mouvement marqueur et effet observé'),
     ],
-  },
-  {
-    id: 'raisonnement',
-    title: 'Raisonnement',
-    source: P,
-    fields: [notes('Hypothèse principale, diagnostics différentiels')],
-  },
-  {
-    id: 'plan',
-    title: 'Plan',
-    sysmeta: 'Plan de traitement',
-    source: P,
-    fields: [notes('Objectifs, axes de traitement, critères et date du rebilan')],
-  },
+    "Test / Echelle d'évaluation",
+  ),
+  section(
+    'force',
+    'Force',
+    [kg('re', 'Rotation externe'), kg('ri', 'Rotation interne'), kg('abd', 'Abduction'), notes()],
+    'Bilan musculaire',
+  ),
+  section('raisonnement', 'Raisonnement', [
+    choice('categorie', 'Catégorie retenue', [
+      ['raide', 'épaule raide'],
+      ['instable', 'épaule instable'],
+      ['cervical', 'origine cervicale'],
+      ['ac', 'acromio-claviculaire'],
+      ['sous_acromial', 'syndrome douloureux sous-acromial'],
+      ['persistante', 'douleur persistante'],
+    ]),
+    notes('Hypothèse principale, diagnostics différentiels, porte d’entrée vers le traitement actif'),
+  ]),
+  section(
+    'plan',
+    'Plan',
+    [notes('Objectifs, axes de traitement, critères et date du rebilan')],
+    'Plan de traitement',
+  ),
 ];
 
 const rules: readonly RuleDef[] = [
@@ -223,6 +315,83 @@ const rules: readonly RuleDef[] = [
     reason: 'Mesure de base de la fonction de l’épaule (questionnaire d’épaule par défaut).',
     source: P,
   },
+  ...(
+    [
+      [
+        'raideur-shrug',
+        'anamnese.signes.raideur',
+        'raide.shrug',
+        'Raideur rapportée : le shrug sign est sensible pour les raideurs.',
+      ],
+      [
+        'luxation-apprehension',
+        'anamnese.signes.luxation',
+        'instable.apprehension',
+        'Luxation ou subluxation : rechercher une instabilité antérieure.',
+      ],
+      [
+        'luxation-relocation',
+        'anamnese.signes.luxation',
+        'instable.relocation',
+        'Compléter le trio appréhension, relocation, surprise.',
+      ],
+      [
+        'luxation-surprise',
+        'anamnese.signes.luxation',
+        'instable.surprise',
+        'Le surprise test est le test isolé le plus spécifique.',
+      ],
+      [
+        'post-jerk',
+        'anamnese.signes.douleur_post_charge',
+        'instable.jerk',
+        'Douleur postérieure en charge : rechercher une lésion labrale postéro-inférieure.',
+      ],
+      [
+        'post-kim',
+        'anamnese.signes.douleur_post_charge',
+        'instable.kim',
+        'Jerk et Kim combinés sont très sensibles.',
+      ],
+      [
+        'cervicalgie-ultt',
+        'anamnese.signes.cervicalgie',
+        'cervical.ultt_combines',
+        'Douleur cervicale associée : les ULTT combinés négatifs aident à exclure une radiculopathie.',
+      ],
+      [
+        'souscoude-ultt',
+        'anamnese.signes.sous_coude',
+        'cervical.ultt_combines',
+        'Douleur sous le coude : explorer le rachis cervical.',
+      ],
+      [
+        'paresthesies-spurling',
+        'anamnese.signes.paresthesies',
+        'cervical.spurling',
+        'Paresthésies : le Spurling aide à confirmer une radiculopathie.',
+      ],
+      [
+        'ac-paxinos',
+        'anamnese.signes.douleur_ac',
+        'ac.paxinos',
+        'Douleur localisée sur l’AC : un Paxinos négatif aide à exclure.',
+      ],
+      [
+        'repetitif-paxinos',
+        'anamnese.signes.debut_repetitif',
+        'ac.paxinos',
+        'Début répétitif : critère du faisceau de Cadogan, tester l’AC.',
+      ],
+    ] as const
+  ).map(([id, key, target, reason]): RuleDef => ({
+    id,
+    when: { key, op: 'checked' },
+    kind: 'test',
+    target,
+    reason,
+    source: P,
+  })),
 ];
 
 export const SHOULDER: ZoneDef = { id: 'shoulder', label: 'Épaule', sections, rules };

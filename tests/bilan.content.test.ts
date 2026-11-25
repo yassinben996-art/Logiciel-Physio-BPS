@@ -30,9 +30,13 @@ describe('contenu épaule', () => {
       'anamnese',
       'drapeaux',
       'mobilite',
-      'force',
+      'raide',
+      'instable',
+      'cervical',
+      'ac',
       'tests',
       'modif',
+      'force',
       'raisonnement',
       'plan',
     ]));
@@ -82,6 +86,42 @@ describe('contenu genou', () => {
         'thessaly',
         'squat_pfp',
       ]),
+    );
+  });
+});
+
+describe('épaule : algorithme de classification', () => {
+  const field = (s: string, f: string) =>
+    SHOULDER.sections.find((x) => x.id === s)?.fields.find((y) => y.id === f);
+  it('catégorie retenue : 6 options dans l’ordre de l’algorithme', () => {
+    const f = field('raisonnement', 'categorie');
+    expect(f?.kind === 'choice' && f.options.map((o) => o.value)).toEqual([
+      'raide',
+      'instable',
+      'cervical',
+      'ac',
+      'sous_acromial',
+      'persistante',
+    ]);
+  });
+  it('irritabilité : élevée, modérée, faible', () => {
+    const f = field('anamnese', 'irritabilite');
+    expect(f?.kind === 'choice' && f.options.map((o) => o.value)).toEqual(['elevee', 'moderee', 'faible']);
+  });
+  it('faisceau de Cadogan : 5 critères', () => {
+    const f = field('ac', 'cadogan');
+    expect(f?.kind === 'chips' && f.chips.length).toBe(5);
+  });
+  it('modification des symptômes : mieux, pareil, pire', () => {
+    const f = field('modif', 'scap_assist');
+    expect(f?.kind === 'choice' && f.options.map((o) => o.value)).toEqual(['mieux', 'pareil', 'pire']);
+  });
+  it('une luxation notée fait proposer appréhension, relocation et surprise', async () => {
+    const { evaluate } = await import('../src/bilan/engine/rules');
+    const { emptyBilan } = await import('../src/bilan/state/bilan');
+    const s = { ...emptyBilan('shoulder'), chips: { 'anamnese.signes.luxation': true as const } };
+    expect(evaluate(SHOULDER, s).map((x) => x.target)).toEqual(
+      expect.arrayContaining(['instable.apprehension', 'instable.relocation', 'instable.surprise']),
     );
   });
 });
