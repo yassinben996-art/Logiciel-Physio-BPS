@@ -68,8 +68,10 @@ export function validateIntake(i: IntakeDef): string[] {
       const target = i.questions.find((x) => x.id === q.showIf!.id);
       if (!target || target.kind !== 'multi')
         errs.push(`question ${q.id} : showIf vers une question inconnue ou non « multi » (${q.showIf.id})`);
-      else if (!target.options.some((o) => o.value === q.showIf!.includes))
-        errs.push(`question ${q.id} : showIf vers une option inconnue (${q.showIf.includes})`);
+      else
+        for (const v of q.showIf.includes)
+          if (!target.options.some((o) => o.value === v))
+            errs.push(`question ${q.id} : showIf vers une option inconnue (${v})`);
     }
   }
   if (count.psfs > 1) errs.push('plus d’une question PSFS');

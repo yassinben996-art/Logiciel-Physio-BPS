@@ -51,7 +51,11 @@ describe('section Accueil (physio)', () => {
   it('réponse corrigée : « patient : 7 »', () => {
     const { container } = render(
       <BilanApp
-        initial={withIntake({ status: 'patient', answers: { douleur: 5 }, original: { douleur: 7 } })}
+        initial={withIntake({
+          status: 'patient',
+          answers: { douleur_actuelle: 5 },
+          original: { douleur_actuelle: 7 },
+        })}
       />,
     );
     expect(openAccueil(container).getByText('patient : 7')).toBeInTheDocument();
@@ -65,5 +69,11 @@ describe('section Accueil (physio)', () => {
     const a = openAccueil(container);
     expect(a.getByRole('group', { name: 'Crayon' })).toBeInTheDocument();
     expect(a.getByRole('button', { name: 'Gomme' })).toBeInTheDocument();
+  });
+  it('Côté aussi pour le genou', () => {
+    const { container } = render(<BilanApp initial={emptyBilan('knee')} />);
+    const a = openAccueil(container);
+    fireEvent.click(within(a.getByRole('group', { name: 'Zones douloureuses' })).getByLabelText('Le genou'));
+    expect(a.getByRole('group', { name: 'Côté' })).toBeInTheDocument();
   });
 });

@@ -8,7 +8,8 @@ import { LABEL_STATUS, type BilanState, type IntakeValue, type PsfsItem } from '
 export function isVisible(q: IntakeQuestion, s: BilanState): boolean {
   if (q.kind !== 'single' || !q.showIf) return true;
   const v = s.intake.answers[q.showIf.id];
-  return Array.isArray(v) && (v as readonly string[]).includes(q.showIf.includes);
+  const list = Array.isArray(v) ? (v as readonly string[]) : [];
+  return q.showIf.includes.some((x) => list.includes(x));
 }
 
 const frDate = (iso: string) => new Date(iso).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' });

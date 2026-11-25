@@ -95,7 +95,9 @@ describe('règles sur l’accueil', () => {
     ).toBe(false);
   });
   it('échelle', () =>
-    expect(matches({ key: 'accueil.douleur', op: 'gte', value: 6 }, withIntake({ douleur: 7 }))).toBe(true));
+    expect(
+      matches({ key: 'accueil.douleur_actuelle', op: 'gte', value: 6 }, withIntake({ douleur_actuelle: 7 })),
+    ).toBe(true));
   it('régions dessinées au crayon douleur', () => {
     const s = withIntake({}, [
       { pen: 'douleur', view: 'front', by: 'patient', pts: [60, 90, 61, 91] },

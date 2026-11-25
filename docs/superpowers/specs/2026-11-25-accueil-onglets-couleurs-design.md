@@ -87,14 +87,14 @@ S'ajoutent :
 - **Côté**, posé seulement si l'épaule est cochée : droite, gauche, les deux. Il est **enregistré et exporté** ; il ne modifie pas les écrans de mobilité et de force dans ce plan. *Ajout et décision de Claude.*
 - **Depuis quand** : moins de 6 semaines, 6 semaines à 3 mois, plus de 3 mois (mêmes catégories que le PDDM).
 - **Début** : petit à petit sans cause précise, après un choc ou une chute, après une opération (mêmes catégories que le PDDM).
-- **Douleur moyenne** de 0 à 10.
+- **Douleur actuelle** et **pire douleur sur 7 jours**, de 0 à 10 (révision de Yass du 25.11.2026, fusion avec la PR #6).
 - **Body chart à dessiner** (décisions de Yass, 25.11.2026) : une silhouette de face et de dos, sur laquelle on **dessine** la zone de douleur, au doigt, au stylet **ou à la souris**.
   - **Patient** (mode patient) : **un seul crayon**, « là où vous avez mal ».
   - **Physio** (section Accueil du bilan) : **plusieurs crayons de couleur**, chacun pour un type de symptôme. Liste provisoire, dans le fichier de contenu : douleur, irradiation, fourmillements, engourdissement. Le tracé du patient apparaît avec le crayon « douleur ».
   - Une gomme et « Annuler le dernier trait » ; le dessin reste modifiable après coup.
   - Le dessin est enregistré chiffré, comme le reste du bilan.
 - **PSFS** : jusqu'à 3 activités que la douleur rend difficiles, chacune notée de 0 (impossible) à 10 (comme avant le problème). Instrument publié : formulation à reprendre d'une source citée (version française), sinon marquée provisoire. Seules les **notes de chaque activité** sont affichées et exportées : **aucune moyenne ni score combiné** (aucun chiffre sans source). *Décision de Claude.*
-- **Dépistage**, 5 questions, construites maintenant et **marquées provisoires** en attendant la validation de Yass (*décision de Claude*) :
+- **Dépistage** (choix validé par Yass le 25.11.2026, fusion avec la PR #6 ; remplace la liste ci-dessous) : peur que bouger aggrave et attentes de guérison (0 à 10, repères du PDDM), sommeil, arrêt de travail, pression au travail ou au quotidien (oui/non). Liste initiale, pour mémoire :
   - trois échelles de 0 à 10 reprises telles quelles du parcours PDDM (`src/data/items.ts`, « repères maison, non validés ») : attentes de guérison (`exp`), peur que bouger aggrave (`fear`), inquiétude (`worry`) ;
   - deux questions oui/non reformulées pour l'accueil, inspirées des éléments du PDDM : « La douleur perturbe-t-elle votre sommeil ? » et « Êtes-vous en arrêt de travail à cause de cette douleur ? ».
   - Aucune note globale de dépistage n'est calculée.

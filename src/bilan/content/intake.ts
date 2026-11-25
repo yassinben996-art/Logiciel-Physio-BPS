@@ -1,4 +1,5 @@
-// Contenu PROVISOIRE de l'accueil patient (spec accueil §5.3), à valider par Yass.
+// Contenu PROVISOIRE de l'accueil patient (spec accueil §5.3). Choix des questions de douleur et de
+// dépistage validé par Yass le 25.11.2026 (fusion avec la PR #6) ; formulations encore à valider.
 // Ajouter, retirer ou réordonner une question ou un crayon : modifier uniquement ce fichier.
 import { SL } from '../../data/items';
 import { P_DURATION, P_ONSET, P_REGION } from '../../data/patient';
@@ -18,7 +19,7 @@ const PDDM: Source = {
 const opts = (r: Readonly<Record<string, string>>): IntakeOption[] =>
   Object.entries(r).map(([value, label]) => ({ value, label }));
 
-const slider = (id: 'exp' | 'fear' | 'worry'): IntakeQuestion => {
+const slider = (id: 'exp' | 'fear'): IntakeQuestion => {
   const s = SL.find((x) => x.id === id)!;
   return { kind: 'scale', id, patient: s.label, clinician: s.label, lo: s.lo, hi: s.hi, source: PDDM };
 };
@@ -30,20 +31,25 @@ export const INTAKE: IntakeDef = {
       id: 'zones',
       patient: 'Où avez-vous mal ?',
       clinician: 'Zones douloureuses',
-      options: opts(P_REGION),
+      options: [
+        { value: 'shoulder', label: P_REGION.shoulder },
+        { value: 'knee', label: 'Le genou' },
+        { value: 'cervical', label: P_REGION.cervical },
+        { value: 'lumbar', label: P_REGION.lumbar },
+      ],
       source: P,
     },
     {
       kind: 'single',
       id: 'cote',
-      patient: 'Quelle épaule ?',
+      patient: 'De quel côté ?',
       clinician: 'Côté',
       options: [
         { value: 'droite', label: 'Droite' },
         { value: 'gauche', label: 'Gauche' },
         { value: 'deux', label: 'Les deux' },
       ],
-      showIf: { id: 'zones', includes: 'shoulder' },
+      showIf: { id: 'zones', includes: ['shoulder', 'knee'] },
       source: P,
     },
     {
@@ -64,9 +70,18 @@ export const INTAKE: IntakeDef = {
     },
     {
       kind: 'scale',
-      id: 'douleur',
-      patient: 'En moyenne, quelle est l’intensité de votre douleur ?',
-      clinician: 'Douleur moyenne (0–10)',
+      id: 'douleur_actuelle',
+      patient: 'Quelle est l’intensité de votre douleur en ce moment ?',
+      clinician: 'Douleur actuelle (0–10)',
+      lo: 'Pas de douleur',
+      hi: 'Pire douleur imaginable',
+      source: P,
+    },
+    {
+      kind: 'scale',
+      id: 'douleur_pire',
+      patient: 'Quelle a été votre pire douleur ces 7 derniers jours ?',
+      clinician: 'Pire douleur sur 7 jours (0–10)',
       lo: 'Pas de douleur',
       hi: 'Pire douleur imaginable',
       source: P,
@@ -93,9 +108,8 @@ export const INTAKE: IntakeDef = {
         provisional: true,
       },
     },
-    slider('exp'),
     slider('fear'),
-    slider('worry'),
+    slider('exp'),
     {
       kind: 'yesno',
       id: 'sommeil',
@@ -108,6 +122,13 @@ export const INTAKE: IntakeDef = {
       id: 'arret',
       patient: 'Êtes-vous en arrêt de travail à cause de cette douleur ?',
       clinician: 'Arrêt de travail',
+      source: P,
+    },
+    {
+      kind: 'yesno',
+      id: 'pression',
+      patient: 'Ressentez-vous beaucoup de pression au travail ou au quotidien ?',
+      clinician: 'Pression au travail ou au quotidien',
       source: P,
     },
   ],

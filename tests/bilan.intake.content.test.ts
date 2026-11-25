@@ -18,14 +18,15 @@ describe('contenu de l’accueil', () => {
       'cote',
       'duree',
       'debut',
-      'douleur',
+      'douleur_actuelle',
+      'douleur_pire',
       'chart',
       'psfs',
-      'exp',
       'fear',
-      'worry',
+      'exp',
       'sommeil',
       'arret',
+      'pression',
     ]));
   it('crayon du patient', () => expect(INTAKE.patientPen).toBe('douleur'));
   it('crayons', () =>
@@ -41,8 +42,17 @@ describe('contenu de l’accueil', () => {
     expect(exp.patient).toBe(sl.label);
     expect(exp.kind === 'scale' && exp.lo === sl.lo && exp.hi === sl.hi).toBe(true);
   });
-  it('côté seulement si épaule', () =>
+  it('le genou fait partie des zones', () => {
+    const z = INTAKE.questions.find((q) => q.id === 'zones')!;
+    expect(z.kind === 'multi' && z.options.map((o) => o.value)).toEqual([
+      'shoulder',
+      'knee',
+      'cervical',
+      'lumbar',
+    ]);
+  });
+  it('côté seulement si épaule ou genou', () =>
     expect(INTAKE.questions.find((q) => q.id === 'cote')).toMatchObject({
-      showIf: { id: 'zones', includes: 'shoulder' },
+      showIf: { id: 'zones', includes: ['shoulder', 'knee'] },
     }));
 });

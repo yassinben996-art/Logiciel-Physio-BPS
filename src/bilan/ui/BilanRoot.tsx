@@ -1,11 +1,13 @@
 // Racine du bilan : verrouillage par PIN, « Mes bilans », sauvegarde automatique chiffrée.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ZoneDef } from '../content/types';
 import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
 import { bilanReducer, emptyBilan, type BilanState } from '../state/bilan';
 import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '../storage/vault';
 import BilanApp from './BilanApp';
 import BilanList from './BilanList';
 import LockScreen from './LockScreen';
+import ZonePicker from './ZonePicker';
 import PatientScreen from './PatientScreen';
 
 const SAVE_DELAY = 500;
@@ -16,6 +18,7 @@ type Screen =
   | { k: 'create' }
   | { k: 'unlock' }
   | { k: 'list'; items: BilanMeta[] }
+  | { k: 'zone' }
   | { k: 'edit'; bilan: BilanState; rev: number; openIntake?: boolean }
   | { k: 'confirmPatient'; bilan: BilanState }
   | { k: 'patient'; bilan: BilanState };
@@ -124,9 +127,8 @@ export default function BilanRoot() {
 
   const newBilan = useCallback(async () => {
     if (!(await leave())) return;
-    setStatus('idle');
-    edit(emptyBilan('shoulder'));
-  }, [leave, edit]);
+    setScreen({ k: 'zone' });
+  }, [leave]);
 
   // Un autre onglet lance le mode patient : celui-ci se verrouille.
   useEffect(() => onRemoteLock(() => void lock()), [lock]);
@@ -155,7 +157,11 @@ export default function BilanRoot() {
 
   // Verrouillage automatique après 15 minutes d'inactivité.
   const unlocked =
-    screen.k === 'list' || screen.k === 'edit' || screen.k === 'confirmPatient' || screen.k === 'patient';
+    screen.k === 'list' ||
+    screen.k === 'zone' ||
+    screen.k === 'edit' ||
+    screen.k === 'confirmPatient' ||
+    screen.k === 'patient';
   useEffect(() => {
     if (!unlocked) return;
     let t = setTimeout(() => void lock(), LOCK_AFTER);
@@ -208,6 +214,16 @@ export default function BilanRoot() {
               })
             }
             onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
+          />
+        );
+      case 'zone':
+        return (
+          <ZonePicker
+            onPick={(zone: ZoneDef['id']) => {
+              setStatus('idle');
+              edit(emptyBilan(zone));
+            }}
+            onCancel={() => void showList()}
           />
         );
       case 'confirmPatient':

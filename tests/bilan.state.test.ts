@@ -167,3 +167,52 @@ describe('traits du patient protégés', () => {
     expect(bilanReducer(a, { type: 'undoStroke' }).intake.strokes).toEqual([ps]);
   });
 });
+
+describe('bilans enregistrés avec l’accueil de la PR #6', () => {
+  it('les réponses sont reprises dans le nouveau format', () => {
+    const old = {
+      ...emptyBilan('knee'),
+      intake: {
+        painNow: 4,
+        painWorst: 7,
+        duration: 'gt3m',
+        onset: 'trauma',
+        regions: ['genou_d'],
+        psfs: [{ activity: 'monter les escaliers', score: 3 }],
+        screening: { sommeil: true, arret: false, travail: true, peur: true, isole: false },
+        completedAt: '2026-11-25T16:00:00.000Z',
+      },
+    };
+    const n = normalizeBilan(old);
+    expect(n.intake.answers).toEqual({
+      douleur_actuelle: 4,
+      douleur_pire: 7,
+      duree: 'gt3m',
+      debut: 'trauma',
+      psfs: [{ activity: 'monter les escaliers', score: 3 }],
+      sommeil: 'oui',
+      arret: 'non',
+      pression: 'oui',
+    });
+    expect(n.intake.original).toEqual(n.intake.answers);
+    expect(n.intake.status).toBe('patient');
+    expect(n.intake.patientAt).toBe('2026-11-25T16:00:00.000Z');
+    expect(n.intake.strokes).toEqual([]);
+  });
+  it('accueil de la PR #6 non terminé → statut « non fait »', () =>
+    expect(
+      normalizeBilan({
+        ...emptyBilan('knee'),
+        intake: {
+          painNow: 2,
+          painWorst: null,
+          duration: null,
+          onset: null,
+          regions: [],
+          psfs: [],
+          screening: {},
+          completedAt: '',
+        },
+      }).intake.status,
+    ).toBe('none'));
+});

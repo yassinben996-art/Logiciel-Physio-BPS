@@ -87,7 +87,7 @@ export interface RuleDef {
 }
 
 export interface ZoneDef {
-  id: 'shoulder' | 'lumbar' | 'cervical';
+  id: 'shoulder' | 'knee' | 'lumbar' | 'cervical';
   label: string;
   sections: readonly SectionDef[];
   rules: readonly RuleDef[];
@@ -111,7 +111,11 @@ export interface IntakeOption {
 
 export type IntakeQuestion =
   | (QBase & { kind: 'multi'; options: readonly IntakeOption[] })
-  | (QBase & { kind: 'single'; options: readonly IntakeOption[]; showIf?: { id: string; includes: string } })
+  | (QBase & {
+      kind: 'single';
+      options: readonly IntakeOption[]; /** Posée seulement si la question « multi » id contient l'une de ces valeurs. */
+      showIf?: { id: string; includes: readonly string[] };
+    })
   /** Échelle de 0 à 10. */
   | (QBase & { kind: 'scale'; lo: string; hi: string })
   /** Valeurs 'oui' / 'non'. */

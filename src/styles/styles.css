@@ -2381,3 +2381,25 @@ sup.c a:hover {
 .patient-screen .bc-views {
   max-width: min(460px, 100%);
 }
+
+/* Choix de la zone (« Nouveau bilan ») */
+.bilan-zones {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 560px;
+}
+.bilan-zones h1 {
+  margin: 0;
+}
+.bilan-zone-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.bilan-zone {
+  min-height: 64px;
+  font-size: 18px;
+}

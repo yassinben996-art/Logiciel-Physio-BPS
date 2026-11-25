@@ -32,6 +32,7 @@ async function startPatient(ui: React.ReactElement = <BilanRoot />) {
   fireEvent.change(screen.getByLabelText('Confirme le PIN'), { target: { value: '123456' } });
   fireEvent.click(screen.getByRole('button', { name: 'Créer le PIN' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Nouveau bilan' }, T));
+  fireEvent.click(await screen.findByRole('button', { name: 'Épaule' }, T));
   fireEvent.change(await screen.findByLabelText('Nom'), { target: { value: 'Dupont' } });
   fireEvent.click(accueil().getByRole('button', { name: 'Accueil patient' }));
   expect(screen.getByText(/Accès guidé/)).toBeInTheDocument();
@@ -58,7 +59,7 @@ describe('mode patient', () => {
     await startPatient();
     fireEvent.click(screen.getByLabelText('L’épaule'));
     fireEvent.click(screen.getByRole('button', { name: 'Suivant' }));
-    expect(screen.getByRole('heading', { name: 'Quelle épaule ?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'De quel côté ?' })).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('Droite'));
     for (let k = 0; k < 20 && !screen.queryByRole('button', { name: 'Terminer' }); k++)
       fireEvent.click(screen.getByRole('button', { name: 'Suivant' }));

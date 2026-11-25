@@ -116,7 +116,7 @@ describe('accueil dans les exports', () => {
     answers: {
       zones: ['shoulder', 'cervical'],
       duree: 'gt3m',
-      douleur: 6,
+      douleur_actuelle: 6,
       sommeil: 'oui',
       psfs: [
         { activity: 'porter un sac', score: 3 },
@@ -124,7 +124,7 @@ describe('accueil dans les exports', () => {
         { activity: '', score: null },
       ],
     },
-    original: { douleur: 7 },
+    original: { douleur_actuelle: 7 },
     strokes: chartStrokes,
   });
   it('intakeLines', () =>
@@ -132,7 +132,7 @@ describe('accueil dans les exports', () => {
       'Accueil : rempli par le physio en séance',
       'Zones douloureuses : L’épaule, La nuque',
       'Durée : Plus de 3 mois',
-      'Douleur moyenne (0–10) : 6 (patient : 7)',
+      'Douleur actuelle (0–10) : 6 (patient : 7)',
       'Douleur : épaule droite (face)',
       'Fourmillements : bras droit (dos)',
       'PSFS : porter un sac 3/10 ; s’habiller 5/10',
@@ -142,7 +142,11 @@ describe('accueil dans les exports', () => {
     expect(
       intakeLines(
         INTAKE,
-        intakeState({ status: 'patient', patientAt: '2026-11-25T08:00:00.000Z', answers: { douleur: 4 } }),
+        intakeState({
+          status: 'patient',
+          patientAt: '2026-11-25T08:00:00.000Z',
+          answers: { douleur_actuelle: 4 },
+        }),
       )[0],
     ).toBe('Accueil : rempli par le patient le 25.11.2026'));
   it('accueil vide → aucune ligne', () => expect(intakeLines(INTAKE, e)).toEqual([]));
@@ -167,9 +171,11 @@ describe('accueil dans les exports', () => {
   });
   it('PDF sans trait : pas de dessin', () =>
     expect(
-      bilanSummaryLines(SHOULDER, intakeState({ answers: { douleur: 3 }, status: 'physio' }), D).some(
-        (l) => l.t === 'chart',
-      ),
+      bilanSummaryLines(
+        SHOULDER,
+        intakeState({ answers: { douleur_actuelle: 3 }, status: 'physio' }),
+        D,
+      ).some((l) => l.t === 'chart'),
     ).toBe(false));
 
   it('côté ignoré si l’épaule n’est plus cochée', () => {

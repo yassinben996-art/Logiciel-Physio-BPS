@@ -160,6 +160,14 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     d'images), découpée en régions invisibles (de face, la droite du patient est à
     gauche) donne la liste des régions par type de symptôme dans SYSmeta et sert aux règles ; le PDF contient le
     dessin.
+46. **Fusion avec la PR #6** (décision de l'utilisateur, 25.11.2026) : deux sessions avaient construit l'accueil
+    en parallèle. Sont gardés le choix de la zone à la création et la zone genou (PR #6), et l'accueil de la PR #7
+    (body chart à dessiner, mode patient verrouillé, remplissage par le physio, réponse d'origine conservée).
+    Questions validées par l'utilisateur : douleur actuelle et pire sur 7 jours (0–10) ; dépistage : peur que
+    bouger aggrave, attentes de guérison (0–10), sommeil, arrêt de travail, pression au travail ou au quotidien
+    (oui/non). Le genou s'ajoute aux zones de l'accueil et à la question du côté. Les accueils déjà enregistrés au
+    format de la PR #6 sont repris au chargement ; leurs zones touchées (ancien body chart) ne peuvent pas devenir
+    des traits et ne sont pas reprises.
 
 ## Technique
 

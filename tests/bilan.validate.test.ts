@@ -191,7 +191,7 @@ describe('validateIntake', () => {
       validateIntake({
         ...base,
         questions: base.questions.map((q) =>
-          q.id === 'cote' && q.kind === 'single' ? { ...q, showIf: { id: 'zz', includes: 'x' } } : q,
+          q.id === 'cote' && q.kind === 'single' ? { ...q, showIf: { id: 'zz', includes: ['x'] } } : q,
         ),
       }),
     ).toContainEqual(expect.stringContaining('showIf')));
@@ -209,7 +209,10 @@ describe('validateIntake', () => {
   it('opérateur incompatible avec une question', () =>
     expect(
       validateZone(
-        { ...ok, rules: [{ ...ok.rules[1]!, when: { key: 'accueil.douleur', op: 'includes', value: 'x' } }] },
+        {
+          ...ok,
+          rules: [{ ...ok.rules[1]!, when: { key: 'accueil.douleur_actuelle', op: 'includes', value: 'x' } }],
+        },
         ['tsk'],
         INTAKE,
       ),

@@ -115,11 +115,56 @@ export const emptyBilan = (zone: ZoneDef['id']): BilanState => {
   };
 };
 
-/** Complète un bilan enregistré par une version antérieure (plan 1 : pas d'accueil). */
+/** Accueil tel qu'enregistré par la PR #6 (25.11.2026), avant la fusion des deux versions. */
+interface Pr6Intake {
+  painNow?: number | null;
+  painWorst?: number | null;
+  duration?: string | null;
+  onset?: string | null;
+  psfs?: readonly PsfsItem[];
+  screening?: Readonly<Record<string, boolean>>;
+  completedAt?: string;
+}
+
+/**
+ * Reprend un accueil de la PR #6 dans le format actuel. Les réponses deviennent des réponses du patient.
+ * Les zones touchées de l'ancien body chart ne peuvent pas devenir des traits : elles ne sont pas reprises.
+ */
+function fromPr6(o: Pr6Intake): IntakeState {
+  const a: Record<string, IntakeValue> = {};
+  if (typeof o.painNow === 'number') a.douleur_actuelle = o.painNow;
+  if (typeof o.painWorst === 'number') a.douleur_pire = o.painWorst;
+  if (o.duration) a.duree = o.duration;
+  if (o.onset) a.debut = o.onset;
+  if (o.psfs?.length) a.psfs = o.psfs;
+  const yes = (k: string, id: string) => {
+    const v = o.screening?.[k];
+    if (typeof v === 'boolean') a[id] = v ? 'oui' : 'non';
+  };
+  yes('sommeil', 'sommeil');
+  yes('arret', 'arret');
+  yes('travail', 'pression');
+  const done = !!o.completedAt;
+  return {
+    status: done ? 'patient' : 'none',
+    patientAt: o.completedAt ?? '',
+    answers: a,
+    original: a,
+    strokes: [],
+  };
+}
+
+/** Complète un bilan enregistré par une version antérieure (plan 1 : pas d'accueil ; PR #6 : autre format). */
 export function normalizeBilan(b: unknown): BilanState {
-  const x = b as Partial<BilanState> & Pick<BilanState, 'id' | 'zone'>;
+  const x = b as Omit<Partial<BilanState>, 'intake'> & Pick<BilanState, 'id' | 'zone'> & { intake?: unknown };
   const base = emptyBilan(x.zone);
-  return { ...base, ...x, intake: { ...emptyIntake(), ...(x.intake ?? {}) } };
+  const raw = x.intake as (Partial<IntakeState> & Pr6Intake) | undefined;
+  const intake: IntakeState = !raw
+    ? emptyIntake()
+    : 'answers' in raw
+      ? { ...emptyIntake(), ...raw }
+      : fromPr6(raw);
+  return { ...base, ...x, intake };
 }
 
 function without<T>(r: Readonly<Record<string, T>>, key: string): Record<string, T> {
