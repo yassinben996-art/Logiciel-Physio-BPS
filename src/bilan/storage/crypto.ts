@@ -45,3 +45,14 @@ export async function open<T>(key: CryptoKey, box: Box): Promise<T> {
   const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(box.iv) }, key, fromB64(box.ct));
   return JSON.parse(new TextDecoder().decode(pt)) as T;
 }
+
+/** Nouvelle clé de coffre : 32 octets aléatoires. */
+export const randomVaultKey = (): Uint8Array<ArrayBuffer> => crypto.getRandomValues(new Uint8Array(32));
+
+/** Importe la clé de coffre (AES-GCM 256, non extractible : on garde les octets bruts à part pour l'appairage). */
+export function importVaultKey(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', new Uint8Array(raw), { name: 'AES-GCM' }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
+}
