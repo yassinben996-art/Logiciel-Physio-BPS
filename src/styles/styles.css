@@ -1838,10 +1838,47 @@ sup.c a:hover {
 }
 .bilan-sec > summary {
   cursor: pointer;
-  padding: 12px 0;
+  padding: 14px 0;
   font-family: var(--f-d);
   font-size: 18px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+}
+.bilan-sec > summary::-webkit-details-marker {
+  display: none;
+}
+.bilan-sec > summary::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  flex: none;
+}
+.bilan-sec[open] > summary::before {
+  transform: rotate(45deg);
+}
+.bilan-sec-title {
+  flex: 1;
+  min-width: 0;
+}
+.bilan-sec-count {
+  font-family: var(--f-b);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.bilan-sec-count.some {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 .bilan-fields {
   display: grid;

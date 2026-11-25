@@ -3,11 +3,13 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { DISCLAIMER } from '../../data/text';
 import { SHOULDER, ZONES } from '../content';
 import { detectKeywords } from '../engine/keywords';
+import { sectionProgress } from '../engine/progress';
 import { evaluate } from '../engine/rules';
 import { bilanReducer, emptyBilan, isDirty, type BilanState, type Identity } from '../state/bilan';
 import { QUESTIONNAIRES } from '@q';
 import BilanExport from './BilanExport';
 import FieldInput from './FieldInput';
+import SectionSummary from './SectionSummary';
 import SuggestionsPanel from './SuggestionsPanel';
 
 interface Props {
@@ -115,8 +117,8 @@ export default function BilanApp({ initial, onChange, toolbar, onNew }: Props) {
       <div className="bilan-layout">
         <main className="bilan-main">
           {zone.sections.map((sec) => (
-            <details key={sec.id} open className="bilan-sec">
-              <summary>{sec.title}</summary>
+            <details key={sec.id} className="bilan-sec">
+              <SectionSummary title={sec.title} {...sectionProgress(sec, s)} />
               <div className="bilan-fields">
                 {sec.fields.map((f) => (
                   <FieldInput key={f.id} section={sec} field={f} state={s} dispatch={dispatch} hits={hits} />
