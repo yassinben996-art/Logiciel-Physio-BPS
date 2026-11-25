@@ -33,6 +33,12 @@ Yass teste l'étape 1. Il attend (1) de choisir la zone au moment de « Nouveau 
    chiffré comme le reste.
 7. **Exports** : l'accueil apparaît dans le PDF et en tête du bloc SYSmeta « Anamnèse » (sans identité).
 
+## Après relecture (25.11.2026)
+- Si l'enregistrement de l'accueil échoue, le patient ne lit pas « réponses enregistrées » ; un nouvel essai est fait à la reprise par le PIN.
+- L'accueil est enregistré comme brouillon à chaque réponse (non terminé), pour ne rien perdre si la page se ferme.
+- Sur un écran de moins de 600 px, le body chart montre une vue à la fois (bascule face / dos) pour des zones assez grandes au doigt.
+- Les activités du PSFS sont du texte libre écrit par le patient : elles passent dans le bloc SYSmeta tel quel. Si un patient y écrit un nom, il faut le retirer avant de coller.
+
 ## Hors périmètre (étape 2 ou plus tard)
 Règles déclenchées par l'accueil (body chart diffus ou > 3 mois → CSI-25), QR code, questionnaires du
 genou dans la banque, IA.

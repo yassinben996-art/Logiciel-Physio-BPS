@@ -1,6 +1,6 @@
 // Accueil rempli par le patient sur la tablette (puis, à l'étape 3, sur son téléphone par QR code).
 // N'affiche aucune donnée d'identité ni aucun autre bilan. Aucune réponse n'est obligatoire.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChoiceCards, Scale } from '../../components/inputs';
 import { P_DURATION, P_ONSET } from '../../data/patient';
 import type { Duration, Onset } from '../../engine/types';
@@ -12,16 +12,31 @@ interface Props {
   zoneLabel: string;
   initial?: Intake;
   onDone: (i: Intake) => void;
+  /** Brouillon à chaque réponse (completedAt vide), pour ne rien perdre si la page se ferme. */
+  onDraft?: (i: Intake) => void;
 }
 
 const entries = <T extends string>(r: Readonly<Record<T, string>>) =>
   (Object.keys(r) as T[]).map((value) => ({ value, label: r[value] }));
 
-export default function IntakeForm({ zoneLabel, initial, onDone }: Props) {
+export default function IntakeForm({ zoneLabel, initial, onDone, onDraft }: Props) {
   const [i, setI] = useState<Intake>(initial ?? emptyIntake());
   const [psfs, setPsfs] = useState<PsfsItem[]>(() =>
     Array.from({ length: PSFS_MAX }, (_, k) => initial?.psfs[k] ?? { activity: '', score: null }),
   );
+  const [sent, setSent] = useState(false);
+  const draftCb = useRef(onDraft);
+  useEffect(() => {
+    draftCb.current = onDraft;
+  }, [onDraft]);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    draftCb.current?.(sanitizeIntake({ ...i, psfs, completedAt: '' }));
+  }, [i, psfs]);
   const patch = (p: Partial<Intake>) => setI((x) => ({ ...x, ...p }));
   const setPsfsAt = (k: number, p: Partial<PsfsItem>) =>
     setPsfs((l) => l.map((x, j) => (j === k ? { ...x, ...p } : x)));
@@ -104,6 +119,7 @@ export default function IntakeForm({ zoneLabel, initial, onDone }: Props) {
               <select
                 id={`psfs-s-${k}`}
                 value={p.score ?? ''}
+                disabled={p.activity.trim() === ''}
                 onChange={(e) =>
                   setPsfsAt(k, { score: e.target.value === '' ? null : Number(e.target.value) })
                 }
@@ -140,7 +156,12 @@ export default function IntakeForm({ zoneLabel, initial, onDone }: Props) {
       <button
         type="button"
         className="btn intake-done"
-        onClick={() => onDone(sanitizeIntake({ ...i, psfs, completedAt: new Date().toISOString() }))}
+        disabled={sent}
+        onClick={() => {
+          if (sent) return;
+          setSent(true);
+          onDone(sanitizeIntake({ ...i, psfs, completedAt: new Date().toISOString() }));
+        }}
       >
         J’ai terminé
       </button>

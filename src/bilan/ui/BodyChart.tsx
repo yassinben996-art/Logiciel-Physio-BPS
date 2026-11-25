@@ -1,5 +1,5 @@
 // Body chart : silhouettes de face et de dos faites de zones à toucher. Sans onToggle, lecture seule.
-import type { KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { BODY_REGIONS, type BodyView } from '../content/body';
 
 interface Props {
@@ -14,6 +14,7 @@ const VIEWS: readonly { view: BodyView; label: string; left: string; right: stri
 
 export default function BodyChart({ selected, onToggle }: Props) {
   const on = new Set(selected);
+  const [active, setActive] = useState<BodyView>('face');
   const key = (id: string) => (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -23,9 +24,29 @@ export default function BodyChart({ selected, onToggle }: Props) {
   const chosen = BODY_REGIONS.filter((r) => on.has(r.id)).map((r) => r.label);
   return (
     <div className={`bodychart${onToggle ? '' : ' readonly'}`}>
+      {onToggle && (
+        <div className="bodychart-switch" role="group" aria-label="Vue du dessin">
+          {VIEWS.map(({ view, label }) => (
+            <button
+              key={view}
+              type="button"
+              className="btn small ghost"
+              aria-pressed={active === view}
+              onClick={() => setActive(view)}
+            >
+              {label === 'De face' ? 'Voir de face' : 'Voir de dos'}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="bodychart-views">
         {VIEWS.map(({ view, label, left, right }) => (
-          <figure key={view} role="group" aria-label={label} className="bodychart-view">
+          <figure
+            key={view}
+            role="group"
+            aria-label={label}
+            className={`bodychart-view${active === view ? ' active' : ''}`}
+          >
             <svg viewBox="0 0 120 245" focusable="false">
               {BODY_REGIONS.filter((r) => r.view === view).map((r) =>
                 onToggle ? (

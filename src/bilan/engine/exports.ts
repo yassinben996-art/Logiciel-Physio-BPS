@@ -98,8 +98,13 @@ export function sysmetaBlocks(z: ZoneDef, state: BilanState): SysmetaBlock[] {
     byRubric.set(sec.sysmeta, [...(byRubric.get(sec.sysmeta) ?? []), ...lines]);
   }
   const intake = intakeLines(s.intake);
-  if (intake.length) byRubric.set('Anamnèse', [...intake, ...(byRubric.get('Anamnèse') ?? [])]);
-  return [...byRubric].map(([rubric, lines]) => ({ rubric, text: lines.join('\n') }));
+  const blocks = [...byRubric].map(([rubric, lines]) => ({ rubric, text: lines.join('\n') }));
+  if (!intake.length) return blocks;
+  const anam = byRubric.get('Anamnèse') ?? [];
+  return [
+    { rubric: 'Anamnèse' as const, text: [...intake, ...anam].join('\n') },
+    ...blocks.filter((b) => b.rubric !== 'Anamnèse'),
+  ];
 }
 
 const frDate = (iso: string): string => {

@@ -2,11 +2,13 @@
 import { useState, type FormEvent } from 'react';
 
 interface Props {
+  /** Enregistrement confirmé : sinon, on ne dit pas au patient que ses réponses sont enregistrées. */
+  saved: boolean;
   /** Rejette avec un message à afficher (ex. « PIN incorrect »). */
   onResume: (pin: string) => Promise<void>;
 }
 
-export default function Handback({ onResume }: Props) {
+export default function Handback({ saved, onResume }: Props) {
   const [pin, setPin] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,7 +27,11 @@ export default function Handback({ onResume }: Props) {
     <div className="bilan bilan-lock">
       <form className="bilan-lock-card" onSubmit={(e) => void submit(e)}>
         <h1>Merci !</h1>
-        <p>Vos réponses sont enregistrées. Vous pouvez rendre la tablette à votre physiothérapeute.</p>
+        {saved ? (
+          <p>Vos réponses sont enregistrées. Vous pouvez rendre la tablette à votre physiothérapeute.</p>
+        ) : (
+          <p>Vous pouvez rendre la tablette à votre physiothérapeute.</p>
+        )}
         <div className="field">
           <label htmlFor="handback-pin">PIN du physiothérapeute</label>
           <input

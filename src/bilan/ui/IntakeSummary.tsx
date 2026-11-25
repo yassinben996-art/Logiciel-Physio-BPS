@@ -17,7 +17,9 @@ export default function IntakeSummary({ intake: i }: { intake: Intake }) {
   const when = frDateTime(i.completedAt);
   return (
     <section className="bilan-intake" aria-label="Accueil rempli par le patient">
-      <h2>Accueil rempli par le patient{when ? ` · ${when}` : ''}</h2>
+      <h2>
+        Accueil rempli par le patient{i.completedAt === '' ? ' · non terminé' : when ? ` · ${when}` : ''}
+      </h2>
       <div className="bilan-intake-grid">
         <BodyChart selected={i.regions} />
         <ul className="bilan-intake-list">

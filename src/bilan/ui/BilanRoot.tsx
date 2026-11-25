@@ -23,7 +23,7 @@ type Screen =
   | { k: 'zone' }
   | { k: 'edit'; bilan: BilanState }
   | { k: 'intake'; bilan: BilanState }
-  | { k: 'handback'; bilan: BilanState };
+  | { k: 'handback'; bilan: BilanState; saved: boolean };
 
 type SaveStatus = 'idle' | 'pending' | 'saved' | 'error';
 
@@ -123,8 +123,8 @@ export default function BilanRoot() {
       const next = bilanReducer(b, { type: 'intake', intake });
       latest.current = next;
       pending.current = next;
-      await flush();
-      setScreen({ k: 'handback', bilan: next });
+      const saved = await flush();
+      setScreen({ k: 'handback', bilan: next, saved });
     },
     [flush],
   );
@@ -152,7 +152,7 @@ export default function BilanRoot() {
   }, [status]);
 
   // Verrouillage automatique après 15 minutes d'inactivité.
-  const unlocked = screen.k === 'list' || screen.k === 'edit';
+  const unlocked = screen.k === 'list' || screen.k === 'edit' || screen.k === 'zone';
   useEffect(() => {
     if (!unlocked) return;
     let t = setTimeout(() => void lock(), LOCK_AFTER);
@@ -212,15 +212,19 @@ export default function BilanRoot() {
         <IntakeForm
           zoneLabel={ZONES[screen.bilan.zone]?.label ?? ''}
           initial={screen.bilan.intake}
+          onDraft={(i) => onChange(bilanReducer(screen.bilan, { type: 'intake', intake: i }))}
           onDone={(i) => void finishIntake(screen.bilan, i)}
         />
       );
     case 'handback':
       return (
         <Handback
+          saved={screen.saved}
           onResume={async (pin) => {
             await unlockVault(pin);
-            openBilan(screen.bilan, status === 'error' ? 'error' : 'saved');
+            // Nouvel essai d'enregistrement si le premier a échoué ; l'erreur reste visible sinon.
+            const ok = screen.saved || (await flush());
+            openBilan(screen.bilan, ok ? 'saved' : 'error');
           }}
         />
       );

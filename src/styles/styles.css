@@ -2248,3 +2248,29 @@ sup.c a:hover {
   flex-direction: column;
   gap: 4px;
 }
+.bodychart svg {
+  touch-action: manipulation;
+}
+.bodychart-switch {
+  display: none;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.bodychart-switch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+@media (max-width: 600px) {
+  .bodychart:not(.readonly) .bodychart-switch {
+    display: flex;
+  }
+  .bodychart:not(.readonly) .bodychart-view {
+    display: none;
+    width: min(88vw, 340px);
+  }
+  .bodychart:not(.readonly) .bodychart-view.active {
+    display: block;
+  }
+}
