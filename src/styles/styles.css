@@ -2526,7 +2526,11 @@ sup.c a:hover {
 .text-preview textarea {
   width: 100%;
   min-width: 0;
-  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    13px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
   padding: 8px 10px;
   border: 1.5px solid var(--line);
   border-radius: 10px;

@@ -104,7 +104,26 @@ export function buildSummary(
         psfs: (psfs as readonly PsfsItem[]).map((p) => ({ ...p, activity: scrub(p.activity, ctx) })),
       }
     : s.intake.answers;
-  const clean: BilanState = { ...s, notes, intake: { ...s.intake, answers, original: {} } };
+  let clean: BilanState = { ...s, notes, intake: { ...s.intake, answers, original: {} } };
+  let text = render(z, clean, intake, ignored);
+  // Trop long pour l'IA (environ 6 000 tokens) : on raccourcit les notes les plus longues.
+  for (let k = 0; k < 20 && text.length > MAX_CHARS; k++) {
+    const [key, longest] = Object.entries(clean.notes).sort((a, b) => b[1].length - a[1].length)[0] ?? [];
+    if (!key || !longest || longest.length <= 400) break;
+    const keep = Math.max(400, longest.length - (text.length - MAX_CHARS) - 20);
+    clean = {
+      ...clean,
+      notes: { ...clean.notes, [key]: `${longest.slice(0, keep).trimEnd()} …[raccourci]` },
+    };
+    text = render(z, clean, intake, ignored);
+  }
+  return text;
+}
+
+/** Environ 6 000 tokens. */
+const MAX_CHARS = 24_000;
+
+function render(z: ZoneDef, clean: BilanState, intake: IntakeDef, ignored: readonly string[]): string {
   const lines = [`Zone : ${z.label}`];
   lines.push(...intakeLines(intake, clean).filter((l) => !l.startsWith('Accueil : ')));
   for (const sec of z.sections) {

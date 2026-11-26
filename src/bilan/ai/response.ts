@@ -67,6 +67,7 @@ export function parseAiResponse(
   const out: AiSuggestion[] = [];
   for (const raw of list) {
     if (out.length >= 5) break;
+    if (!raw || typeof raw !== 'object') continue;
     const r = raw as { type?: unknown; label?: unknown; reason?: unknown };
     const kind = typeof r.type === 'string' ? (normalize(r.type) as AiKind) : null;
     const label = typeof r.label === 'string' ? r.label.trim() : '';

@@ -238,6 +238,8 @@ describe('suggestions de l’IA', () => {
     model: 'openai/gpt-oss-120b',
     items: [sug('a', 'A'), sug('b', 'B'), sug('c', 'C')],
   });
+  // Les ids reçoivent un suffixe propre à la demande : on les retrouve par libellé.
+  const idOf = (s: typeof r1, label: string) => s.ai!.items.find((i) => i.label === label)!.id;
   it('vide au départ, et pour un bilan ancien', () => {
     expect(base.ai).toBeNull();
     const { ai: _a, ...old } = base;
@@ -251,30 +253,30 @@ describe('suggestions de l’IA', () => {
   it('« Noter » ajoute la ligne au raisonnement', () => {
     const withNote = bilanReducer(
       { ...r1, notes: { 'raisonnement.notes': 'Hypothèse : tendinopathie' } },
-      { type: 'aiStatus', id: 'a', status: 'noted' },
+      { type: 'aiStatus', id: idOf(r1, 'A'), status: 'noted' },
     );
     expect(withNote.notes['raisonnement.notes']).toBe(
       'Hypothèse : tendinopathie\nSuggestion IA (non sourcée) : A — raison A',
     );
-    const fresh = bilanReducer(r1, { type: 'aiStatus', id: 'a', status: 'noted' });
+    const fresh = bilanReducer(r1, { type: 'aiStatus', id: idOf(r1, 'A'), status: 'noted' });
     expect(fresh.notes['raisonnement.notes']).toBe('Suggestion IA (non sourcée) : A — raison A');
   });
   it('nouvelle demande : gardés ajoutés, notés et ignorés ; en attente remplacés', () => {
-    let s = bilanReducer(r1, { type: 'aiStatus', id: 'a', status: 'noted' });
-    s = bilanReducer(s, { type: 'aiStatus', id: 'b', status: 'added' });
-    s = bilanReducer(s, { type: 'aiStatus', id: 'c', status: 'ignored' });
+    let s = bilanReducer(r1, { type: 'aiStatus', id: idOf(r1, 'A'), status: 'noted' });
+    s = bilanReducer(s, { type: 'aiStatus', id: idOf(r1, 'B'), status: 'added' });
+    s = bilanReducer(s, { type: 'aiStatus', id: idOf(r1, 'C'), status: 'ignored' });
     s = bilanReducer(s, {
       type: 'aiResult',
       provider: 'OpenRouter',
       model: 'm',
       items: [sug('d', 'D'), sug('e', 'E')],
     });
-    expect(s.ai!.items.map((i) => `${i.id}:${i.status}`)).toEqual([
-      'a:noted',
-      'b:added',
-      'c:ignored',
-      'd:pending',
-      'e:pending',
+    expect(s.ai!.items.map((i) => `${i.label}:${i.status}`)).toEqual([
+      'A:noted',
+      'B:added',
+      'C:ignored',
+      'D:pending',
+      'E:pending',
     ]);
     expect(ignoredAiLabels(s)).toEqual(['C']);
     expect(s.ai!.provider).toBe('OpenRouter');

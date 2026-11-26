@@ -247,7 +247,12 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
     case 'aiResult': {
       // Ce que Yass a déjà ajouté, noté ou ignoré reste ; les suggestions en attente sont remplacées.
       const kept = (s.ai?.items ?? []).filter((i) => i.status !== 'pending');
-      const items = [...kept, ...a.items.map((i) => ({ ...i, status: 'pending' as const }))];
+      // Ids rendus uniques d'une demande à l'autre (l'IA peut reproposer la même suggestion).
+      const round = crypto.randomUUID().slice(0, 8);
+      const items = [
+        ...kept,
+        ...a.items.map((i) => ({ ...i, id: `${i.id}-${round}`, status: 'pending' as const })),
+      ];
       return { ...s, ai: { provider: a.provider, model: a.model, at: new Date().toISOString(), items } };
     }
     case 'aiStatus': {

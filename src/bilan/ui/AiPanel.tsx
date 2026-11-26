@@ -26,10 +26,12 @@ function errorText(e: unknown): string {
     if (e.status === 429) return 'Limite atteinte : réessaie dans une heure.';
     if (e.status === 503 || e.status >= 500)
       return 'IA indisponible pour le moment, seules les règles sont actives';
+    if (e.status === 413) return 'Texte trop long : raccourcis-le dans l’aperçu.';
     return 'Erreur de l’IA';
   }
+  // Un appel réseau qui échoue lève une TypeError (fetch) : pas de réseau.
   if (e instanceof TypeError) return 'Hors connexion';
-  return e instanceof Error ? e.message : 'Erreur de l’IA';
+  return 'Erreur de l’IA';
 }
 
 interface Props {
@@ -56,19 +58,29 @@ export default function AiPanel({ zone, state: s, dispatch, ai }: Props) {
     const n = ++request.current;
     setErr(null);
     setMode('waiting');
+    let r: Awaited<ReturnType<AiAsk['ask']>>;
     try {
-      const r = await ai.ask(text);
-      if (n !== request.current) return; // annulé entre-temps
+      r = await ai.ask(text); // seules les erreurs de cet appel peuvent signifier « hors connexion »
+    } catch (e) {
+      if (n === request.current) {
+        setErr(errorText(e));
+        setMode('idle');
+      }
+      return;
+    }
+    if (n !== request.current) return; // annulé entre-temps
+    try {
+      if (typeof r?.text !== 'string') throw new Error('réponse sans texte');
       const items = parseAiResponse(
         r.text,
         zone,
         QUESTIONNAIRES.map((q) => ({ id: q.id, name: q.name })),
       );
       dispatch({ type: 'aiResult', provider: r.provider, model: r.model, items });
-    } catch (e) {
-      if (n === request.current) setErr(errorText(e));
+    } catch {
+      setErr('L’IA a répondu de façon inattendue');
     } finally {
-      if (n === request.current) setMode('idle');
+      setMode('idle');
     }
   };
 
