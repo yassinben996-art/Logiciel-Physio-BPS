@@ -96,7 +96,7 @@ export default function AiPanel({ zone, state: s, dispatch, ai }: Props) {
       {mode === 'preview' && (
         <TextPreview
           title="Voici ce qui sera envoyé"
-          note="Sans nom ni date : vérifie qu’aucune information identifiante n’a échappé au nettoyage."
+          note="Sans le nom du patient : relis avant d’envoyer."
           initial={buildSummary(zone, s, INTAKE, ignoredAiLabels(s))}
           confirmLabel="Envoyer"
           onConfirm={(t) => void send(t)}

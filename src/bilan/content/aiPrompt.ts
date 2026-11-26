@@ -14,7 +14,7 @@ Règles :
 {"suggestions":[{"type":"hypothese|test|questionnaire|drapeau","label":"…","reason":"…"}]}`;
 
 export const CLAUDE_PROMPT = `Je suis physiothérapeute (musculosquelettique). Voici le résumé anonymisé d'un bilan en cours,
-issu de mon outil de bilan standardisé. Les noms, dates et lieux ont été remplacés par [nom], [date] et [lieu].
+issu de mon outil de bilan standardisé. Le nom du patient et ses coordonnées ont été remplacés par [nom], [téléphone] et [e-mail].
 
 Peux-tu m'aider à approfondir mon raisonnement clinique :
 1. hypothèses principales et diagnostics différentiels, avec ce qui les soutient ou les affaiblit dans le résumé ;
