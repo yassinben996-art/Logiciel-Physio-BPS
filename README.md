@@ -78,3 +78,7 @@ Voir `DECISIONS.md` pour les choix d'implémentation et les écarts au prototype
 
 Installation du relais chiffré (une fois) : voir [docs/GUIDE-SYNCHRONISATION.md](docs/GUIDE-SYNCHRONISATION.md).
 Développement local : `npm run relay:dev`, puis `VITE_RELAY_URL=http://localhost:8787 npm run dev`.
+
+## Suggestions par IA
+
+Activation (une fois) : voir [docs/GUIDE-IA.md](docs/GUIDE-IA.md). Développement local avec une IA simulée : `MOCK_AI=1 npm run relay:dev`.

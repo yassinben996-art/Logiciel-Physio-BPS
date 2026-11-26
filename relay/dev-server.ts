@@ -5,7 +5,35 @@ import { handle } from './src/handler';
 import { MemoryStore } from './src/memoryStore';
 
 const store = new MemoryStore();
-const env = { RELAY_SETUP_CODE: 'dev', ALLOWED_ORIGIN: 'http://localhost:5173' };
+const MOCK_AI = process.env.MOCK_AI === '1';
+const env = {
+  RELAY_SETUP_CODE: 'dev',
+  ALLOWED_ORIGIN: 'http://localhost:5173',
+  ...(MOCK_AI ? { GROQ_API_KEY: 'simulée' } : {}),
+};
+// IA simulée (MOCK_AI=1) : répond sans aucun appel externe.
+const mockAi = (async () =>
+  new Response(
+    JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              suggestions: [
+                {
+                  type: 'hypothese',
+                  label: 'Tendinopathie de la coiffe des rotateurs',
+                  reason: 'Douleur à l’élévation, sans traumatisme',
+                },
+                { type: 'test', label: 'Neer', reason: 'Rechercher un conflit sous-acromial' },
+              ],
+            }),
+          },
+        },
+      ],
+    }),
+    { status: 200 },
+  )) as unknown as typeof fetch;
 const PORT = Number(process.env.PORT ?? 8787);
 
 createServer(async (req, res) => {
@@ -22,7 +50,13 @@ createServer(async (req, res) => {
     }),
     env,
     store,
+    undefined,
+    MOCK_AI ? mockAi : undefined,
   );
   res.writeHead(r.status, Object.fromEntries(r.headers.entries()));
   res.end(Buffer.from(await r.arrayBuffer()));
-}).listen(PORT, () => console.log(`Relais local : http://localhost:${PORT} (code d'installation : dev)`));
+}).listen(PORT, () =>
+  console.log(
+    `Relais local : http://localhost:${PORT} (code d'installation : dev${MOCK_AI ? ', IA simulée' : ''})`,
+  ),
+);
