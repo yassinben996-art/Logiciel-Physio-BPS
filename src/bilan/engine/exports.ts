@@ -53,7 +53,7 @@ function fieldLine(sec: SectionDef, f: FieldDef, s: BilanState): string | null {
   }
 }
 
-const sectionLines = (sec: SectionDef, s: BilanState): string[] =>
+export const sectionLines = (sec: SectionDef, s: BilanState): string[] =>
   sec.fields.map((f) => fieldLine(sec, f, s)).filter((x): x is string => x !== null);
 
 export function sysmetaBlocks(z: ZoneDef, state: BilanState): SysmetaBlock[] {
