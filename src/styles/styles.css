@@ -2537,3 +2537,30 @@ sup.c a:hover {
   background: var(--surface);
   color: var(--ink);
 }
+
+/* Relecture du 26.11.2026 : choix uniques ronds, « non fait » discret, réponses compactes. */
+.bilan-radios .chip {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+.bilan-radios .chip::before {
+  border-radius: 50%;
+}
+.bilan-radios .chip-unset {
+  color: var(--muted);
+  border-style: dashed;
+}
+.bilan-radios .chip-unset:has(input:checked) {
+  background: var(--surface);
+  border-color: var(--line);
+  font-weight: 400;
+}
+.bilan-radios .chip-unset:has(input:checked)::before {
+  background: var(--muted);
+  border-color: var(--muted);
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+/* L'état d'enregistrement à gauche, les boutons à droite. */
+.bilan-head .bilan-save {
+  margin-right: auto;
+}

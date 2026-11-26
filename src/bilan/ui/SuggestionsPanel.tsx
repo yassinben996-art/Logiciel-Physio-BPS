@@ -19,8 +19,11 @@ interface Props {
 }
 
 export default function SuggestionsPanel({ suggestions, questionnaires, dispatch, aiPanel }: Props) {
-  // Sur petit écran, le panneau collant peut être replié pour libérer la saisie.
-  const [open, setOpen] = useState(true);
+  // Sur petit écran, le panneau collant peut être replié pour libérer la saisie. Tant que Yass n'a pas choisi,
+  // il ne s'ouvre que s'il y a des suggestions : vide, il ne cache pas la saisie.
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const open = choice ?? suggestions.length > 0;
+  const setOpen = setChoice;
   return (
     <section className={`bilan-sugg${open ? '' : ' folded'}`} aria-label="Suggestions">
       <div className="bilan-sugg-head">
