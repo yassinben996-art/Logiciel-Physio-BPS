@@ -78,7 +78,9 @@ export async function linkDevice(
   });
 }
 
-const offline = (e: unknown) => !(e instanceof RelayError) || e.status >= 500 || e.status === 429;
+/** Réseau absent (fetch échoue) ou relais indisponible : on réessaiera. Tout le reste est une vraie erreur. */
+const offline = (e: unknown) =>
+  e instanceof TypeError || (e instanceof RelayError && (e.status >= 500 || e.status === 429));
 
 export async function syncOnce(
   v: Vault,

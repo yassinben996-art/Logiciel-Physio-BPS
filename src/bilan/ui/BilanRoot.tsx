@@ -11,6 +11,8 @@ import SyncPanel from './SyncPanel';
 import { RELAY_URL } from '../sync/config';
 import { linkDevice, SYNC_LABEL, syncOnce, type SyncStatus } from '../sync/engine';
 import { codeFromHash } from '../sync/pairing';
+import { debounce } from '../sync/schedule';
+import { openBilanId } from './openBilan';
 import ZonePicker from './ZonePicker';
 import PatientScreen from './PatientScreen';
 
@@ -111,9 +113,10 @@ export default function BilanRoot() {
     syncRunning.current = true;
     try {
       setSyncStatus((s) => (s === 'off' ? s : 'syncing'));
-      const sc = screenRef.current;
-      const openId = sc.k === 'edit' || sc.k === 'patient' ? (current.current?.id ?? sc.bilan.id) : null;
-      const res = await syncOnce(v, { isOpen: (id) => id === openId });
+      // Relu à chaque enregistrement reçu : un bilan ouvert pendant la synchronisation est protégé aussi.
+      const res = await syncOnce(v, {
+        isOpen: (id) => id === openBilanId(screenRef.current, current.current?.id ?? null),
+      });
       if (vault.current !== v) return;
       setSyncStatus(res.status);
       if (res.openCopied)
@@ -145,7 +148,9 @@ export default function BilanRoot() {
     if (!(await leave())) return;
     const v = vault.current;
     if (v) setScreen({ k: 'list', items: await v.list() });
-  }, [leave]);
+    // En quittant un bilan, l'envoi part tout de suite (sans attendre le délai de regroupement).
+    void runSync();
+  }, [leave, runSync]);
 
   /** Lève la garde du mode patient (après saisie du PIN). */
   const releasePatient = useCallback(() => {
@@ -175,10 +180,12 @@ export default function BilanRoot() {
 
   const lock = useCallback(async () => {
     if (!(await leave())) return;
+    // Dernier envoi avant de verrouiller (la synchronisation garde son accès au coffre jusqu'à la fin).
+    void runSync();
     vault.current = null;
     setStatus('idle');
     setScreen({ k: 'unlock' });
-  }, [leave]);
+  }, [leave, runSync]);
 
   const newBilan = useCallback(async () => {
     if (!(await leave())) return;
@@ -211,9 +218,13 @@ export default function BilanRoot() {
   }, [status]);
 
   // Synchronisation : après chaque enregistrement, au retour sur l'app, et toutes les 60 secondes.
+  // Après un enregistrement : on attend 5 s sans nouvelle saisie (une rafale de frappe = un seul envoi,
+  // pour rester loin de la limite de requêtes du relais).
   useEffect(() => {
-    syncSoon.current = () => void runSync();
+    const d = debounce(() => void runSync(), 5000);
+    syncSoon.current = d;
     runSyncRef.current = runSync;
+    return () => d.cancel();
   }, [runSync]);
   const syncActive = screen.k !== 'loading' && screen.k !== 'create' && screen.k !== 'unlock';
   useEffect(() => {

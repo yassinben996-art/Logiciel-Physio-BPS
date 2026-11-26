@@ -10,6 +10,8 @@ export interface D1Stmt {
 }
 export interface D1Like {
   prepare(sql: string): D1Stmt;
+  /** Exécute les requêtes comme une seule transaction (garantie de D1). */
+  batch(stmts: D1Stmt[]): Promise<{ results?: unknown[]; meta: { changes: number } }[]>;
 }
 
 interface DeviceSql {
@@ -97,31 +99,35 @@ export class D1Store implements RelayStore {
     return r ? record(r) : null;
   }
   async putRecord(r: Omit<RecordRow, 'seq'>) {
-    const s = await this.db
-      .prepare("UPDATE meta SET value = value + 1 WHERE key = 'seq' RETURNING value")
-      .first<{ value: number }>();
-    if (!s) throw new Error('séquence absente');
-    // Insertion, ou mise à jour seulement si la version suit la version courante (atomique).
-    const w = await this.db
-      .prepare(
-        `INSERT INTO records (id, meta, data, version, seq, deleted)
-         SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE ?4 = 1
-         ON CONFLICT (id) DO UPDATE SET meta = excluded.meta, data = excluded.data, version = excluded.version,
-           seq = excluded.seq, deleted = excluded.deleted
-         WHERE records.version = excluded.version - 1`,
-      )
-      .bind(r.id, r.meta, r.data, r.version, s.value, r.deleted ? 1 : 0)
-      .run();
-    if (w.meta.changes === 1) return s.value;
-    if (r.version === 1) return null;
-    // Mise à jour d'un enregistrement existant (le SELECT ... WHERE ?4 = 1 a exclu l'insertion).
-    const u = await this.db
-      .prepare(
-        'UPDATE records SET meta = ?, data = ?, version = ?, seq = ?, deleted = ? WHERE id = ? AND version = ?',
-      )
-      .bind(r.meta, r.data, r.version, s.value, r.deleted ? 1 : 0, r.id, r.version - 1)
-      .run();
-    return u.meta.changes === 1 ? s.value : null;
+    // Une seule transaction : la séquence et l'écriture sont visibles ensemble, dans l'ordre des séquences.
+    // Sinon un appareil pourrait lire une séquence plus récente avant qu'une plus ancienne soit écrite,
+    // avancer son curseur et manquer la modification pour de bon.
+    const SEQ = "(SELECT value FROM meta WHERE key = 'seq')";
+    const deleted = r.deleted ? 1 : 0;
+    const res = await this.db.batch([
+      this.db.prepare("UPDATE meta SET value = value + 1 WHERE key = 'seq'"),
+      // Création (version 1 seulement, et seulement si l'id n'existe pas).
+      this.db
+        .prepare(
+          `INSERT INTO records (id, meta, data, version, seq, deleted)
+           SELECT ?1, ?2, ?3, ?4, ${SEQ}, ?5 WHERE ?4 = 1
+           ON CONFLICT (id) DO NOTHING`,
+        )
+        .bind(r.id, r.meta, r.data, r.version, deleted),
+      // Mise à jour, seulement si la version suit la version courante.
+      this.db
+        .prepare(
+          `UPDATE records SET meta = ?2, data = ?3, version = ?4, seq = ${SEQ}, deleted = ?5
+           WHERE id = ?1 AND ?4 > 1 AND version = ?4 - 1`,
+        )
+        .bind(r.id, r.meta, r.data, r.version, deleted),
+      this.db.prepare(`SELECT ${SEQ} AS value`),
+    ]);
+    const written = (res[1]?.meta.changes ?? 0) + (res[2]?.meta.changes ?? 0);
+    if (written !== 1) return null;
+    const row = res[3]?.results?.[0] as { value: number } | undefined;
+    if (!row) throw new Error('séquence absente');
+    return row.value;
   }
   async recordsSince(seq: number, limit: number) {
     const r = await this.db

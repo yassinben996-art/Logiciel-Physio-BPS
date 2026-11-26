@@ -25,6 +25,8 @@ jobs:
     defaults:
       run:
         working-directory: relay
+        # bash explicite : active pipefail, pour qu'un déploiement raté (« deploy | tee ») fasse échouer le job.
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
