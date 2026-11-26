@@ -46,7 +46,7 @@ export default function FieldInput({ section, field: f, state: s, dispatch, hits
           max={f.max}
           step={0.5}
           inputMode="decimal"
-          hint={f.unit}
+          hint={side ? undefined : f.unit} // côté D/G : l'unité est déjà dans le titre
           onChange={(v) => dispatch({ type: 'num', key: k, value: v, min: f.min, max: f.max })}
         />
       );
@@ -70,7 +70,7 @@ export default function FieldInput({ section, field: f, state: s, dispatch, hits
           <legend>{f.label}</legend>
           <div className="bilan-radios">
             {[...f.options, { value: '', label: 'non renseigné' }].map((o) => (
-              <label key={o.value} className="chip">
+              <label key={o.value} className={o.value ? 'chip' : 'chip chip-unset'}>
                 <input
                   type="radio"
                   name={domId}
@@ -89,7 +89,7 @@ export default function FieldInput({ section, field: f, state: s, dispatch, hits
           <legend>{f.label}</legend>
           <div className="bilan-radios">
             {TEST_OPTIONS.map((o) => (
-              <label key={o.label} className="chip">
+              <label key={o.label} className={o.value ? 'chip' : 'chip chip-unset'}>
                 <input
                   type="radio"
                   name={domId}
