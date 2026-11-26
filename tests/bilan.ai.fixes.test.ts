@@ -3,10 +3,9 @@ import { SHOULDER } from '../src/bilan/content';
 import { INTAKE } from '../src/bilan/content/intake';
 import { parseAiResponse } from '../src/bilan/ai/response';
 import { scrub } from '../src/bilan/ai/scrub';
-import { buildSummary, medicalDictionary } from '../src/bilan/ai/summary';
+import { buildSummary } from '../src/bilan/ai/summary';
 import { bilanReducer, emptyBilan, ignoredAiLabels } from '../src/bilan/state/bilan';
 
-const dictionary = medicalDictionary([SHOULDER], INTAKE);
 const qs = QUESTIONNAIRES.map((q) => ({ id: q.id, name: q.name }));
 
 describe('corrections de la relecture (IA)', () => {
@@ -51,26 +50,15 @@ describe('corrections de la relecture (IA)', () => {
   });
 
   it('nom court ou en plusieurs mots du patient', () => {
-    expect(scrub('Li a mal, li revient demain', { names: ['Li', 'Wei'], dictionary })).not.toMatch(/\bli\b/i);
-    expect(scrub('bensaïd revient', { names: ['Ben Saïd', 'Yassine'], dictionary })).toBe('[nom] revient');
+    expect(scrub('Li a mal, li revient demain', { names: ['Li', 'Wei'] })).not.toMatch(/\bli\b/i);
+    expect(scrub('bensaïd revient', { names: ['Ben Saïd', 'Yassine'] })).toBe('[nom] revient');
   });
 
-  it('pas de faux lieu ni de faux téléphone', () => {
-    const ctx = { names: ['Dupont'], dictionary };
-    const t = 'Mise en place d’exercices, il conduit sur la route de nuit. Flexion 170 160 150 140.';
+  it('pas de faux téléphone', () => {
+    const ctx = { names: ['Dupont'] };
+    const t = 'Mise en place d’exercices, le 12.03.2024. Flexion 170 160 150 140.';
     expect(scrub(t, ctx)).toBe(t);
     expect(scrub('tél 079 123 45 67 ou +41 79 123 45 67', ctx)).toBe('tél [téléphone] ou [téléphone]');
-    expect(scrub('habite rue de Bourg 3, au calme', ctx)).toBe('habite [lieu], au calme');
-    expect(scrub('Il habite chemin des Roses 4, au calme', ctx)).toBe('Il habite [lieu], au calme');
-  });
-
-  it('noms de tiers après une abréviation ou deux-points', () => {
-    const ctx = { names: ['Dupont'], dictionary };
-    expect(scrub('Adressée par le Dr. Martin pour sa douleur', ctx)).toBe(
-      'Adressée par le Dr. [nom] pour sa douleur',
-    );
-    expect(scrub('Médecin traitant : Durand', ctx)).toBe('Médecin traitant : [nom]');
-    expect(scrub('Vu avec M. Wu hier', ctx)).toBe('Vu avec M. [nom] hier');
   });
 
   it('« Déjà écarté » arrive dans le résumé', () => {

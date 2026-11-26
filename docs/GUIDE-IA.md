@@ -2,7 +2,7 @@
 
 À faire **une seule fois**, sur ton ordinateur, en 10 minutes environ. Il faut que la synchronisation soit déjà installée (voir `GUIDE-SYNCHRONISATION.md`).
 
-L'IA lit un résumé **anonymisé** du bilan : sans nom, prénom, date de naissance ni code. Les noms, dates et lieux tapés dans les notes sont remplacés par `[nom]`, `[date]` et `[lieu]`. Tu vois toujours le texte exact avant l'envoi, et tu peux le corriger.
+L'IA lit un résumé **anonymisé** du bilan : sans nom, prénom, date de naissance ni code. Dans les notes, seuls le nom et le prénom du patient, son téléphone et son e-mail sont remplacés ; tout le reste (noms de tests, dates, lieux, médecins) est envoyé tel quel. Tu vois toujours le texte exact avant l'envoi, et tu peux le corriger.
 
 ---
 

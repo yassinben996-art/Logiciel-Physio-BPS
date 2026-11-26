@@ -62,7 +62,7 @@ export default function BilanExport({ zone, state }: { zone: ZoneDef; state: Bil
       {claude === 'preview' ? (
         <TextPreview
           title="Texte copié pour Claude"
-          note="Anonymisé : vérifie qu’aucune information identifiante n’a échappé au nettoyage."
+          note="Sans le nom du patient : relis avant de copier."
           initial={`${CLAUDE_PROMPT}\n\n${buildSummary(zone, state, INTAKE)}`}
           confirmLabel="Copier"
           onConfirm={(text) =>
