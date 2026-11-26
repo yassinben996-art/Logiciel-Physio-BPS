@@ -21,14 +21,17 @@ describe('nettoyage des textes libres', () => {
     const t = 'Test de Neer positif, Hawkins-Kennedy négatif, Jobe douloureux. Douleur nocturne.';
     expect(scrub(t, ctx)).toBe(t);
   });
-  it('adresse', () => expect(scrub('Il habite chemin des Roses 4, au calme', ctx)).toBe('Il habite [lieu], au calme'));
+  it('adresse', () =>
+    expect(scrub('Il habite chemin des Roses 4, au calme', ctx)).toBe('Il habite [lieu], au calme'));
   it('dates écrites', () => {
     const out = scrub('Lundi 12 mars, rendez-vous', ctx);
     expect(out).toContain('[date]');
     expect(out).not.toMatch(/Lundi|12 mars/);
   });
   it('autre nom propre en milieu de phrase', () =>
-    expect(scrub('Adressé par le docteur Martin pour sa douleur', ctx)).toBe('Adressé par le docteur [nom] pour sa douleur'));
+    expect(scrub('Adressé par le docteur Martin pour sa douleur', ctx)).toBe(
+      'Adressé par le docteur [nom] pour sa douleur',
+    ));
 });
 
 describe('résumé envoyé à l’IA', () => {
@@ -39,7 +42,11 @@ describe('résumé envoyé à l’IA', () => {
       code: 'B-1234',
       identity: { nom: 'Dupont', prenom: 'Marie', naissance: '1980-03-05' },
       notes: { 'anamnese.notes': 'Marie a mal depuis le 3 mars' },
-      intake: { ...e.intake, status: 'physio', answers: { psfs: [{ activity: 'porter Dupont junior', score: 4 }] } },
+      intake: {
+        ...e.intake,
+        status: 'physio',
+        answers: { psfs: [{ activity: 'porter Dupont junior', score: 4 }] },
+      },
     };
   };
   it('aucune identité, aucun code, aucun id', () => {
@@ -51,5 +58,6 @@ describe('résumé envoyé à l’IA', () => {
     expect(out.split('\n')[0]).toBe('Zone : Épaule');
     expect(out).not.toContain('Accueil : rempli');
   });
-  it('bilan vide', () => expect(buildSummary(SHOULDER, emptyBilan('shoulder'), INTAKE)).toBe('Zone : Épaule'));
+  it('bilan vide', () =>
+    expect(buildSummary(SHOULDER, emptyBilan('shoulder'), INTAKE)).toBe('Zone : Épaule'));
 });
