@@ -73,3 +73,8 @@ sur 3000 cas aléatoires et vérifie que le moteur porté donne exactement les m
 - Les références ont été lues sur titres et résumés : **à vérifier dans les textes complets avant usage clinique**.
 
 Voir `DECISIONS.md` pour les choix d'implémentation et les écarts au prototype.
+
+## Synchronisation entre appareils
+
+Installation du relais chiffré (une fois) : voir [docs/GUIDE-SYNCHRONISATION.md](docs/GUIDE-SYNCHRONISATION.md).
+Développement local : `npm run relay:dev`, puis `VITE_RELAY_URL=http://localhost:8787 npm run dev`.

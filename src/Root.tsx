@@ -17,7 +17,7 @@ export default function Root() {
   // L'adresse modifiée par le patient est aussitôt remise sur le bilan : un rechargement ramène donc à
   // l'écran du PIN, jamais à l'app PDDM.
   useEffect(() => {
-    if (locked && hash !== '#/bilan') location.hash = '#/bilan';
+    if (locked && !hash.startsWith('#/bilan')) location.hash = '#/bilan';
   }, [locked, hash]);
-  return hash === '#/bilan' || locked ? <BilanRoot /> : <App />;
+  return hash.startsWith('#/bilan') || locked ? <BilanRoot /> : <App />;
 }

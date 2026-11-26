@@ -7,6 +7,12 @@ import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '
 import BilanApp from './BilanApp';
 import BilanList from './BilanList';
 import LockScreen from './LockScreen';
+import SyncPanel from './SyncPanel';
+import { RELAY_URL } from '../sync/config';
+import { linkDevice, SYNC_LABEL, syncOnce, type SyncStatus } from '../sync/engine';
+import { codeFromHash } from '../sync/pairing';
+import { debounce } from '../sync/schedule';
+import { openBilanId } from './openBilan';
 import ZonePicker from './ZonePicker';
 import PatientScreen from './PatientScreen';
 
@@ -21,7 +27,8 @@ type Screen =
   | { k: 'zone' }
   | { k: 'edit'; bilan: BilanState; rev: number; openIntake?: boolean }
   | { k: 'confirmPatient'; bilan: BilanState }
-  | { k: 'patient'; bilan: BilanState };
+  | { k: 'patient'; bilan: BilanState }
+  | { k: 'link'; code: string };
 
 type SaveStatus = 'idle' | 'pending' | 'saved' | 'error';
 
@@ -34,6 +41,17 @@ export default function BilanRoot() {
   /** Dernier état connu du bilan ouvert (pour lancer le mode patient sur la saisie à jour). */
   const current = useRef<BilanState | null>(null);
   const popGuard = useRef<(() => void) | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('off');
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const screenRef = useRef(screen);
+  useEffect(() => {
+    screenRef.current = screen;
+  });
+  // Lien d'appairage (QR code) : le code est lu, puis retiré de l'adresse.
+  const linkCode = useRef<string | null>(codeFromHash(location.hash));
+  useEffect(() => {
+    if (linkCode.current) history.replaceState(null, '', '#/bilan');
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -47,6 +65,8 @@ export default function BilanRoot() {
    * Enregistre tout de suite ce qui est en attente, y compris ce qui a été saisi pendant l'enregistrement.
    * Renvoie false si l'enregistrement a échoué : la saisie reste en attente et l'erreur reste affichée.
    */
+  /** Envoi après chaque enregistrement réussi (branché plus bas, quand runSync existe). */
+  const syncSoon = useRef<(() => void) | null>(null);
   const flush = useCallback(async (): Promise<boolean> => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
@@ -62,6 +82,7 @@ export default function BilanRoot() {
       if (pending.current === b) {
         pending.current = null;
         setStatus('saved');
+        syncSoon.current?.();
       }
     }
     return true;
@@ -78,6 +99,43 @@ export default function BilanRoot() {
     [flush],
   );
 
+  /** Une synchronisation à la fois ; une demande pendant l'exécution relance un tour à la fin. */
+  const syncRunning = useRef(false);
+  const syncAgain = useRef(false);
+  const runSyncRef = useRef<(() => Promise<void>) | null>(null);
+  const runSync = useCallback(async (): Promise<void> => {
+    const v = vault.current;
+    if (!v) return;
+    if (syncRunning.current) {
+      syncAgain.current = true;
+      return;
+    }
+    syncRunning.current = true;
+    try {
+      setSyncStatus((s) => (s === 'off' ? s : 'syncing'));
+      // Relu à chaque enregistrement reçu : un bilan ouvert pendant la synchronisation est protégé aussi.
+      const res = await syncOnce(v, {
+        isOpen: (id) => id === openBilanId(screenRef.current, current.current?.id ?? null),
+      });
+      if (vault.current !== v) return;
+      setSyncStatus(res.status);
+      if (res.openCopied)
+        setSyncNotice(
+          'Une autre version de ce bilan est arrivée d’un autre appareil : elle est gardée comme copie dans Mes bilans.',
+        );
+      if (screenRef.current.k === 'list') {
+        const items = await v.list();
+        if (screenRef.current.k === 'list' && vault.current === v) setScreen({ k: 'list', items });
+      }
+    } finally {
+      syncRunning.current = false;
+      if (syncAgain.current) {
+        syncAgain.current = false;
+        void runSyncRef.current?.();
+      }
+    }
+  }, []);
+
   const [blocked, setBlocked] = useState(false);
   /** Avant de quitter le bilan : tout enregistrer, sinon rester sur place avec l'erreur visible. */
   const leave = useCallback(async () => {
@@ -90,7 +148,9 @@ export default function BilanRoot() {
     if (!(await leave())) return;
     const v = vault.current;
     if (v) setScreen({ k: 'list', items: await v.list() });
-  }, [leave]);
+    // En quittant un bilan, l'envoi part tout de suite (sans attendre le délai de regroupement).
+    void runSync();
+  }, [leave, runSync]);
 
   /** Lève la garde du mode patient (après saisie du PIN). */
   const releasePatient = useCallback(() => {
@@ -120,10 +180,12 @@ export default function BilanRoot() {
 
   const lock = useCallback(async () => {
     if (!(await leave())) return;
+    // Dernier envoi avant de verrouiller (la synchronisation garde son accès au coffre jusqu'à la fin).
+    void runSync();
     vault.current = null;
     setStatus('idle');
     setScreen({ k: 'unlock' });
-  }, [leave]);
+  }, [leave, runSync]);
 
   const newBilan = useCallback(async () => {
     if (!(await leave())) return;
@@ -154,6 +216,27 @@ export default function BilanRoot() {
     window.addEventListener('beforeunload', h);
     return () => window.removeEventListener('beforeunload', h);
   }, [status]);
+
+  // Synchronisation : après chaque enregistrement, au retour sur l'app, et toutes les 60 secondes.
+  // Après un enregistrement : on attend 5 s sans nouvelle saisie (une rafale de frappe = un seul envoi,
+  // pour rester loin de la limite de requêtes du relais).
+  useEffect(() => {
+    const d = debounce(() => void runSync(), 5000);
+    syncSoon.current = d;
+    runSyncRef.current = runSync;
+    return () => d.cancel();
+  }, [runSync]);
+  const syncActive = screen.k !== 'loading' && screen.k !== 'create' && screen.k !== 'unlock';
+  useEffect(() => {
+    if (!syncActive) return;
+    const vis = () => document.visibilityState === 'visible' && void runSync();
+    document.addEventListener('visibilitychange', vis);
+    const iv = setInterval(() => void runSync(), 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', vis);
+      clearInterval(iv);
+    };
+  }, [syncActive, runSync]);
 
   // Verrouillage automatique après 15 minutes d'inactivité.
   const unlocked =
@@ -195,7 +278,12 @@ export default function BilanRoot() {
             onSubmit={async (pin) => {
               vault.current = screen.k === 'create' ? await createVault(pin) : await unlockVault(pin);
               if (isPatientLocked()) releasePatient();
+              if (linkCode.current) {
+                setScreen({ k: 'link', code: linkCode.current });
+                return;
+              }
               await showList();
+              void runSync();
             }}
           />
         );
@@ -213,7 +301,41 @@ export default function BilanRoot() {
                 }
               })
             }
-            onRemove={(id) => void vault.current?.remove(id).then(() => showList())}
+            onRemove={(id) =>
+              void vault.current
+                ?.remove(id)
+                .then(() => showList())
+                .then(() => runSync())
+            }
+            footer={
+              vault.current && (
+                <SyncPanel
+                  vault={vault.current}
+                  relayUrl={RELAY_URL}
+                  status={syncStatus}
+                  onChanged={() => void runSync()}
+                  onSyncNow={() => void runSync()}
+                />
+              )
+            }
+          />
+        );
+      case 'link':
+        return (
+          <LinkScreen
+            relayUrl={RELAY_URL}
+            onLink={async (name) => {
+              const v = vault.current;
+              if (!v) return;
+              await linkDevice(v, RELAY_URL, screen.code, name);
+              linkCode.current = null;
+              await runSync();
+              await showList();
+            }}
+            onCancel={() => {
+              linkCode.current = null;
+              void showList();
+            }}
           />
         );
       case 'zone':
@@ -291,6 +413,14 @@ export default function BilanRoot() {
                         ? 'Échec de l’enregistrement'
                         : ''}
                 </span>
+                {syncStatus !== 'off' && (
+                  <span className={`sync-status s-${syncStatus}`}>{SYNC_LABEL[syncStatus]}</span>
+                )}
+                {syncNotice && (
+                  <span className="note err" role="alert">
+                    {syncNotice}
+                  </span>
+                )}
                 {blocked && (
                   <span className="note err" role="alert">
                     La dernière saisie n’est pas enregistrée : impossible de quitter ce bilan pour l’instant.
@@ -308,4 +438,60 @@ export default function BilanRoot() {
         );
     }
   }
+}
+
+/** Écran « Relier cet appareil », ouvert par le lien du QR code après le PIN. */
+function LinkScreen({
+  relayUrl,
+  onLink,
+  onCancel,
+}: {
+  relayUrl: string;
+  onLink: (name: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="bilan">
+      <div className="bilan-lock-card">
+        <h1>Relier cet appareil</h1>
+        {!relayUrl ? (
+          <p className="note">La synchronisation n’est pas encore installée (voir le guide).</p>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setErr(null);
+              setBusy(true);
+              void onLink(name.trim() || 'Appareil').catch((x: unknown) => {
+                setErr(x instanceof Error ? x.message : 'Erreur inattendue.');
+                setBusy(false);
+              });
+            }}
+          >
+            <p>Tes bilans des autres appareils vont arriver ici ; ceux déjà présents sont gardés.</p>
+            <div className="f">
+              <label htmlFor="link-name">Nom de cet appareil</label>
+              <input id="link-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            {err && (
+              <p className="note err" role="alert">
+                {err}
+              </p>
+            )}
+            <div className="row">
+              <button type="submit" className="btn" disabled={busy}>
+                Relier
+              </button>
+              <button type="button" className="btn ghost" onClick={onCancel}>
+                Plus tard
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
 }

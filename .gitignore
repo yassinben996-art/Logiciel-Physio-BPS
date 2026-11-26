@@ -9,3 +9,6 @@ dist-single
 private/
 dist-private/
 personnel/
+
+# Fichiers de travail de wrangler (relais Cloudflare)
+.wrangler/
