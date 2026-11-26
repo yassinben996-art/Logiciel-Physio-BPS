@@ -1,5 +1,6 @@
 // État d'un bilan : fonctions pures et immuables, sans dépendance à React.
 import type { Stroke } from '../bodychart/geometry';
+import type { AiSuggestion } from '../ai/response';
 import type { ZoneDef } from '../content/types';
 
 export type Side = 'G' | 'D';
@@ -45,6 +46,17 @@ export const emptyIntake = (): IntakeState => ({
   strokes: [],
 });
 
+export type AiItemStatus = 'pending' | 'added' | 'noted' | 'ignored';
+export interface AiItem extends AiSuggestion {
+  status: AiItemStatus;
+}
+export interface AiState {
+  provider: string;
+  model: string;
+  at: string;
+  items: readonly AiItem[];
+}
+
 export interface BilanState {
   /** crypto.randomUUID() */
   id: string;
@@ -70,6 +82,8 @@ export interface BilanState {
   /** Ids de règles refusées, et "kw:<s.f.chip>" pour les mots-clés refusés. */
   dismissed: readonly string[];
   intake: IntakeState;
+  /** Dernières suggestions de l'IA (null tant qu'aucune demande). */
+  ai: AiState | null;
 }
 
 export type BilanAction =
@@ -86,6 +100,8 @@ export type BilanAction =
   | { type: 'eraseStroke'; index: number }
   | { type: 'undoStroke' }
   | { type: 'intakeStatus'; status: IntakeStatus }
+  | { type: 'aiResult'; provider: string; model: string; items: readonly AiSuggestion[] }
+  | { type: 'aiStatus'; id: string; status: Exclude<AiItemStatus, 'pending'> }
   | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 
@@ -112,6 +128,7 @@ export const emptyBilan = (zone: ZoneDef['id']): BilanState => {
     accepted: [],
     dismissed: [],
     intake: emptyIntake(),
+    ai: null,
   };
 };
 
@@ -164,7 +181,7 @@ export function normalizeBilan(b: unknown): BilanState {
     : 'answers' in raw
       ? { ...emptyIntake(), ...raw }
       : fromPr6(raw);
-  return { ...base, ...x, intake };
+  return { ...base, ...x, intake, ai: (x as { ai?: AiState | null }).ai ?? null };
 }
 
 function without<T>(r: Readonly<Record<string, T>>, key: string): Record<string, T> {
@@ -227,6 +244,21 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
         ? s
         : { ...s, intake: { ...s.intake, strokes: s.intake.strokes.filter((_, j) => j !== k) } };
     }
+    case 'aiResult': {
+      // Ce que Yass a déjà ajouté, noté ou ignoré reste ; les suggestions en attente sont remplacées.
+      const kept = (s.ai?.items ?? []).filter((i) => i.status !== 'pending');
+      const items = [...kept, ...a.items.map((i) => ({ ...i, status: 'pending' as const }))];
+      return { ...s, ai: { provider: a.provider, model: a.model, at: new Date().toISOString(), items } };
+    }
+    case 'aiStatus': {
+      const item = s.ai?.items.find((i) => i.id === a.id);
+      if (!s.ai || !item) return s;
+      const ai = { ...s.ai, items: s.ai.items.map((i) => (i.id === a.id ? { ...i, status: a.status } : i)) };
+      if (a.status !== 'noted') return { ...s, ai };
+      const line = `Suggestion IA (non sourcée) : ${item.label} — ${item.reason}`;
+      const prev = (s.notes['raisonnement.notes'] ?? '').replace(/\s+$/, '');
+      return { ...s, ai, notes: { ...s.notes, 'raisonnement.notes': prev ? `${prev}\n${line}` : line } };
+    }
     case 'intakeStatus':
       return {
         ...s,
@@ -261,3 +293,7 @@ export const isDirty = (s: BilanState): boolean =>
   nonEmpty(s.intake.answers) ||
   s.intake.strokes.length > 0 ||
   s.intake.status !== 'none';
+
+/** Libellés des suggestions de l'IA ignorées (envoyées comme « Déjà écarté »). */
+export const ignoredAiLabels = (s: BilanState): string[] =>
+  (s.ai?.items ?? []).filter((i) => i.status === 'ignored').map((i) => i.label);
