@@ -9,7 +9,10 @@ import { activateSync, createPairingCode, linkDevice, SYNC_LABEL, syncOnce } fro
 import { BASE, ENV, fetchFor } from './relay.helpers';
 
 const no = () => false;
-const bilan = (note: string): BilanState => ({ ...emptyBilan('shoulder'), notes: { 'anamnese.notes': note } });
+const bilan = (note: string): BilanState => ({
+  ...emptyBilan('shoulder'),
+  notes: { 'anamnese.notes': note },
+});
 
 async function twoDevices() {
   const store = new MemoryStore();
@@ -24,7 +27,9 @@ async function link(A: Vault, B: Vault, f: typeof fetch) {
   await linkDevice(B, BASE, code, 'Téléphone', f);
 }
 const notesOf = async (v: Vault) =>
-  (await Promise.all((await v.list()).map(async (m) => (await v.load(m.id))!.notes['anamnese.notes']))).sort();
+  (
+    await Promise.all((await v.list()).map(async (m) => (await v.load(m.id))!.notes['anamnese.notes']))
+  ).sort();
 
 describe('synchronisation', () => {
   it('libellés exacts', () =>
@@ -38,7 +43,9 @@ describe('synchronisation', () => {
   it('activation : mauvais code refusé, bon code enregistré', async () => {
     const f = fetchFor(new MemoryStore());
     const A = await createVault('123456', { idb: new IDBFactory() });
-    await expect(activateSync(A, BASE, 'faux', 'Tablette', f)).rejects.toThrow('Code d’installation incorrect');
+    await expect(activateSync(A, BASE, 'faux', 'Tablette', f)).rejects.toThrow(
+      'Code d’installation incorrect',
+    );
     expect(await A.getSyncConfig()).toBeNull();
     await activateSync(A, BASE, ENV.RELAY_SETUP_CODE, 'Tablette', f);
     expect(await A.getSyncConfig()).toMatchObject({ relayUrl: BASE, deviceName: 'Tablette', cursor: 0 });
@@ -62,9 +69,15 @@ describe('synchronisation', () => {
     await linkDevice(B, BASE, code, 'Téléphone', f);
     const C = await createVault('111111', { idb: new IDBFactory() });
     await expect(linkDevice(C, BASE, code, 'Ordi', f)).rejects.toThrow('Code expiré ou déjà utilisé');
-    await expect(linkDevice(C, BASE, code.replace(/^./, (c) => (c === 'A' ? 'B' : 'A')), 'Ordi', f)).rejects.toThrow(
-      'Code incorrect : vérifie la saisie',
-    );
+    await expect(
+      linkDevice(
+        C,
+        BASE,
+        code.replace(/^./, (c) => (c === 'A' ? 'B' : 'A')),
+        'Ordi',
+        f,
+      ),
+    ).rejects.toThrow('Code incorrect : vérifie la saisie');
     expect(await C.getSyncConfig()).toBeNull();
   }, 30000);
 
@@ -145,5 +158,16 @@ describe('synchronisation', () => {
     expect((await syncOnce(B, { isOpen: no, f })).status).toBe('error');
     const C = await createVault('111111', { idb: new IDBFactory() });
     expect((await syncOnce(C, { isOpen: no, f })).status).toBe('off');
+  }, 30000);
+
+  it('indique combien d’enregistrements ont été reçus (0 si rien de neuf)', async () => {
+    const { f, A, B } = await twoDevices();
+    await link(A, B, f);
+    await syncOnce(B, { isOpen: no, f });
+    expect((await syncOnce(B, { isOpen: no, f })).received).toBe(0);
+    await A.save(bilan('nouveau'));
+    await syncOnce(A, { isOpen: no, f });
+    expect((await syncOnce(B, { isOpen: no, f })).received).toBe(1);
+    expect((await syncOnce(B, { isOpen: no, f })).received).toBe(0);
   }, 30000);
 });

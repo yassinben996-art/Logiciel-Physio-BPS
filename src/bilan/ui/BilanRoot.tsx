@@ -123,9 +123,12 @@ export default function BilanRoot() {
         setSyncNotice(
           'Une autre version de ce bilan est arrivée d’un autre appareil : elle est gardée comme copie dans Mes bilans.',
         );
-      if (screenRef.current.k === 'list') {
+      // La liste n'est relue que si quelque chose est arrivé, et jamais pour écraser une liste plus récente
+      // (par exemple affichée juste après une suppression faite pendant la synchronisation).
+      if ((res.received > 0 || res.copied > 0) && screenRef.current.k === 'list') {
+        const before = screenRef.current;
         const items = await v.list();
-        if (screenRef.current.k === 'list' && vault.current === v) setScreen({ k: 'list', items });
+        if (screenRef.current === before && vault.current === v) setScreen({ k: 'list', items });
       }
     } finally {
       syncRunning.current = false;
