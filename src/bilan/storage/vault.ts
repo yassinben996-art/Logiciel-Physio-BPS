@@ -290,6 +290,8 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
         }
         // Modifié ici et pas encore envoyé : c'est l'envoi (réponse 409) qui tranchera.
         if (ls?.dirty) return 'skipped';
+        // Déjà à jour (ex. l'écho de notre propre envoi) : rien à écrire.
+        if (ls && ls.version === r.version && ls.deleted === r.deleted) return 'skipped';
         await putRec(idb, r.id, {
           meta: r.meta,
           data: r.data,

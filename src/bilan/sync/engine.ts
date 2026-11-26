@@ -85,12 +85,13 @@ const offline = (e: unknown) =>
 export async function syncOnce(
   v: Vault,
   opts: { isOpen: (id: string) => boolean; f?: typeof fetch },
-): Promise<{ status: SyncStatus; copied: number; openCopied: boolean }> {
+): Promise<{ status: SyncStatus; copied: number; openCopied: boolean; received: number }> {
   const cfg = await v.getSyncConfig<SyncConfig>();
-  if (!cfg) return { status: 'off', copied: 0, openCopied: false };
+  if (!cfg) return { status: 'off', copied: 0, openCopied: false, received: 0 };
   const api = relayApi(cfg.relayUrl, cfg.token, opts.f);
   let copied = 0;
   let openCopied = false;
+  let received = 0;
   const now = () => new Date().toISOString();
   try {
     // 1. Envoi (plusieurs passes : une copie en conflit créée en route est envoyée aussi).
@@ -117,13 +118,13 @@ export async function syncOnce(
           }
         } else if (p.deleted) {
           // Supprimé ici, modifié ailleurs : on garde la version modifiée (rien n'est perdu).
-          await v.markSynced(p.id, c.version);
+          await v.markSynced(p.id, 0); // base effacée : la version distante sera appliquée telle quelle
           await v.applyRemote(c, false);
         } else {
           // La version arrivée la première au relais reste ; la saisie locale devient une copie.
           await v.keepAsConflictCopy(p.id, now());
           copied++;
-          await v.markSynced(p.id, c.version);
+          await v.markSynced(p.id, 0); // base effacée : la version distante sera appliquée telle quelle
           await v.applyRemote(c, false);
         }
       }
@@ -134,7 +135,9 @@ export async function syncOnce(
       const page = await api.since(cursor);
       for (const r of page.records) {
         const open = opts.isOpen(r.id);
-        if ((await v.applyRemote(r, open)) === 'copied') {
+        const res = await v.applyRemote(r, open);
+        if (res !== 'skipped') received++;
+        if (res === 'copied') {
           copied++;
           if (open) openCopied = true;
         }
@@ -150,8 +153,8 @@ export async function syncOnce(
         if ('version' in res) await v.markSynced(p.id, res.version, p.data.ct);
       }
     }
-    return { status: 'synced', copied, openCopied };
+    return { status: 'synced', copied, openCopied, received };
   } catch (e) {
-    return { status: offline(e) ? 'offline' : 'error', copied, openCopied };
+    return { status: offline(e) ? 'offline' : 'error', copied, openCopied, received };
   }
 }
