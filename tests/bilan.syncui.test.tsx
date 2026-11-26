@@ -102,7 +102,7 @@ describe('écrans de synchronisation', () => {
     expect(await within(list).findByText('Dupont', {}, T)).toBeInTheDocument();
 
     // Mes appareils : deux appareils ; on retire la tablette.
-    fireEvent.click(syncSection().getByRole('button', { name: 'Mes appareils' }));
+    fireEvent.click(await syncSection().findByRole('button', { name: 'Mes appareils' }, T));
     const devices = await syncSection().findByRole('list', { name: 'Appareils reliés' }, T);
     expect(within(devices).getAllByRole('listitem')).toHaveLength(2);
     expect(within(devices).getByText(/cet appareil/)).toBeInTheDocument();
