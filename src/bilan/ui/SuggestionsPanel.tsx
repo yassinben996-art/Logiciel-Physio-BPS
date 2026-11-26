@@ -1,8 +1,8 @@
 // Panneau des suggestions du moteur de règles : chaque suggestion montre sa raison et sa source.
-import { useState, type Dispatch } from 'react';
+import { useState, type Dispatch, type ReactNode } from 'react';
 import type { Suggestion } from '../engine/rules';
 import type { BilanAction } from '../state/bilan';
-import { fieldDomId } from './dom';
+import { goToField as goTo } from './dom';
 
 const KIND: Record<Suggestion['kind'], string> = {
   test: 'Test',
@@ -10,25 +10,15 @@ const KIND: Record<Suggestion['kind'], string> = {
   redflag: 'Drapeau rouge à vérifier',
 };
 
-/** Fait défiler jusqu'au champ ciblé et y place le focus. */
-function goTo(target: string) {
-  const parts = target.split('.');
-  const el =
-    document.getElementById(fieldDomId(target)) ??
-    document.getElementById(fieldDomId(parts.slice(0, 2).join('.')));
-  const details = el?.closest('details');
-  if (details) details.open = true;
-  el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-  el?.focus({ preventScroll: true });
-}
-
 interface Props {
   suggestions: readonly Suggestion[];
   questionnaires: readonly string[];
   dispatch: Dispatch<BilanAction>;
+  /** Suggestions de l'IA, sous celles des règles. */
+  aiPanel?: ReactNode;
 }
 
-export default function SuggestionsPanel({ suggestions, questionnaires, dispatch }: Props) {
+export default function SuggestionsPanel({ suggestions, questionnaires, dispatch, aiPanel }: Props) {
   // Sur petit écran, le panneau collant peut être replié pour libérer la saisie.
   const [open, setOpen] = useState(true);
   return (
@@ -91,6 +81,7 @@ export default function SuggestionsPanel({ suggestions, questionnaires, dispatch
             <p className="note">Le QR code pour le patient arrive dans une prochaine version.</p>
           </>
         )}
+        {aiPanel}
       </div>
     </section>
   );

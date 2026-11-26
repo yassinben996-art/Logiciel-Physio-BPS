@@ -1,5 +1,5 @@
 // Racine du bilan : verrouillage par PIN, « Mes bilans », sauvegarde automatique chiffrée.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ZoneDef } from '../content/types';
 import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
 import { bilanReducer, emptyBilan, type BilanState } from '../state/bilan';
@@ -12,6 +12,9 @@ import { RELAY_URL } from '../sync/config';
 import { linkDevice, SYNC_LABEL, syncOnce, type SyncStatus } from '../sync/engine';
 import { codeFromHash } from '../sync/pairing';
 import { debounce } from '../sync/schedule';
+import { relayApi, type SyncConfig } from '../sync/api';
+import { AI_SYSTEM_PROMPT } from '../content/aiPrompt';
+import type { AiAsk } from './AiPanel';
 import { openBilanId } from './openBilan';
 import ZonePicker from './ZonePicker';
 import PatientScreen from './PatientScreen';
@@ -43,6 +46,24 @@ export default function BilanRoot() {
   const popGuard = useRef<(() => void) | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('off');
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  // L'IA passe par le relais : disponible seulement quand la synchronisation est active.
+  const [syncCfg, setSyncCfg] = useState<SyncConfig | null>(null);
+  useEffect(() => {
+    const v = vault.current;
+    if (!v || screen.k !== 'edit') return;
+    let alive = true;
+    void v.getSyncConfig<SyncConfig>().then((c) => alive && setSyncCfg(c));
+    return () => {
+      alive = false;
+    };
+  }, [screen.k, syncStatus]);
+  const ai = useMemo<AiAsk | null>(
+    () =>
+      syncCfg
+        ? { ask: (user) => relayApi(syncCfg.relayUrl, syncCfg.token).ai(AI_SYSTEM_PROMPT, user) }
+        : null,
+    [syncCfg],
+  );
   const screenRef = useRef(screen);
   useEffect(() => {
     screenRef.current = screen;
@@ -400,6 +421,7 @@ export default function BilanRoot() {
             key={`${screen.bilan.id}-${screen.rev}`}
             initial={screen.bilan}
             openIntake={screen.openIntake}
+            ai={ai}
             onChange={onChange}
             onNew={() => void newBilan()}
             onStartPatient={() =>

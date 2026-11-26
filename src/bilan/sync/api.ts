@@ -61,6 +61,8 @@ export function relayApi(relayUrl: string, token: string | null, f: typeof fetch
     revoke: async (id: string) => {
       await call('DELETE', `/devices/${encodeURIComponent(id)}`);
     },
+    ai: async (system: string, user: string) =>
+      (await call<{ provider: string; model: string; text: string }>('POST', '/ai', { system, user })).json,
     since: async (cursor: number) =>
       (await call<{ records: RemoteRecord[]; cursor: number }>('GET', `/records?since=${cursor}`)).json,
     put: async (

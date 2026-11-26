@@ -2,11 +2,16 @@
 import { useState } from 'react';
 import type { ZoneDef } from '../content/types';
 import { bilanSummaryLines, sysmetaBlocks } from '../engine/exports';
+import { buildSummary } from '../ai/summary';
+import { CLAUDE_PROMPT } from '../content/aiPrompt';
+import { INTAKE } from '../content/intake';
+import TextPreview from './TextPreview';
 import type { BilanState } from '../state/bilan';
 
 export default function BilanExport({ zone, state }: { zone: ZoneDef; state: BilanState }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [claude, setClaude] = useState<'idle' | 'preview' | 'copied'>('idle');
   const blocks = sysmetaBlocks(zone, state);
   const copy = async (rubric: string, text: string) => {
     try {
@@ -53,6 +58,29 @@ export default function BilanExport({ zone, state }: { zone: ZoneDef; state: Bil
           PDF
         </button>
       </div>
+      <h3>Copier pour Claude</h3>
+      {claude === 'preview' ? (
+        <TextPreview
+          title="Texte copié pour Claude"
+          note="Anonymisé : vérifie qu’aucune information identifiante n’a échappé au nettoyage."
+          initial={`${CLAUDE_PROMPT}\n\n${buildSummary(zone, state, INTAKE)}`}
+          confirmLabel="Copier"
+          onConfirm={(text) =>
+            void navigator.clipboard.writeText(text).then(
+              () => setClaude('copied'),
+              () => setMsg('Copie impossible dans ce navigateur.'),
+            )
+          }
+          onCancel={() => setClaude('idle')}
+        />
+      ) : (
+        <div className="row">
+          <button type="button" className="btn small ghost" onClick={() => setClaude('preview')}>
+            Copier pour Claude
+          </button>
+          {claude === 'copied' && <span className="note">Copié</span>}
+        </div>
+      )}
       {msg && (
         <p className="note err" role="status">
           {msg}
