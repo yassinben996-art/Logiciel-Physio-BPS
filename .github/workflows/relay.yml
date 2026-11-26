@@ -55,6 +55,14 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Code d'installation
         run: printf '%s' "$RELAY_SETUP_CODE" | $WRANGLER secret put RELAY_SETUP_CODE
+      - name: Clés des IA (facultatives)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          for v in GROQ_API_KEY OPENROUTER_API_KEY; do
+            if [ -n "${!v}" ]; then printf '%s' "${!v}" | $WRANGLER secret put "$v"; else echo "$v absent : IA correspondante désactivée"; fi
+          done
       - name: Adresse du relais
         run: |
           echo "### Adresse du relais" >> "$GITHUB_STEP_SUMMARY"

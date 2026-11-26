@@ -106,4 +106,10 @@ export function storeContract(make: () => RelayStore | Promise<RelayStore>) {
     expect((await s.recordsSince(a2, 10)).map((r) => r.id)).toEqual([]);
     expect(await s.getRecord('zz')).toBeNull();
   });
+  it('contrat : compteur horaire de l’IA', async () => {
+    const s = await make();
+    for (let i = 0; i < 30; i++) expect(await s.aiCountUp('2026-11-26T10', 30)).toBe(true);
+    expect(await s.aiCountUp('2026-11-26T10', 30)).toBe(false);
+    expect(await s.aiCountUp('2026-11-26T11', 30)).toBe(true);
+  });
 }

@@ -1,11 +1,15 @@
 // Logique du relais (Cloudflare Worker), indépendante du stockage. Le relais ne voit que des boîtes
 // chiffrées : la clé de coffre ne quitte jamais les appareils de Yass.
+import { askAi, type AiKeys } from './ai';
 import type { DeviceRow, RecordRow, RelayStore } from './store';
 
-export interface RelayEnv {
+export interface RelayEnv extends AiKeys {
   RELAY_SETUP_CODE: string;
   ALLOWED_ORIGIN: string;
 }
+
+const AI_PER_HOUR = 30;
+const AI_MAX_CHARS = 40_000;
 
 const MAX_BODY = 2 * 1024 * 1024;
 const RATE_LIMIT = 120; // requêtes par minute et par appareil
@@ -108,6 +112,7 @@ export async function handle(
   env: RelayEnv,
   store: RelayStore,
   now: () => Date = () => new Date(),
+  aiFetch?: typeof fetch,
 ): Promise<Response> {
   const headers = cors(req, env);
   const reply = (status: number, body?: unknown) =>
@@ -160,6 +165,19 @@ export async function handle(
       const expiresAt = new Date(at.getTime() + TICKET_MS).toISOString();
       await store.addTicket(await sha256(ticket), expiresAt);
       return reply(201, { ticket, expiresAt });
+    }
+    if (req.method === 'POST' && path === '/ai') {
+      // Ni la demande ni la réponse ne sont journalisées.
+      const b = await readJson(req);
+      const system = typeof b.system === 'string' ? b.system : '';
+      const user = typeof b.user === 'string' ? b.user : '';
+      if (!user) return reply(400, { error: 'demande vide' });
+      if (system.length > AI_MAX_CHARS || user.length > AI_MAX_CHARS)
+        return reply(413, { error: 'trop long' });
+      if (!(await store.aiCountUp(iso.slice(0, 13), AI_PER_HOUR)))
+        return reply(429, { error: 'limite horaire' });
+      const r = await askAi(env, system, user, aiFetch);
+      return r ? reply(200, r) : reply(503, { error: 'indisponible' });
     }
     if (req.method === 'GET' && path === '/devices') {
       const devices = (await store.listDevices())

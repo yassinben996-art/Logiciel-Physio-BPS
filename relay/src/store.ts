@@ -41,4 +41,6 @@ export interface RelayStore {
    */
   putRecord(r: Omit<RecordRow, 'seq'>): Promise<number | null>;
   recordsSince(seq: number, limit: number): Promise<RecordRow[]>;
+  /** Compte un appel à l'IA pour cette heure ; faux (sans compter) si la limite est atteinte. Atomique. */
+  aiCountUp(hour: string, max: number): Promise<boolean>;
 }

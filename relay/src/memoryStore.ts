@@ -7,6 +7,7 @@ export class MemoryStore implements RelayStore {
   private tickets = new Map<string, { expiresAt: string; used: boolean }>();
   private records = new Map<string, RecordRow>();
   private seq = 0;
+  private ai = new Map<string, number>();
 
   async hasAccount() {
     return this.account;
@@ -52,6 +53,12 @@ export class MemoryStore implements RelayStore {
     const seq = ++this.seq;
     this.records.set(r.id, { ...r, seq });
     return seq;
+  }
+  async aiCountUp(hour: string, max: number) {
+    const n = this.ai.get(hour) ?? 0;
+    if (n >= max) return false;
+    this.ai.set(hour, n + 1);
+    return true;
   }
   async recordsSince(seq: number, limit: number) {
     return [...this.records.values()]
