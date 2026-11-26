@@ -188,6 +188,21 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     modifie. Une suppression faite sur un appareil pendant que l'autre modifiait le même bilan laisse revenir la
     version modifiée (rien n'est perdu).
 
+### Suggestions par IA (plan 2b, 26.11.2026)
+
+51. **IA par le relais** : bouton « Demander à l'IA » (choix de l'utilisateur : jamais d'appel automatique). Le relais
+    garde les clés et interroge, dans l'ordre, Groq `openai/gpt-oss-120b`, Groq `llama-3.3-70b-versatile`, puis
+    OpenRouter `openai/gpt-oss-120b:free` (vérifiés le 26.11.2026 : Groq gratuit, 1 000 demandes par jour ; Cerebras
+    sans offre gratuite permanente, écarté). Sans réponse : « seules les règles sont actives ». Au plus 30 demandes
+    par heure (compteur en base) ; ni la demande ni la réponse ne sont journalisées.
+52. **Résumé anonymisé et aperçu modifiable** : jamais d'identité, de code, d'identifiant ni de date de l'état ; les
+    textes libres (notes, activités du PSFS) sont nettoyés (`[nom]`, `[date]`, `[lieu]`, `[téléphone]`, `[e-mail]`)
+    par des règles approximatives. L'aperçu modifiable avant l'envoi laisse le dernier mot à l'utilisateur. Même
+    résumé pour « Copier pour Claude » (sans aucun appel réseau).
+53. **Suggestions « IA · non sourcé »** : au plus 5. « Ajouter » pour un test ou un questionnaire connu du contenu ;
+    sinon « Noter », qui écrit la suggestion dans les notes de Raisonnement (donc dans le PDF, jamais dans un bloc
+    SYSmeta). Ce qui est ignoré n'est pas reproposé.
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

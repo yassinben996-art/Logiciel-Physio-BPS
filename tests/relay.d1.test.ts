@@ -17,7 +17,8 @@ try {
 /** Faux D1 : l'API de D1 (prepare/bind/first/all/run) au-dessus de SQLite de Node. */
 function fakeD1(): D1Like {
   const db = new sqlite!.DatabaseSync(':memory:');
-  db.exec(readFileSync(resolve(__dirname, '../relay/migrations/0001_init.sql'), 'utf8'));
+  for (const m of ['0001_init.sql', '0002_ai.sql'])
+    db.exec(readFileSync(resolve(__dirname, '../relay/migrations', m), 'utf8'));
   const stmt = (sql: string, args: unknown[] = []) => ({
     bind: (...a: unknown[]) => stmt(sql, a),
     async first<T>() {

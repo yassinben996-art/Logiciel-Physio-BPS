@@ -13,6 +13,7 @@ import FieldInput from './FieldInput';
 import IntakeSection from './IntakeSection';
 import SectionSummary from './SectionSummary';
 import SuggestionsPanel from './SuggestionsPanel';
+import AiPanel, { type AiAsk } from './AiPanel';
 
 interface Props {
   initial?: BilanState;
@@ -25,6 +26,8 @@ interface Props {
   onStartPatient?: () => void;
   /** Ouvrir l'onglet Accueil dès l'affichage (retour du mode patient). */
   openIntake?: boolean;
+  /** Appel à l'IA par le relais (null : synchronisation non active). */
+  ai?: AiAsk | null;
 }
 
 const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' | 'date' }[] = [
@@ -33,7 +36,15 @@ const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' |
   { field: 'naissance', label: 'Date de naissance', type: 'date' },
 ];
 
-export default function BilanApp({ initial, onChange, toolbar, onNew, onStartPatient, openIntake }: Props) {
+export default function BilanApp({
+  initial,
+  onChange,
+  toolbar,
+  onNew,
+  onStartPatient,
+  openIntake,
+  ai,
+}: Props) {
   const [s, dispatch] = useReducer(bilanReducer, initial, (i) => i ?? emptyBilan('shoulder'));
   const [confirm, setConfirm] = useState(false);
   const zone = ZONES[s.zone] ?? SHOULDER;
@@ -41,13 +52,18 @@ export default function BilanApp({ initial, onChange, toolbar, onNew, onStartPat
   const hits = useMemo(() => detectKeywords(zone, s), [zone, s]);
   const questionnaires = useMemo(
     () =>
-      zone.rules
-        .filter((r) => r.kind === 'questionnaire' && s.accepted.includes(r.id))
-        .map((r) =>
-          r.target === 'psfs' ? 'PSFS' : (QUESTIONNAIRES.find((q) => q.id === r.target)?.name ?? r.target),
-        )
+      [
+        ...zone.rules
+          .filter((r) => r.kind === 'questionnaire' && s.accepted.includes(r.id))
+          .map((r) => r.target),
+        // Questionnaires ajoutés depuis une suggestion de l'IA.
+        ...(s.ai?.items ?? [])
+          .filter((i) => i.kind === 'questionnaire' && i.status === 'added' && i.target)
+          .map((i) => i.target!),
+      ]
+        .map((t) => (t === 'psfs' ? 'PSFS' : (QUESTIONNAIRES.find((q) => q.id === t)?.name ?? t)))
         .filter((v, i, a) => a.indexOf(v) === i),
-    [zone, s.accepted],
+    [zone, s.accepted, s.ai],
   );
 
   // Notifie le parent à chaque changement (pas au premier rendu).
@@ -145,7 +161,12 @@ export default function BilanApp({ initial, onChange, toolbar, onNew, onStartPat
           <BilanExport zone={zone} state={s} />
         </main>
         <aside className="bilan-side">
-          <SuggestionsPanel suggestions={suggestions} questionnaires={questionnaires} dispatch={dispatch} />
+          <SuggestionsPanel
+            suggestions={suggestions}
+            questionnaires={questionnaires}
+            dispatch={dispatch}
+            aiPanel={<AiPanel zone={zone} state={s} dispatch={dispatch} ai={ai} />}
+          />
         </aside>
       </div>
       <footer className="bilan-foot">

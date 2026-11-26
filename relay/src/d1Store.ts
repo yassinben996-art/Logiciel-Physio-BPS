@@ -129,6 +129,16 @@ export class D1Store implements RelayStore {
     if (!row) throw new Error('séquence absente');
     return row.value;
   }
+  async aiCountUp(hour: string, max: number) {
+    const r = await this.db
+      .prepare(
+        `INSERT INTO ai_usage (hour, count) VALUES (?1, 1)
+         ON CONFLICT (hour) DO UPDATE SET count = count + 1 WHERE ai_usage.count < ?2`,
+      )
+      .bind(hour, max)
+      .run();
+    return r.meta.changes === 1;
+  }
   async recordsSince(seq: number, limit: number) {
     const r = await this.db
       .prepare('SELECT * FROM records WHERE seq > ? ORDER BY seq LIMIT ?')
