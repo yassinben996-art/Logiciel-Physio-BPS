@@ -63,6 +63,19 @@ export function relayApi(relayUrl: string, token: string | null, f: typeof fetch
     },
     ai: async (system: string, user: string) =>
       (await call<{ provider: string; model: string; text: string }>('POST', '/ai', { system, user })).json,
+    homeSubmitRaw: async (ticket: string, box: Box) => {
+      await call('POST', '/q/submit', { ticket, box });
+    },
+    homeTicket: async () => (await call<{ ticket: string; expiresAt: string }>('POST', '/q/ticket', {})).json,
+    homeInbox: async () => (await call<{ hashes: string[] }>('GET', '/q/inbox')).json.hashes,
+    /** Relève la boîte (bail de 10 minutes) ; null si un autre appareil l'a déjà relevée. */
+    homeClaim: async (hash: string): Promise<Box | null> => {
+      const r = await call<{ box?: Box }>('POST', `/q/claim/${hash}`, {}, [200, 409]);
+      return r.status === 200 ? (r.json.box ?? null) : null;
+    },
+    homeDone: async (hash: string) => {
+      await call('DELETE', `/q/${hash}`);
+    },
     since: async (cursor: number) =>
       (await call<{ records: RemoteRecord[]; cursor: number }>('GET', `/records?since=${cursor}`)).json,
     put: async (
@@ -81,4 +94,16 @@ export function relayApi(relayUrl: string, token: string | null, f: typeof fetch
       return r.status === 409 ? { conflict: r.json.current ?? null } : { version: r.json.version };
     },
   };
+}
+
+export type RelayApi = ReturnType<typeof relayApi>;
+
+/** Dépôt des réponses du patient (route publique : le ticket suffit). Lève RelayError (410 : lien expiré ou utilisé). */
+export async function homeSubmit(
+  relayUrl: string,
+  ticket: string,
+  box: Box,
+  f: typeof fetch = fetch,
+): Promise<void> {
+  await relayApi(relayUrl, null, f).homeSubmitRaw(ticket, box);
 }

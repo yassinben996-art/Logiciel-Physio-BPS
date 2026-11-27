@@ -91,6 +91,8 @@ export interface ZoneDef {
   label: string;
   sections: readonly SectionDef[];
   rules: readonly RuleDef[];
+  /** Questionnaires à domicile proposés par défaut pour cette zone (ids de QUESTIONNAIRES). */
+  homeQuestionnaires?: readonly string[];
 }
 
 // ---------- Accueil patient ----------

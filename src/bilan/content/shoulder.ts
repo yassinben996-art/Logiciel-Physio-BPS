@@ -394,4 +394,11 @@ const rules: readonly RuleDef[] = [
   })),
 ];
 
-export const SHOULDER: ZoneDef = { id: 'shoulder', label: 'Épaule', sections, rules };
+export const SHOULDER: ZoneDef = {
+  id: 'shoulder',
+  label: 'Épaule',
+  sections,
+  rules,
+  // Questionnaires à domicile proposés par défaut (choix de Claude, validé par Yass le 27.11.2026).
+  homeQuestionnaires: ['spadi', 'quickdash'],
+};

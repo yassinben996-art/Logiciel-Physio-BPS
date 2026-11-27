@@ -308,4 +308,4 @@ const rules: readonly RuleDef[] = [
   ),
 ];
 
-export const KNEE: ZoneDef = { id: 'knee', label: 'Genou', sections, rules };
+export const KNEE: ZoneDef = { id: 'knee', label: 'Genou', sections, rules, homeQuestionnaires: [] };

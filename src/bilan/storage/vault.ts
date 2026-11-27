@@ -24,6 +24,23 @@ export interface BilanMeta {
   /** Copie en conflit : id du bilan d'origine et date de la copie. */
   conflictOf?: string;
   conflictAt?: string;
+  /** Empreinte du ticket des questionnaires à domicile en attente (pour relever les réponses). */
+  homeQHash?: string;
+  /** Pastille de « Mes bilans ». */
+  qStatus?: 'pending' | 'received';
+}
+
+function homePart(b: BilanState): Partial<BilanMeta> {
+  const received = Object.keys(b.qResults ?? {}).length > 0;
+  if (b.homeQ) {
+    // L'empreinte reste même après l'expiration : un dépôt fait juste avant peut être relevé plus tard.
+    const live = b.homeQ.expiresAt > new Date().toISOString();
+    return {
+      homeQHash: b.homeQ.hash,
+      ...(live ? { qStatus: 'pending' as const } : received ? { qStatus: 'received' as const } : {}),
+    };
+  }
+  return received ? { qStatus: 'received' } : {};
 }
 
 export interface SyncMeta {
@@ -159,6 +176,7 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
     label: labelOf(b),
     zone: b.zone,
     updatedAt: b.updatedAt,
+    ...homePart(b),
     ...extra,
   });
   const conflictPart = (m: BilanMeta): Partial<BilanMeta> =>
