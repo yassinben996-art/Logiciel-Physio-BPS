@@ -1,7 +1,7 @@
 // QR code du lien d'appairage, dessiné en SVG (aucun canvas, aucun HTML injecté).
 import QRCode from 'qrcode';
 
-export default function PairingQr({ text }: { text: string }) {
+export default function PairingQr({ text, label = 'QR code d’appairage' }: { text: string; label?: string }) {
   const m = QRCode.create(text, { errorCorrectionLevel: 'M' }).modules;
   const n = m.size;
   const cells: JSX.Element[] = [];
@@ -13,7 +13,7 @@ export default function PairingQr({ text }: { text: string }) {
       className="pairing-qr"
       viewBox={`0 0 ${n + 8} ${n + 8}`}
       role="img"
-      aria-label="QR code d’appairage"
+      aria-label={label}
       shapeRendering="crispEdges"
     >
       <rect width={n + 8} height={n + 8} fill="#ffffff" />

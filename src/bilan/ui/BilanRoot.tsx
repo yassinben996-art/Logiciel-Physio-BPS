@@ -4,6 +4,8 @@ import type { ZoneDef } from '../content/types';
 import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
 import { bilanReducer, emptyBilan, type BilanState } from '../state/bilan';
 import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '../storage/vault';
+import { newHomeKey, ticketHash } from '../homeq/link';
+import type { HomeQCreate } from './HomeQPanel';
 import BilanApp from './BilanApp';
 import BilanList from './BilanList';
 import LockScreen from './LockScreen';
@@ -61,6 +63,26 @@ export default function BilanRoot() {
     () =>
       syncCfg
         ? { ask: (user) => relayApi(syncCfg.relayUrl, syncCfg.token).ai(AI_SYSTEM_PROMPT, user) }
+        : null,
+    [syncCfg],
+  );
+  // Questionnaires à domicile : ticket du relais + clé tirée ici (la clé ne va jamais au relais).
+  const homeQ = useMemo<HomeQCreate | null>(
+    () =>
+      syncCfg
+        ? {
+            create: async (ids) => {
+              const t = await relayApi(syncCfg.relayUrl, syncCfg.token).homeTicket();
+              return {
+                ticket: t.ticket,
+                hash: await ticketHash(t.ticket),
+                key: newHomeKey(),
+                ids,
+                createdAt: new Date().toISOString(),
+                expiresAt: t.expiresAt,
+              };
+            },
+          }
         : null,
     [syncCfg],
   );
@@ -442,6 +464,7 @@ export default function BilanRoot() {
             initial={screen.bilan}
             openIntake={screen.openIntake}
             ai={ai}
+            homeQ={homeQ}
             onChange={onChange}
             onNew={() => void newBilan()}
             onStartPatient={() =>

@@ -63,7 +63,7 @@ describe('relève des questionnaires à domicile', () => {
     const { f, A } = await device();
     const r = await withRequest(A, f);
     await homeSubmit(BASE, r.ticket, await sealAnswers(r.key, { tsk: { tsk1: 1 } }), f);
-    const refuse = vi.fn(async (_id: string, _a: BilanAction) => false);
+    const refuse = vi.fn<(id: string, a: BilanAction) => Promise<boolean>>(async () => false);
     await syncOnce(A, { isOpen: (id) => id === r.id, f, applyOpen: refuse });
     expect(refuse).toHaveBeenCalledOnce();
     expect(refuse.mock.calls[0]![1]).toMatchObject({ type: 'homeQReceived', answers: { tsk: { tsk1: 1 } } });

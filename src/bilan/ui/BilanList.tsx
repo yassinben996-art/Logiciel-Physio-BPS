@@ -59,6 +59,11 @@ export default function BilanList({ items, onOpen, onNew, onRemove, onLock, foot
                       timeStyle: 'short',
                     })}
                   </span>
+                  {m.qStatus && (
+                    <span className={`homeq-pill q-${m.qStatus}`}>
+                      {m.qStatus === 'received' ? 'réponses reçues' : 'questionnaires en attente'}
+                    </span>
+                  )}
                   {m.conflictOf && m.conflictAt && (
                     <span className="note err">copie en conflit, du {conflictDate(m.conflictAt)}</span>
                   )}

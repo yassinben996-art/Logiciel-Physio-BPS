@@ -8,6 +8,7 @@ import { INTAKE } from '../content/intake';
 import { evaluate } from '../engine/rules';
 import { bilanReducer, emptyBilan, isDirty, type BilanState, type Identity } from '../state/bilan';
 import { QUESTIONNAIRES } from '@q';
+import HomeQPanel, { type HomeQCreate } from './HomeQPanel';
 import BilanExport from './BilanExport';
 import FieldInput from './FieldInput';
 import IntakeSection from './IntakeSection';
@@ -28,6 +29,8 @@ interface Props {
   openIntake?: boolean;
   /** Appel à l'IA par le relais (null : synchronisation non active). */
   ai?: AiAsk | null;
+  /** Questionnaires à domicile par le relais (null : synchronisation non active). */
+  homeQ?: HomeQCreate | null;
 }
 
 const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' | 'date' }[] = [
@@ -44,6 +47,7 @@ export default function BilanApp({
   onStartPatient,
   openIntake,
   ai,
+  homeQ,
 }: Props) {
   const [s, dispatch] = useReducer(bilanReducer, initial, (i) => i ?? emptyBilan('shoulder'));
   const [confirm, setConfirm] = useState(false);
@@ -158,6 +162,7 @@ export default function BilanApp({
               </div>
             </details>
           ))}
+          <HomeQPanel zone={zone} state={s} dispatch={dispatch} suggestions={suggestions} homeQ={homeQ} />
           <BilanExport zone={zone} state={s} />
         </main>
         <aside className="bilan-side">
