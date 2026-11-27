@@ -1,5 +1,5 @@
 // Écran du bilan clinicien. Tout le contenu (sections, champs, règles) vient de src/bilan/content.
-import { useEffect, useMemo, useReducer, useRef, useState, type MutableRefObject } from 'react';
+import { Fragment, useEffect, useMemo, useReducer, useRef, useState, type MutableRefObject } from 'react';
 import { DISCLAIMER } from '../../data/text';
 import { SHOULDER, ZONES } from '../content';
 import { detectKeywords } from '../engine/keywords';
@@ -17,6 +17,9 @@ import {
 import { QUESTIONNAIRES } from '@q';
 import HomeQPanel from './HomeQPanel';
 import type { HomeQCreate } from '../homeq/create';
+import Evolution from './Evolution';
+import FollowUp from './FollowUp';
+import { previousValue, seriesColumns } from '../engine/evolution';
 import BilanExport from './BilanExport';
 import FieldInput from './FieldInput';
 import IntakeSection from './IntakeSection';
@@ -41,6 +44,10 @@ interface Props {
   homeQ?: HomeQCreate | null;
   /** Rempli avec le dispatch de cet écran : le parent y injecte des actions (réponses reçues) sans remonter. */
   injectRef?: MutableRefObject<((a: BilanAction) => void) | null>;
+  /** Bilans du même patient (celui-ci compris ou non) : rebilan, valeurs d'avant, évolution. */
+  series?: readonly BilanState[];
+  /** Crée un rebilan de ce patient. */
+  onRebilan?: () => void;
 }
 
 const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' | 'date' }[] = [
@@ -59,11 +66,28 @@ export default function BilanApp({
   ai,
   homeQ,
   injectRef,
+  series: allSeries = [],
+  onRebilan,
 }: Props) {
   const [s, dispatch] = useReducer(bilanReducer, initial, (i) => i ?? emptyBilan('shoulder'));
   const [confirm, setConfirm] = useState(false);
   const zone = ZONES[s.zone] ?? SHOULDER;
   const suggestions = useMemo(() => evaluate(zone, s), [zone, s]);
+  // Seulement les bilans du même patient (la série chargée peut encore être celle du bilan affiché avant).
+  const series = useMemo(
+    () => allSeries.filter((b) => b.patientId === s.patientId),
+    [allSeries, s.patientId],
+  );
+  // Série du patient, avec l'état ouvert à la place de sa version enregistrée.
+  const columns = useMemo(() => seriesColumns([...series.filter((b) => b.id !== s.id), s]), [series, s]);
+  // Rang dans la série : 0 pour le premier bilan, 1 pour le rebilan n° 2…
+  const rank = series.filter((b) => b.id !== s.id && b.createdAt < s.createdAt).length;
+  const prevBilan =
+    series.find((b) => b.id === s.previousId) ??
+    [...series]
+      .filter((b) => b.id !== s.id && b.createdAt < s.createdAt)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const [showPrev, setShowPrev] = useState(false);
   const hits = useMemo(() => detectKeywords(zone, s), [zone, s]);
   const questionnaires = useMemo(
     () =>
@@ -112,7 +136,9 @@ export default function BilanApp({
     <div className="bilan bilan-theme">
       <header className="bilan-head">
         <div className="bilan-title">
-          <p className="eyebrow">Bilan · {zone.label}</p>
+          <p className="eyebrow">
+            {rank > 0 ? `Rebilan n° ${rank + 1}` : 'Bilan'} · {zone.label}
+          </p>
           <p className="bilan-code">{s.code}</p>
         </div>
         <div className="bilan-id">
@@ -171,18 +197,36 @@ export default function BilanApp({
               onStartPatient={onStartPatient}
             />
           </details>
+          <FollowUp state={s} dispatch={dispatch} onRebilan={onRebilan} />
+          {prevBilan && (
+            <button
+              type="button"
+              className="btn small ghost bilan-prev-toggle"
+              aria-pressed={showPrev}
+              onClick={() => setShowPrev(!showPrev)}
+            >
+              {showPrev ? 'Masquer le bilan précédent' : 'Afficher le bilan précédent'}
+            </button>
+          )}
           {zone.sections.map((sec) => (
             <details key={sec.id} className="bilan-sec">
               <SectionSummary title={sec.title} {...sectionProgress(sec, s)} />
               <div className="bilan-fields">
-                {sec.fields.map((f) => (
-                  <FieldInput key={f.id} section={sec} field={f} state={s} dispatch={dispatch} hits={hits} />
-                ))}
+                {sec.fields.map((f) => {
+                  const before = showPrev && prevBilan ? previousValue(sec, f, prevBilan) : null;
+                  return (
+                    <Fragment key={f.id}>
+                      <FieldInput section={sec} field={f} state={s} dispatch={dispatch} hits={hits} />
+                      {before && <p className="bilan-prev">avant : {before}</p>}
+                    </Fragment>
+                  );
+                })}
               </div>
             </details>
           ))}
+          {columns.length > 1 && <Evolution zone={zone} columns={columns} />}
           <HomeQPanel zone={zone} state={s} dispatch={dispatch} suggestions={suggestions} homeQ={homeQ} />
-          <BilanExport zone={zone} state={s} />
+          <BilanExport zone={zone} state={s} series={columns.length > 1 ? columns : []} />
         </main>
         <aside className="bilan-side">
           <SuggestionsPanel

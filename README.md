@@ -86,3 +86,7 @@ Activation (une fois) : voir [docs/GUIDE-IA.md](docs/GUIDE-IA.md). Développemen
 ## Questionnaires à domicile
 
 À la fin de la séance, bloc « Questionnaires à domicile » du bilan : QR code ou lien pour le patient, qui remplit chez lui (`#/q`). Ses réponses, chiffrées, arrivent dans le bilan à la synchronisation suivante. Nécessite la synchronisation (voir ci-dessus).
+
+## Rebilan et suivi
+
+Bouton « Rebilan » dans le bloc « Suivi » d'un bilan : nouveau bilan relié au précédent, valeurs d'avant à la demande, bloc « Évolution » (écran et PDF). Onglet « À rebilanter » dans « Mes bilans » (délai, date modifiable, report, fin de prise en charge).
