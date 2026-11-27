@@ -83,8 +83,11 @@ describe('questionnaires à domicile : écran de Yass', () => {
     expect(list.getByText('QuickDASH')).toBeInTheDocument();
     expect(list.getByText(/50 \/ 100/)).toBeInTheDocument();
     expect(list.getByText(/reçu le 28\.11\.2026/)).toBeInTheDocument();
-    // déjà reçu : plus pré-coché
+    // nouvel envoi à la demande ; déjà reçu : plus pré-coché
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouvel envoi' }));
     expect(screen.getByRole('checkbox', { name: /QuickDASH/ })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /SPADI/ })).toBeChecked();
   });
 });
 

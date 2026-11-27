@@ -90,4 +90,5 @@ Les bilans déjà présents sur chaque appareil sont gardés et réunis : rien n
 - **Hors connexion**, tout continue de marcher ; les modifications partent quand le réseau revient.
 - **Appareil perdu** : sur un autre appareil, **Mes bilans** → **Mes appareils** → **Retirer**. Il ne reçoit plus rien ; ce qu'il contenait déjà reste protégé par son PIN.
 - **PIN oublié sur un appareil** : réinitialise le site sur cet appareil (supprime les données du site dans les réglages du navigateur), puis relie-le à nouveau : tes bilans reviennent du serveur.
+- **Questionnaires à domicile** : une fois la synchronisation active, le bloc « Questionnaires à domicile » du bilan crée un QR code pour le patient. Il remplit chez lui, sur son téléphone ; ses réponses arrivent toutes seules dans le bilan. Le lien est valable 14 jours et ne sert qu'une fois.
 - **Coût** : l'offre gratuite de Cloudflare (100 000 requêtes par jour) suffit très largement.

@@ -82,3 +82,7 @@ Développement local : `npm run relay:dev`, puis `VITE_RELAY_URL=http://localhos
 ## Suggestions par IA
 
 Activation (une fois) : voir [docs/GUIDE-IA.md](docs/GUIDE-IA.md). Développement local avec une IA simulée : `MOCK_AI=1 npm run relay:dev`.
+
+## Questionnaires à domicile
+
+À la fin de la séance, bloc « Questionnaires à domicile » du bilan : QR code ou lien pour le patient, qui remplit chez lui (`#/q`). Ses réponses, chiffrées, arrivent dans le bilan à la synchronisation suivante. Nécessite la synchronisation (voir ci-dessus).

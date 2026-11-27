@@ -44,7 +44,9 @@ export default function HomeQPanel({ zone, state: s, dispatch, suggestions, home
   const chosen = picked ?? proposed;
   const req = s.homeQ;
   const live = !!req && req.expiresAt > new Date().toISOString();
-  const showForm = !req || composing;
+  const results = QUESTIONNAIRES.filter((q) => q.id in s.qResults);
+  // Après des réponses reçues, un nouvel envoi se fait à la demande (le formulaire reste replié).
+  const showForm = composing || (!req && results.length === 0);
 
   const create = async () => {
     if (!homeQ || !chosen.length) return;
@@ -75,8 +77,6 @@ export default function HomeQPanel({ zone, state: s, dispatch, suggestions, home
       setMsg('Copie impossible dans ce navigateur.');
     }
   };
-  const results = QUESTIONNAIRES.filter((q) => q.id in s.qResults);
-
   return (
     <section className="bilan-homeq" aria-labelledby="bilan-homeq-title">
       <h2 id="bilan-homeq-title">Questionnaires à domicile</h2>
@@ -138,6 +138,12 @@ export default function HomeQPanel({ zone, state: s, dispatch, suggestions, home
             )}
           </div>
         </fieldset>
+      ) : !req ? (
+        <div className="row">
+          <button type="button" className="btn small ghost" onClick={() => setComposing(true)}>
+            Nouvel envoi
+          </button>
+        </div>
       ) : live ? (
         <div className="homeq-link">
           <p className="homeq-wait">En attente des réponses du patient</p>
