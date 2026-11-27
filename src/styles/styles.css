@@ -2647,3 +2647,28 @@ sup.c a:hover {
   background: var(--warn-bg);
   color: var(--ink);
 }
+
+/* Page du patient : questionnaires à domicile */
+.homeq-patient {
+  max-width: 720px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.homeq-patient h1 {
+  margin: 0;
+  font-size: 26px;
+  outline: none;
+}
+.homeq-patient .eyebrow {
+  margin: 0;
+}
+.homeq-patient > .btn {
+  justify-self: start;
+}
+.homeq-nav {
+  justify-content: space-between;
+}

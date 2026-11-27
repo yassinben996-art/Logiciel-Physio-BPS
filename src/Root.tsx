@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import App from './App';
 import { isPatientLocked, onPatientLockChange } from './bilan/patientGuard';
 import BilanRoot from './bilan/ui/BilanRoot';
+import PatientHomeQ from './bilan/ui/PatientHomeQ';
+import { RELAY_URL } from './bilan/sync/config';
 
 export default function Root() {
   const [hash, setHash] = useState(location.hash);
@@ -19,5 +21,7 @@ export default function Root() {
   useEffect(() => {
     if (locked && !hash.startsWith('#/bilan')) location.hash = '#/bilan';
   }, [locked, hash]);
+  // Questionnaires à domicile (téléphone du patient). Jamais pendant le mode patient d'un appareil du physio.
+  if (!locked && hash.startsWith('#/q?')) return <PatientHomeQ hash={hash} relayUrl={RELAY_URL} />;
   return hash.startsWith('#/bilan') || locked ? <BilanRoot /> : <App />;
 }
