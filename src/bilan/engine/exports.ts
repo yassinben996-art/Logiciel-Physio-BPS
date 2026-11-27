@@ -8,6 +8,8 @@ import { intakeLines } from './intakeText';
 import type { FieldDef, SectionDef, SysmetaRubric, ZoneDef } from '../content/types';
 import type { BilanState, Identity } from '../state/bilan';
 import { withinBounds } from './bounds';
+import { QUESTIONNAIRES } from '../../questionnaires/public';
+import { scoreQ } from '../../questionnaires/scoring';
 
 export interface SysmetaBlock {
   rubric: SysmetaRubric;
@@ -56,11 +58,21 @@ function fieldLine(sec: SectionDef, f: FieldDef, s: BilanState): string | null {
 export const sectionLines = (sec: SectionDef, s: BilanState): string[] =>
   sec.fields.map((f) => fieldLine(sec, f, s)).filter((x): x is string => x !== null);
 
+/** Questionnaires remplis par le patient à domicile : « QuickDASH : 50 / 100 », avec sous-scores et mentions. */
+export function questionnaireLines(s: BilanState): string[] {
+  return QUESTIONNAIRES.filter((q) => q.id in (s.qResults ?? {})).map((q) => {
+    const r = scoreQ(q, s.qResults[q.id]!.answers);
+    if (!r) return `${q.name} : aucune réponse`;
+    const extra = [r.parts?.join(', '), !r.valid ? (r.note ?? 'non valable') : r.note].filter(Boolean);
+    return `${q.name} : ${r.display}${extra.length ? ` (${extra.join(' ; ')})` : ''}`;
+  });
+}
+
 export function sysmetaBlocks(z: ZoneDef, state: BilanState): SysmetaBlock[] {
   const s = withinBounds(z, state);
   const byRubric = new Map<SysmetaRubric, string[]>();
   // L'accueil ouvre le bloc « Anamnèse ».
-  const intake = intakeLines(INTAKE, s);
+  const intake = [...intakeLines(INTAKE, s), ...questionnaireLines(s)];
   if (intake.length) byRubric.set('Anamnèse', intake);
   for (const sec of z.sections) {
     if (!sec.sysmeta) continue;
@@ -103,6 +115,12 @@ export function bilanSummaryLines(z: ZoneDef, state: BilanState, date: Date = ne
     any = true;
     L.push({ t: 'h', s: sec.title });
     for (const l of lines) L.push({ t: 'p', s: l });
+  }
+  const ql = questionnaireLines(s);
+  if (ql.length) {
+    any = true;
+    L.push({ t: 'h', s: 'Questionnaires' });
+    for (const l of ql) L.push({ t: 'p', s: l });
   }
   if (!any) L.push({ t: 'p', s: 'Aucune donnée saisie (non renseigné).' });
   L.push({ t: 'n', s: DISCLAIMER });

@@ -1,7 +1,7 @@
 // Résumé du bilan envoyé à l'IA ou copié pour Claude : aucune identité, aucun code, aucune date de l'état ;
 // textes libres nettoyés : nom, prénom, téléphone et e-mail du patient (spec IA §5.1).
 import type { IntakeDef, ZoneDef } from '../content/types';
-import { sectionLines } from '../engine/exports';
+import { questionnaireLines, sectionLines } from '../engine/exports';
 import { intakeLines } from '../engine/intakeText';
 import type { BilanState, PsfsItem } from '../state/bilan';
 import { scrub, type ScrubContext } from './scrub';
@@ -48,6 +48,8 @@ function render(z: ZoneDef, clean: BilanState, intake: IntakeDef, ignored: reado
     const l = sectionLines(sec, clean);
     if (l.length) lines.push(`${sec.title} :`, ...l.map((x) => `- ${x}`));
   }
+  const ql = questionnaireLines(clean);
+  if (ql.length) lines.push('Questionnaires :', ...ql.map((x) => `- ${x}`));
   if (ignored.length) lines.push(`Déjà écarté : ${ignored.join(' ; ')}`);
   return lines.join('\n');
 }

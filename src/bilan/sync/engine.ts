@@ -2,6 +2,8 @@
 // La version attribuée par le relais tranche les conflits ; un bilan ouvert à l'écran n'est jamais remplacé.
 import type { Vault } from '../storage/vault';
 import { relayApi, RelayError, type RemoteRecord, type SyncConfig } from './api';
+import { collectHomeAnswers } from '../homeq/collect';
+import type { BilanAction } from '../state/bilan';
 import { decodePairing, encodePairing } from './pairing';
 
 export type SyncStatus = 'off' | 'syncing' | 'synced' | 'offline' | 'error';
@@ -82,16 +84,43 @@ export async function linkDevice(
 const offline = (e: unknown) =>
   e instanceof TypeError || (e instanceof RelayError && (e.status >= 500 || e.status === 429));
 
+async function mergeHomeIntoOpen(
+  v: Vault,
+  r: RemoteRecord,
+  applyOpen: (id: string, a: BilanAction) => Promise<boolean>,
+): Promise<void> {
+  const [remote, local] = await Promise.all([v.peekRemote(r), v.load(r.id)]);
+  if (!remote || !local) return;
+  const fresh = Object.entries(remote.qResults).some(
+    ([id, x]) => !local.qResults[id] || x.at > local.qResults[id]!.at,
+  );
+  if (!fresh) return;
+  const doneHash = local.homeQ && remote.homeQ?.hash !== local.homeQ.hash ? local.homeQ.hash : undefined;
+  await applyOpen(r.id, { type: 'homeQMerge', results: remote.qResults, ...(doneHash ? { doneHash } : {}) });
+}
+
 export async function syncOnce(
   v: Vault,
-  opts: { isOpen: (id: string) => boolean; f?: typeof fetch },
-): Promise<{ status: SyncStatus; copied: number; openCopied: boolean; received: number }> {
+  opts: {
+    isOpen: (id: string) => boolean;
+    f?: typeof fetch;
+    /** Réponses de questionnaires à domicile pour le bilan ouvert à l'écran. */
+    applyOpen?: (id: string, a: BilanAction) => Promise<boolean>;
+  },
+): Promise<{
+  status: SyncStatus;
+  copied: number;
+  openCopied: boolean;
+  received: number;
+  homeReceived: number;
+}> {
   const cfg = await v.getSyncConfig<SyncConfig>();
-  if (!cfg) return { status: 'off', copied: 0, openCopied: false, received: 0 };
+  if (!cfg) return { status: 'off', copied: 0, openCopied: false, received: 0, homeReceived: 0 };
   const api = relayApi(cfg.relayUrl, cfg.token, opts.f);
   let copied = 0;
   let openCopied = false;
   let received = 0;
+  let homeReceived = 0;
   const now = () => new Date().toISOString();
   try {
     // 1. Envoi (plusieurs passes : une copie en conflit créée en route est envoyée aussi).
@@ -135,6 +164,9 @@ export async function syncOnce(
       const page = await api.since(cursor);
       for (const r of page.records) {
         const open = opts.isOpen(r.id);
+        // Bilan ouvert ici, réponses de questionnaires relevées par un autre appareil : on les ajoute à la
+        // saisie ouverte, sinon elles ne vivraient que dans la copie en conflit.
+        if (open && opts.applyOpen) await mergeHomeIntoOpen(v, r, opts.applyOpen);
         const res = await v.applyRemote(r, open);
         if (res !== 'skipped') received++;
         if (res === 'copied') {
@@ -146,15 +178,21 @@ export async function syncOnce(
       if (page.records.length < 200) break;
     }
     if (cursor !== cfg.cursor) await v.setSyncConfig<SyncConfig>({ ...cfg, cursor });
-    // Les copies créées à la réception partent tout de suite.
-    if ((await v.pending()).length && copied) {
+    // 3. Questionnaires à domicile. Une panne ici ne change pas l'état de la synchronisation des bilans.
+    try {
+      homeReceived = await collectHomeAnswers(v, api, { isOpen: opts.isOpen, applyOpen: opts.applyOpen });
+    } catch {
+      /* réessayé au prochain tour */
+    }
+    // Les copies créées à la réception et les réponses intégrées partent tout de suite.
+    if ((await v.pending()).length && (copied || homeReceived)) {
       for (const p of await v.pending()) {
         const res = await api.put(p.id, p.version, p.meta, p.data, p.deleted);
         if ('version' in res) await v.markSynced(p.id, res.version, p.data.ct);
       }
     }
-    return { status: 'synced', copied, openCopied, received };
+    return { status: 'synced', copied, openCopied, received, homeReceived };
   } catch (e) {
-    return { status: offline(e) ? 'offline' : 'error', copied, openCopied, received };
+    return { status: offline(e) ? 'offline' : 'error', copied, openCopied, received, homeReceived };
   }
 }

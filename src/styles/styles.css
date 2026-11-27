@@ -2564,3 +2564,111 @@ sup.c a:hover {
 .bilan-head .bilan-save {
   margin-right: auto;
 }
+
+/* Questionnaires à domicile */
+.bilan-homeq {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.bilan-homeq h2,
+.bilan-homeq h3 {
+  margin: 0;
+}
+.homeq-pick {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.homeq-pick legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.homeq-pick .row {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+.homeq-prop {
+  color: var(--accent);
+  font-size: 13px;
+}
+.homeq-link {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.homeq-link .pairing-qr {
+  width: min(240px, 100%);
+}
+.homeq-wait {
+  margin: 0;
+  font-weight: 600;
+}
+.homeq-url {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.homeq-results ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.homeq-results li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+.homeq-score {
+  font-weight: 600;
+}
+.homeq-pill {
+  justify-self: start;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.homeq-pill.q-pending {
+  background: var(--warn-bg);
+  color: var(--ink);
+}
+
+/* Page du patient : questionnaires à domicile */
+.homeq-patient {
+  max-width: 720px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.homeq-patient h1 {
+  margin: 0;
+  font-size: 26px;
+  outline: none;
+}
+.homeq-patient .eyebrow {
+  margin: 0;
+}
+.homeq-patient > .btn {
+  justify-self: start;
+}
+.homeq-nav {
+  justify-content: space-between;
+}

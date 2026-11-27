@@ -112,4 +112,39 @@ export function storeContract(make: () => RelayStore | Promise<RelayStore>) {
     expect(await s.aiCountUp('2026-11-26T10', 30)).toBe(false);
     expect(await s.aiCountUp('2026-11-26T11', 30)).toBe(true);
   });
+  it('contrat : boîte aux lettres des questionnaires à domicile', async () => {
+    const s = await make();
+    const t0 = '2026-11-27T10:00:00.000Z';
+    await s.addHomeTicket('h', '2026-12-11T10:00:00.000Z', t0);
+    expect(await s.submitHome('h', 'b', '2026-11-28T10:00:00.000Z')).toBe(true);
+    expect(await s.submitHome('h', 'b2', '2026-11-28T10:00:00.000Z')).toBe(false);
+    expect(await s.submitHome('x', 'b', '2026-11-28T10:00:00.000Z')).toBe(false);
+    await s.addHomeTicket('vieux', '2026-11-28T00:00:00.000Z', t0);
+    expect(await s.submitHome('vieux', 'b', '2026-11-28T00:00:00.000Z')).toBe(false); // expiré
+    const now = '2026-11-28T12:00:00.000Z';
+    const lease = '2026-11-28T11:50:00.000Z';
+    expect(await s.homeInbox(lease)).toEqual(['h']);
+    expect(await s.claimHome('h', 'd1', now, lease)).toBe('b');
+    expect(await s.homeInbox(lease)).toEqual([]);
+    expect(await s.claimHome('h', 'd2', now, lease)).toBeNull(); // bail en cours
+    const later = '2026-11-28T12:10:01.000Z';
+    expect(await s.homeInbox('2026-11-28T12:00:01.000Z')).toEqual(['h']);
+    expect(await s.claimHome('h', 'd2', later, '2026-11-28T12:00:01.000Z')).toBe('b'); // bail expiré
+    await s.deleteHome('h');
+    expect(await s.homeInbox(later)).toEqual([]);
+    expect(await s.claimHome('h', 'd2', later, later)).toBeNull();
+  });
+  it('contrat : purge des tickets expirés', async () => {
+    const s = await make();
+    await s.addHomeTicket('vide', '2026-11-28T00:00:00.000Z', '2026-11-27T00:00:00.000Z');
+    await s.addHomeTicket('plein', '2026-11-28T00:00:00.000Z', '2026-11-27T00:00:00.000Z');
+    expect(await s.submitHome('plein', 'b', '2026-11-27T12:00:00.000Z')).toBe(true);
+    // Le lendemain de l'expiration : le ticket vide disparaît, le dépôt reste (30 jours).
+    await s.addHomeTicket('autre', '2026-12-20T00:00:00.000Z', '2026-11-29T00:00:00.000Z');
+    expect(await s.submitHome('vide', 'b', '2026-11-27T13:00:00.000Z')).toBe(false);
+    expect(await s.homeInbox('2026-11-29T00:00:00.000Z')).toEqual(['plein']);
+    // Plus de 30 jours après l'expiration : le dépôt est effacé.
+    await s.addHomeTicket('encore', '2027-01-20T00:00:00.000Z', '2026-12-29T00:00:01.000Z');
+    expect(await s.homeInbox('2026-12-29T00:00:01.000Z')).toEqual([]);
+  });
 }

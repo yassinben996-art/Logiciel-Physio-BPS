@@ -57,6 +57,24 @@ export interface AiState {
   items: readonly AiItem[];
 }
 
+/** Questionnaires à domicile : demande en attente (le lien du QR code). */
+export interface HomeRequest {
+  ticket: string;
+  /** SHA-256 (hex) du ticket : c'est sous cette empreinte que le relais garde la boîte. */
+  hash: string;
+  /** Clé AES-GCM (base64url) qui ouvre les réponses du patient. */
+  key: string;
+  ids: readonly string[];
+  createdAt: string;
+  expiresAt: string;
+}
+
+/** Réponses reçues d'un questionnaire à domicile (les scores sont calculés à l'affichage). */
+export interface HomeResult {
+  answers: Readonly<Record<string, number>>;
+  at: string;
+}
+
 export interface BilanState {
   /** crypto.randomUUID() */
   id: string;
@@ -84,6 +102,10 @@ export interface BilanState {
   intake: IntakeState;
   /** Dernières suggestions de l'IA (null tant qu'aucune demande). */
   ai: AiState | null;
+  /** Questionnaires à domicile en attente (null : aucun). */
+  homeQ: HomeRequest | null;
+  /** Réponses reçues, par questionnaire. */
+  qResults: Readonly<Record<string, HomeResult>>;
 }
 
 export type BilanAction =
@@ -102,6 +124,19 @@ export type BilanAction =
   | { type: 'intakeStatus'; status: IntakeStatus }
   | { type: 'aiResult'; provider: string; model: string; items: readonly AiSuggestion[] }
   | { type: 'aiStatus'; id: string; status: Exclude<AiItemStatus, 'pending'> }
+  | { type: 'homeQCreate'; req: HomeRequest }
+  | {
+      type: 'homeQReceived';
+      hash: string;
+      answers: Readonly<Record<string, Record<string, number>>>;
+      at: string;
+    }
+  | {
+      type: 'homeQMerge';
+      results: Readonly<Record<string, HomeResult>>;
+      /** Empreinte de la demande relevée ailleurs : la demande en attente est close si c'est elle. */
+      doneHash?: string;
+    }
   | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 
@@ -129,6 +164,8 @@ export const emptyBilan = (zone: ZoneDef['id']): BilanState => {
     dismissed: [],
     intake: emptyIntake(),
     ai: null,
+    homeQ: null,
+    qResults: {},
   };
 };
 
@@ -181,7 +218,8 @@ export function normalizeBilan(b: unknown): BilanState {
     : 'answers' in raw
       ? { ...emptyIntake(), ...raw }
       : fromPr6(raw);
-  return { ...base, ...x, intake, ai: (x as { ai?: AiState | null }).ai ?? null };
+  const y = x as { ai?: AiState | null; homeQ?: HomeRequest | null; qResults?: Record<string, HomeResult> };
+  return { ...base, ...x, intake, ai: y.ai ?? null, homeQ: y.homeQ ?? null, qResults: y.qResults ?? {} };
 }
 
 function without<T>(r: Readonly<Record<string, T>>, key: string): Record<string, T> {
@@ -264,6 +302,30 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
       const prev = (s.notes['raisonnement.notes'] ?? '').replace(/\s+$/, '');
       return { ...s, ai, notes: { ...s.notes, 'raisonnement.notes': prev ? `${prev}\n${line}` : line } };
     }
+    case 'homeQCreate':
+      return { ...s, homeQ: a.req };
+    case 'homeQReceived': {
+      // Seule la demande en attente est acceptée (un ancien lien remplacé est ignoré).
+      if (!s.homeQ || a.hash !== s.homeQ.hash) return s;
+      const got = Object.fromEntries(
+        Object.entries(a.answers).map(([id, answers]) => [id, { answers, at: a.at }]),
+      );
+      return { ...s, homeQ: null, qResults: { ...s.qResults, ...got } };
+    }
+    case 'homeQMerge': {
+      // Réponses relevées par un autre appareil, ajoutées à la saisie ouverte (le plus récent l'emporte).
+      const fresh = Object.entries(a.results).filter(([id, r]) => {
+        const cur = s.qResults[id];
+        return !cur || r.at > cur.at;
+      });
+      const close = !!a.doneHash && s.homeQ?.hash === a.doneHash;
+      if (!fresh.length && !close) return s;
+      return {
+        ...s,
+        homeQ: close ? null : s.homeQ,
+        qResults: { ...s.qResults, ...Object.fromEntries(fresh) },
+      };
+    }
     case 'intakeStatus':
       return {
         ...s,
@@ -297,7 +359,9 @@ export const isDirty = (s: BilanState): boolean =>
   s.dismissed.length > 0 ||
   nonEmpty(s.intake.answers) ||
   s.intake.strokes.length > 0 ||
-  s.intake.status !== 'none';
+  s.intake.status !== 'none' ||
+  s.homeQ !== null ||
+  nonEmpty(s.qResults);
 
 /** Libellés des suggestions de l'IA ignorées (envoyées comme « Déjà écarté »). */
 export const ignoredAiLabels = (s: BilanState): string[] =>

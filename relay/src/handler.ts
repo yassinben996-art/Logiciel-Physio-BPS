@@ -14,6 +14,10 @@ const AI_MAX_CHARS = 40_000;
 const MAX_BODY = 2 * 1024 * 1024;
 const RATE_LIMIT = 120; // requêtes par minute et par appareil
 const TICKET_MS = 10 * 60 * 1000;
+const HOME_MS = 14 * 24 * 60 * 60 * 1000; // lien des questionnaires à domicile : 14 jours
+const HOME_LEASE_MS = 10 * 60 * 1000; // bail de relève
+const HOME_MAX_BOX = 64 * 1024;
+const HASH_RE = /^[0-9a-f]{64}$/;
 const ID_RE = /^[A-Za-z0-9-]{1,64}$/;
 const LOCAL_ORIGIN = 'http://localhost:5173';
 
@@ -148,6 +152,18 @@ export async function handle(
       return reply(201, { deviceId: d.row.id, token: d.token });
     }
 
+    // Dépôt des réponses du patient : public, mais seulement avec un ticket valide (un seul dépôt).
+    if (req.method === 'POST' && path === '/q/submit') {
+      const b = await readJson(req);
+      const ticket = typeof b.ticket === 'string' ? b.ticket : '';
+      if (!ticket || !isBox(b.box)) return reply(400, { error: 'dépôt invalide' });
+      const box = JSON.stringify({ iv: b.box.iv, ct: b.box.ct });
+      if (box.length > HOME_MAX_BOX) return reply(413, { error: 'trop gros' });
+      if (!(await store.submitHome(await sha256(ticket), box, iso)))
+        return reply(410, { error: 'lien expiré ou déjà utilisé' });
+      return reply(201, {});
+    }
+
     // Routes protégées.
     const auth = req.headers.get('authorization') ?? '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
@@ -165,6 +181,34 @@ export async function handle(
       const expiresAt = new Date(at.getTime() + TICKET_MS).toISOString();
       await store.addTicket(await sha256(ticket), expiresAt);
       return reply(201, { ticket, expiresAt });
+    }
+    if (req.method === 'POST' && path === '/q/ticket') {
+      const ticket = random(16);
+      const expiresAt = new Date(at.getTime() + HOME_MS).toISOString();
+      await store.addHomeTicket(await sha256(ticket), expiresAt, iso);
+      return reply(201, { ticket, expiresAt });
+    }
+    const leaseBefore = new Date(at.getTime() - HOME_LEASE_MS).toISOString();
+    if (req.method === 'GET' && path === '/q/inbox') {
+      return reply(200, { hashes: await store.homeInbox(leaseBefore) });
+    }
+    const claim = /^\/q\/claim\/([^/]+)$/.exec(path);
+    if (req.method === 'POST' && claim) {
+      const hash = claim[1]!;
+      if (!HASH_RE.test(hash)) return reply(400, { error: 'empreinte invalide' });
+      const box = await store.claimHome(hash, device.id, iso, leaseBefore);
+      return box ? reply(200, { box: JSON.parse(box) as unknown }) : reply(409, { error: 'déjà relevé' });
+    }
+    const rv = /^\/q\/revoke\/([^/]+)$/.exec(path);
+    if (req.method === 'POST' && rv) {
+      const hash = rv[1]!;
+      if (!HASH_RE.test(hash)) return reply(400, { error: 'empreinte invalide' });
+      return (await store.revokeHome(hash)) ? reply(204) : reply(409, { error: 'déjà répondu' });
+    }
+    const hq = /^\/q\/([0-9a-f]{64})$/.exec(path);
+    if (req.method === 'DELETE' && hq) {
+      await store.deleteHome(hq[1]!);
+      return reply(204);
     }
     if (req.method === 'POST' && path === '/ai') {
       // Ni la demande ni la réponse ne sont journalisées.

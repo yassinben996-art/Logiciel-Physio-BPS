@@ -24,6 +24,23 @@ export interface BilanMeta {
   /** Copie en conflit : id du bilan d'origine et date de la copie. */
   conflictOf?: string;
   conflictAt?: string;
+  /** Empreinte du ticket des questionnaires à domicile en attente (pour relever les réponses). */
+  homeQHash?: string;
+  /** Pastille de « Mes bilans ». */
+  qStatus?: 'pending' | 'received';
+}
+
+function homePart(b: BilanState): Partial<BilanMeta> {
+  const received = Object.keys(b.qResults ?? {}).length > 0;
+  if (b.homeQ) {
+    // L'empreinte reste même après l'expiration : un dépôt fait juste avant peut être relevé plus tard.
+    const live = b.homeQ.expiresAt > new Date().toISOString();
+    return {
+      homeQHash: b.homeQ.hash,
+      ...(live ? { qStatus: 'pending' as const } : received ? { qStatus: 'received' as const } : {}),
+    };
+  }
+  return received ? { qStatus: 'received' } : {};
 }
 
 export interface SyncMeta {
@@ -62,6 +79,8 @@ export interface Vault {
   markSynced(id: string, version: number, sentCt?: string): Promise<void>;
   /** Applique un enregistrement venu du relais (voir la conception, §5.4). */
   applyRemote(r: WireRecord, isOpen: boolean): Promise<'applied' | 'copied' | 'skipped'>;
+  /** Déchiffre un enregistrement reçu sans rien écrire (null si supprimé ou illisible). */
+  peekRemote(r: WireRecord): Promise<BilanState | null>;
   /** Duplique le bilan local sous un nouvel id, marqué « copie en conflit », à envoyer. */
   keepAsConflictCopy(id: string, at: string): Promise<string>;
 }
@@ -159,6 +178,7 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
     label: labelOf(b),
     zone: b.zone,
     updatedAt: b.updatedAt,
+    ...homePart(b),
     ...extra,
   });
   const conflictPart = (m: BilanMeta): Partial<BilanMeta> =>
@@ -299,6 +319,14 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
         });
         return 'applied';
       }),
+    peekRemote: async (r) => {
+      if (r.deleted) return null;
+      try {
+        return normalizeBilan(await open<unknown>(key, r.data));
+      } catch {
+        return null;
+      }
+    },
     keepAsConflictCopy: (id, at) =>
       serial(async () => {
         const rec = await getRec(idb, id);

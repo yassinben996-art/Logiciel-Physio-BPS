@@ -2,8 +2,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ZoneDef } from '../content/types';
 import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
-import { bilanReducer, emptyBilan, type BilanState } from '../state/bilan';
+import { bilanReducer, emptyBilan, type BilanAction, type BilanState } from '../state/bilan';
 import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '../storage/vault';
+import { newHomeKey, ticketHash } from '../homeq/link';
+import { HomeQAnswered, type HomeQCreate } from '../homeq/create';
 import BilanApp from './BilanApp';
 import BilanList from './BilanList';
 import LockScreen from './LockScreen';
@@ -64,6 +66,31 @@ export default function BilanRoot() {
         : null,
     [syncCfg],
   );
+  // Questionnaires à domicile : ticket du relais + clé tirée ici (la clé ne va jamais au relais).
+  const homeQ = useMemo<HomeQCreate | null>(
+    () =>
+      syncCfg
+        ? {
+            create: async (ids, previousHash) => {
+              const api = relayApi(syncCfg.relayUrl, syncCfg.token);
+              // L'ancien lien est révoqué d'abord ; si le patient y a déjà répondu, on garde ses réponses.
+              if (previousHash && !(await api.homeRevoke(previousHash))) throw new HomeQAnswered();
+              const t = await api.homeTicket();
+              return {
+                ticket: t.ticket,
+                hash: await ticketHash(t.ticket),
+                key: newHomeKey(),
+                ids,
+                createdAt: new Date().toISOString(),
+                expiresAt: t.expiresAt,
+              };
+            },
+          }
+        : null,
+    [syncCfg],
+  );
+  /** Dispatch de l'écran d'édition monté (questionnaires reçus pendant que le bilan est ouvert). */
+  const injectRef = useRef<((a: BilanAction) => void) | null>(null);
   const screenRef = useRef(screen);
   useEffect(() => {
     screenRef.current = screen;
@@ -137,6 +164,23 @@ export default function BilanRoot() {
       // Relu à chaque enregistrement reçu : un bilan ouvert pendant la synchronisation est protégé aussi.
       const res = await syncOnce(v, {
         isOpen: (id) => id === openBilanId(screenRef.current, current.current?.id ?? null),
+        // Réponses de questionnaires à domicile pour le bilan à l'écran : l'action est injectée dans la saisie
+        // ouverte (rien n'est remonté ni remplacé), puis enregistrée. La saisie ouverte, qui la contient désormais,
+        // repart ensuite par le chemin habituel (onChange → enregistrement). En mode patient, on attend.
+        applyOpen: async (id, action) => {
+          const sc = screenRef.current;
+          const inject = injectRef.current;
+          if (sc.k !== 'edit' || sc.bilan.id !== id || !inject || !(await flush())) return false;
+          const cur = current.current;
+          if (!cur || cur.id !== id) return false;
+          inject(action);
+          try {
+            await v.save(bilanReducer(cur, action));
+          } catch {
+            return false;
+          }
+          return true;
+        },
       });
       if (vault.current !== v) return;
       setSyncStatus(res.status);
@@ -146,7 +190,7 @@ export default function BilanRoot() {
         );
       // La liste n'est relue que si quelque chose est arrivé, et jamais pour écraser une liste plus récente
       // (par exemple affichée juste après une suppression faite pendant la synchronisation).
-      if ((res.received > 0 || res.copied > 0) && screenRef.current.k === 'list') {
+      if ((res.received > 0 || res.copied > 0 || res.homeReceived > 0) && screenRef.current.k === 'list') {
         const before = screenRef.current;
         const items = await v.list();
         if (screenRef.current === before && vault.current === v) setScreen({ k: 'list', items });
@@ -158,7 +202,7 @@ export default function BilanRoot() {
         void runSyncRef.current?.();
       }
     }
-  }, []);
+  }, [flush]);
 
   const [blocked, setBlocked] = useState(false);
   /** Avant de quitter le bilan : tout enregistrer, sinon rester sur place avec l'erreur visible. */
@@ -422,6 +466,8 @@ export default function BilanRoot() {
             initial={screen.bilan}
             openIntake={screen.openIntake}
             ai={ai}
+            homeQ={homeQ}
+            injectRef={injectRef}
             onChange={onChange}
             onNew={() => void newBilan()}
             onStartPatient={() =>

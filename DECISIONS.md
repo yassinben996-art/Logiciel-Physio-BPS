@@ -203,6 +203,20 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     sinon « Noter », qui écrit la suggestion dans les notes de Raisonnement (donc dans le PDF, jamais dans un bloc
     SYSmeta). Ce qui est ignoré n'est pas reproposé.
 
+### Questionnaires à domicile (plan 3, 27.11.2026)
+
+54. **Remplis par le patient chez lui, après la séance** (choix de l'utilisateur). L'outil propose des questionnaires
+    d'après le bilan (suggestions, questionnaires ajoutés, défauts de la zone : épaule SPADI et QuickDASH) ;
+    l'utilisateur peut en cocher d'autres parmi les 8 publics. QR code et lien à copier.
+55. **Boîte aux lettres chiffrée sur le relais** : ticket aléatoire (le relais n'en garde que l'empreinte), valable
+    14 jours, un seul dépôt ; clé AES-GCM tirée par l'appareil, présente seulement dans le lien (après « # ») et dans
+    le bilan chiffré. Le relais ne peut pas lire les réponses ; les dépôts non relevés sont effacés 30 jours après
+    l'expiration.
+56. **Intégration à la synchronisation** : un seul appareil relève un dépôt (bail de 10 minutes), l'intègre au bilan
+    (dans la saisie ouverte si le bilan est à l'écran ; jamais pendant le mode patient), puis seulement le fait
+    supprimer. Le patient ne voit pas ses scores ; les scores sont calculés à l'affichage et vont dans le PDF, le
+    bloc SYSmeta « Anamnèse » et le résumé de l'IA.
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

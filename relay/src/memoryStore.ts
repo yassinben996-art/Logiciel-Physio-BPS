@@ -1,5 +1,5 @@
 // Stockage en mémoire : tests et serveur de développement local.
-import type { DeviceRow, RecordRow, RelayStore } from './store';
+import { HOME_KEEP_MS, type DeviceRow, type RecordRow, type RelayStore } from './store';
 
 export class MemoryStore implements RelayStore {
   private account = false;
@@ -8,6 +8,10 @@ export class MemoryStore implements RelayStore {
   private records = new Map<string, RecordRow>();
   private seq = 0;
   private ai = new Map<string, number>();
+  private home = new Map<
+    string,
+    { expiresAt: string; box: string | null; claimedBy: string | null; claimedAt: string | null }
+  >();
 
   async hasAccount() {
     return this.account;
@@ -58,6 +62,39 @@ export class MemoryStore implements RelayStore {
     const n = this.ai.get(hour) ?? 0;
     if (n >= max) return false;
     this.ai.set(hour, n + 1);
+    return true;
+  }
+  async addHomeTicket(hash: string, expiresAt: string, now: string) {
+    const old = new Date(new Date(now).getTime() - HOME_KEEP_MS).toISOString();
+    for (const [h, r] of this.home)
+      if ((r.box === null && r.expiresAt <= now) || r.expiresAt < old) this.home.delete(h);
+    this.home.set(hash, { expiresAt, box: null, claimedBy: null, claimedAt: null });
+  }
+  async submitHome(hash: string, box: string, now: string) {
+    const r = this.home.get(hash);
+    if (!r || r.box !== null || now >= r.expiresAt) return false;
+    r.box = box;
+    return true;
+  }
+  async homeInbox(leaseBefore: string) {
+    return [...this.home]
+      .filter(([, r]) => r.box !== null && (r.claimedAt === null || r.claimedAt < leaseBefore))
+      .map(([h]) => h);
+  }
+  async claimHome(hash: string, device: string, now: string, leaseBefore: string) {
+    const r = this.home.get(hash);
+    if (!r || r.box === null || (r.claimedAt !== null && r.claimedAt >= leaseBefore)) return null;
+    r.claimedBy = device;
+    r.claimedAt = now;
+    return r.box;
+  }
+  async deleteHome(hash: string) {
+    this.home.delete(hash);
+  }
+  async revokeHome(hash: string) {
+    const r = this.home.get(hash);
+    if (r?.box != null) return false;
+    this.home.delete(hash);
     return true;
   }
   async recordsSince(seq: number, limit: number) {
