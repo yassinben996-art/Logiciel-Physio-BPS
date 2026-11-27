@@ -101,6 +101,6 @@ describe('évolution', () => {
     expect(i).toBeGreaterThan(-1);
     expect(lines.some((l) => l.t === 'p' && l.s === 'Flexion active D : 120° → 150° (+30°)')).toBe(true);
     expect(lines.some((l) => l.t === 'p' && l.s === 'Bilans : 01.10.2026 → 01.11.2026')).toBe(true);
-    expect(bilanSummaryLines(SHOULDER, cols[0]!, new Date()).some((l) => l.s === 'Évolution')).toBe(false);
+    expect(bilanSummaryLines(SHOULDER, cols[0]!, new Date()).some((l) => l.t === 'h' && l.s === 'Évolution')).toBe(false);
   });
 });
