@@ -43,4 +43,18 @@ export interface RelayStore {
   recordsSince(seq: number, limit: number): Promise<RecordRow[]>;
   /** Compte un appel à l'IA pour cette heure ; faux (sans compter) si la limite est atteinte. Atomique. */
   aiCountUp(hour: string, max: number): Promise<boolean>;
+
+  // Questionnaires à domicile (boîte aux lettres par ticket ; seule l'empreinte du ticket est gardée).
+  /** Crée le ticket et efface au passage les tickets expirés sans dépôt et les dépôts expirés depuis 30 jours. */
+  addHomeTicket(hash: string, expiresAt: string, now: string): Promise<void>;
+  /** Dépose la boîte : vrai une seule fois, et seulement avant l'expiration. Atomique. */
+  submitHome(hash: string, box: string, now: string): Promise<boolean>;
+  /** Empreintes déposées, non relevées ou dont le bail a commencé avant leaseBefore. */
+  homeInbox(leaseBefore: string): Promise<string[]>;
+  /** Relève la boîte pour un appareil (bail) ; null si absente ou relevée par un autre. Atomique. */
+  claimHome(hash: string, device: string, now: string, leaseBefore: string): Promise<string | null>;
+  deleteHome(hash: string): Promise<void>;
 }
+
+/** Les dépôts non relevés sont gardés 30 jours après l'expiration du ticket. */
+export const HOME_KEEP_MS = 30 * 24 * 60 * 60 * 1000;

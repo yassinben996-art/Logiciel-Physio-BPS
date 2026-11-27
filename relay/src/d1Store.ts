@@ -1,5 +1,5 @@
 // Stockage D1 (SQLite de Cloudflare). Chaque écriture sensible est une seule requête atomique.
-import type { DeviceRow, RecordRow, RelayStore } from './store';
+import { HOME_KEEP_MS, type DeviceRow, type RecordRow, type RelayStore } from './store';
 
 /** Le sous-ensemble de l'API D1 utilisé ici (évite une dépendance aux types de Cloudflare). */
 export interface D1Stmt {
@@ -138,6 +138,49 @@ export class D1Store implements RelayStore {
       .bind(hour, max)
       .run();
     return r.meta.changes === 1;
+  }
+  async addHomeTicket(hash: string, expiresAt: string, now: string) {
+    const old = new Date(new Date(now).getTime() - HOME_KEEP_MS).toISOString();
+    await this.db.batch([
+      this.db
+        .prepare('DELETE FROM home_q WHERE (box IS NULL AND expires_at <= ?1) OR expires_at < ?2')
+        .bind(now, old),
+      this.db.prepare('INSERT INTO home_q (hash, expires_at) VALUES (?, ?)').bind(hash, expiresAt),
+    ]);
+  }
+  async submitHome(hash: string, box: string, now: string) {
+    const r = await this.db
+      .prepare('UPDATE home_q SET box = ?2 WHERE hash = ?1 AND box IS NULL AND expires_at > ?3')
+      .bind(hash, box, now)
+      .run();
+    return r.meta.changes === 1;
+  }
+  async homeInbox(leaseBefore: string) {
+    const r = await this.db
+      .prepare(
+        'SELECT hash FROM home_q WHERE box IS NOT NULL AND (claimed_at IS NULL OR claimed_at < ?) LIMIT 50',
+      )
+      .bind(leaseBefore)
+      .all<{ hash: string }>();
+    return r.results.map((x) => x.hash);
+  }
+  async claimHome(hash: string, device: string, now: string, leaseBefore: string) {
+    const r = await this.db
+      .prepare(
+        `UPDATE home_q SET claimed_by = ?2, claimed_at = ?3
+         WHERE hash = ?1 AND box IS NOT NULL AND (claimed_at IS NULL OR claimed_at < ?4)`,
+      )
+      .bind(hash, device, now, leaseBefore)
+      .run();
+    if (r.meta.changes !== 1) return null;
+    const row = await this.db
+      .prepare('SELECT box FROM home_q WHERE hash = ?')
+      .bind(hash)
+      .first<{ box: string }>();
+    return row?.box ?? null;
+  }
+  async deleteHome(hash: string) {
+    await this.db.prepare('DELETE FROM home_q WHERE hash = ?').bind(hash).run();
   }
   async recordsSince(seq: number, limit: number) {
     const r = await this.db
