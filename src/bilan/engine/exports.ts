@@ -8,6 +8,8 @@ import { intakeLines } from './intakeText';
 import type { FieldDef, SectionDef, SysmetaRubric, ZoneDef } from '../content/types';
 import type { BilanState, Identity } from '../state/bilan';
 import { withinBounds } from './bounds';
+import { evolutionRows } from './evolution';
+import { frDay, zurichDay } from './followup';
 import { QUESTIONNAIRES } from '../../questionnaires/public';
 import { scoreQ } from '../../questionnaires/scoring';
 
@@ -16,10 +18,10 @@ export interface SysmetaBlock {
   text: string;
 }
 
-const withUnit = (v: number, unit?: string) => fr(v) + (unit ? (unit === '°' ? '°' : ` ${unit}`) : '');
+export const withUnit = (v: number, unit?: string) => fr(v) + (unit ? (unit === '°' ? '°' : ` ${unit}`) : '');
 
 /** Lignes de texte d'un champ rempli (une seule, sauf notes multilignes conservées telles quelles). */
-function fieldLine(sec: SectionDef, f: FieldDef, s: BilanState): string | null {
+export function fieldLine(sec: SectionDef, f: FieldDef, s: BilanState): string | null {
   const key = `${sec.id}.${f.id}`;
   switch (f.kind) {
     case 'number': {
@@ -94,7 +96,13 @@ function patientLine(id: Identity): string | null {
   return parts.length ? `Patient : ${parts.join(', ')}` : null;
 }
 
-export function bilanSummaryLines(z: ZoneDef, state: BilanState, date: Date = new Date()): PdfLine[] {
+export function bilanSummaryLines(
+  z: ZoneDef,
+  state: BilanState,
+  date: Date = new Date(),
+  /** Bilans du patient (colonnes de l'évolution), du plus ancien au plus récent. */
+  series: readonly BilanState[] = [],
+): PdfLine[] {
   const s = withinBounds(z, state);
   const L: PdfLine[] = [{ t: 't', s: `Bilan : ${z.label}` }];
   const patient = patientLine(s.identity);
@@ -121,6 +129,19 @@ export function bilanSummaryLines(z: ZoneDef, state: BilanState, date: Date = ne
     any = true;
     L.push({ t: 'h', s: 'Questionnaires' });
     for (const l of ql) L.push({ t: 'p', s: l });
+  }
+  if (series.length > 1) {
+    const rows = evolutionRows(z, series);
+    if (rows.length) {
+      any = true;
+      L.push({ t: 'h', s: 'Évolution' });
+      L.push({ t: 'p', s: `Bilans : ${series.map((b) => frDay(zurichDay(b.createdAt))).join(' → ')}` });
+      for (const r of rows)
+        L.push({
+          t: 'p',
+          s: `${r.label} : ${r.values.map((v) => v ?? '–').join(' → ')}${r.delta ? ` (${r.delta})` : ''}`,
+        });
+    }
   }
   if (!any) L.push({ t: 'p', s: 'Aucune donnée saisie (non renseigné).' });
   L.push({ t: 'n', s: DISCLAIMER });
