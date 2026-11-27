@@ -137,6 +137,26 @@ export default function BilanRoot() {
       // Relu à chaque enregistrement reçu : un bilan ouvert pendant la synchronisation est protégé aussi.
       const res = await syncOnce(v, {
         isOpen: (id) => id === openBilanId(screenRef.current, current.current?.id ?? null),
+        // Réponses de questionnaires à domicile pour le bilan à l'écran : enregistrées par-dessus la saisie
+        // ouverte (rien n'est remplacé), puis l'écran est remonté avec l'état complété. En mode patient, on
+        // attend : le dépôt sera relevé plus tard.
+        applyOpen: async (id, action) => {
+          const sc = screenRef.current;
+          if (sc.k !== 'edit' || sc.bilan.id !== id || !(await flush())) return false;
+          const cur = current.current;
+          if (!cur || cur.id !== id) return false;
+          const next = bilanReducer(cur, action);
+          try {
+            await v.save(next);
+          } catch {
+            return false;
+          }
+          current.current = next;
+          setScreen((s) =>
+            s.k === 'edit' && s.bilan.id === id ? { k: 'edit', bilan: next, rev: s.rev + 1 } : s,
+          );
+          return true;
+        },
       });
       if (vault.current !== v) return;
       setSyncStatus(res.status);
@@ -146,7 +166,7 @@ export default function BilanRoot() {
         );
       // La liste n'est relue que si quelque chose est arrivé, et jamais pour écraser une liste plus récente
       // (par exemple affichée juste après une suppression faite pendant la synchronisation).
-      if ((res.received > 0 || res.copied > 0) && screenRef.current.k === 'list') {
+      if ((res.received > 0 || res.copied > 0 || res.homeReceived > 0) && screenRef.current.k === 'list') {
         const before = screenRef.current;
         const items = await v.list();
         if (screenRef.current === before && vault.current === v) setScreen({ k: 'list', items });
@@ -158,7 +178,7 @@ export default function BilanRoot() {
         void runSyncRef.current?.();
       }
     }
-  }, []);
+  }, [flush]);
 
   const [blocked, setBlocked] = useState(false);
   /** Avant de quitter le bilan : tout enregistrer, sinon rester sur place avec l'erreur visible. */
