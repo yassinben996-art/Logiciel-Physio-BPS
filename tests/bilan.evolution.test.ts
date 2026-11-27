@@ -73,7 +73,7 @@ describe('évolution', () => {
     expect(tsk?.delta).toBe(d > 0 ? `+${d}` : `−${-d}`);
   });
   it('valeur du bilan précédent, sans le libellé', () => {
-    const [b2, b1] = series();
+    const [b2, b1] = series() as [BilanState, BilanState];
     void b2;
     const sec = SHOULDER.sections.find((s) => s.id === 'mobilite')!;
     const f = sec.fields.find((x) => x.id === 'flex_a')!;
