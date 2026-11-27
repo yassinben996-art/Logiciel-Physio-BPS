@@ -6,7 +6,8 @@
 // de Yass (transmise par le QR d'appairage, jamais par le relais). Sur chaque appareil, elle est stockée
 // enveloppée par la clé dérivée du PIN de cet appareil. Un PIN oublié rend l'appareil illisible ; ses bilans
 // reviennent du relais si l'appareil est relié à nouveau.
-import { normalizeBilan, type BilanState } from '../state/bilan';
+import { DEFAULT_FOLLOW_UP, normalizeBilan, type BilanState } from '../state/bilan';
+import { nextDue } from '../engine/followup';
 import { deriveKey, fromB64, importVaultKey, open, randomVaultKey, seal, toB64, type Box } from './crypto';
 
 const DB = 'bilan-vault';
@@ -28,6 +29,13 @@ export interface BilanMeta {
   homeQHash?: string;
   /** Pastille de « Mes bilans ». */
   qStatus?: 'pending' | 'received';
+  /** Série du patient et suivi (absents des fiches enregistrées avant le 27.11.2026, jusqu'au prochain enregistrement). */
+  patientId?: string;
+  previousId?: string | null;
+  createdAt?: string;
+  /** Date du prochain rebilan (AAAA-MM-JJ). */
+  due?: string;
+  closed?: boolean;
 }
 
 function homePart(b: BilanState): Partial<BilanMeta> {
@@ -179,6 +187,11 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
     zone: b.zone,
     updatedAt: b.updatedAt,
     ...homePart(b),
+    patientId: b.patientId ?? b.id,
+    previousId: b.previousId ?? null,
+    createdAt: b.createdAt,
+    due: nextDue(b.createdAt, b.followUp ?? DEFAULT_FOLLOW_UP),
+    closed: b.followUp?.closed ?? false,
     ...extra,
   });
   const conflictPart = (m: BilanMeta): Partial<BilanMeta> =>

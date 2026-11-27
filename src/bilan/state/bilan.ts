@@ -75,6 +75,16 @@ export interface HomeResult {
   at: string;
 }
 
+/** Suivi : délai avant le rebilan, date choisie à la main (remplace le délai), fin de prise en charge. */
+export interface FollowUp {
+  weeks: number;
+  /** AAAA-MM-JJ, ou null : date du bilan + délai. */
+  due: string | null;
+  closed: boolean;
+}
+
+export const DEFAULT_FOLLOW_UP: FollowUp = { weeks: 4, due: null, closed: false };
+
 export interface BilanState {
   /** crypto.randomUUID() */
   id: string;
@@ -106,6 +116,11 @@ export interface BilanState {
   homeQ: HomeRequest | null;
   /** Réponses reçues, par questionnaire. */
   qResults: Readonly<Record<string, HomeResult>>;
+  /** Patient : id du premier bilan de la série (les rebilans le reprennent). */
+  patientId: string;
+  /** Bilan précédent (rebilan), sinon null. */
+  previousId: string | null;
+  followUp: FollowUp;
 }
 
 export type BilanAction =
@@ -137,6 +152,7 @@ export type BilanAction =
       /** Empreinte de la demande relevée ailleurs : la demande en attente est close si c'est elle. */
       doneHash?: string;
     }
+  | { type: 'followUp'; weeks?: number; due?: string | null; closed?: boolean }
   | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 
@@ -147,8 +163,9 @@ const newCode = (): string => {
 
 export const emptyBilan = (zone: ZoneDef['id']): BilanState => {
   const now = new Date().toISOString();
+  const id = crypto.randomUUID();
   return {
-    id: crypto.randomUUID(),
+    id,
     code: newCode(),
     createdAt: now,
     updatedAt: now,
@@ -166,8 +183,22 @@ export const emptyBilan = (zone: ZoneDef['id']): BilanState => {
     ai: null,
     homeQ: null,
     qResults: {},
+    patientId: id,
+    previousId: null,
+    followUp: DEFAULT_FOLLOW_UP,
   };
 };
+
+/** Rebilan : bilan vide pour le même patient (identité, zone et délai repris ; aucune mesure copiée). */
+export function makeRebilan(prev: BilanState): BilanState {
+  return {
+    ...emptyBilan(prev.zone),
+    identity: { ...prev.identity },
+    patientId: prev.patientId,
+    previousId: prev.id,
+    followUp: { weeks: prev.followUp.weeks, due: null, closed: false },
+  };
+}
 
 /** Accueil tel qu'enregistré par la PR #6 (25.11.2026), avant la fusion des deux versions. */
 interface Pr6Intake {
@@ -218,8 +249,25 @@ export function normalizeBilan(b: unknown): BilanState {
     : 'answers' in raw
       ? { ...emptyIntake(), ...raw }
       : fromPr6(raw);
-  const y = x as { ai?: AiState | null; homeQ?: HomeRequest | null; qResults?: Record<string, HomeResult> };
-  return { ...base, ...x, intake, ai: y.ai ?? null, homeQ: y.homeQ ?? null, qResults: y.qResults ?? {} };
+  const y = x as {
+    ai?: AiState | null;
+    homeQ?: HomeRequest | null;
+    qResults?: Record<string, HomeResult>;
+    patientId?: string;
+    previousId?: string | null;
+    followUp?: FollowUp;
+  };
+  return {
+    ...base,
+    ...x,
+    intake,
+    ai: y.ai ?? null,
+    homeQ: y.homeQ ?? null,
+    qResults: y.qResults ?? {},
+    patientId: y.patientId ?? x.id,
+    previousId: y.previousId ?? null,
+    followUp: { ...DEFAULT_FOLLOW_UP, ...y.followUp },
+  };
 }
 
 function without<T>(r: Readonly<Record<string, T>>, key: string): Record<string, T> {
@@ -301,6 +349,16 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
       const line = `Suggestion IA (non sourcée) : ${item.label} — ${item.reason}`;
       const prev = (s.notes['raisonnement.notes'] ?? '').replace(/\s+$/, '');
       return { ...s, ai, notes: { ...s.notes, 'raisonnement.notes': prev ? `${prev}\n${line}` : line } };
+    }
+    case 'followUp': {
+      const f = { ...s.followUp };
+      if (a.weeks !== undefined) {
+        f.weeks = a.weeks;
+        f.due = null; // un nouveau délai remplace la date choisie
+      }
+      if (a.due !== undefined) f.due = a.due;
+      if (a.closed !== undefined) f.closed = a.closed;
+      return { ...s, followUp: f };
     }
     case 'homeQCreate':
       return { ...s, homeQ: a.req };
