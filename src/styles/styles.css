@@ -2672,3 +2672,88 @@ sup.c a:hover {
 .homeq-nav {
   justify-content: space-between;
 }
+
+/* Rebilan : suivi, valeurs d'avant, évolution, onglets de « Mes bilans » */
+.bilan-follow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.bilan-follow input,
+.bilan-follow select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.bilan-prev-toggle {
+  justify-self: start;
+}
+.bilan-prev {
+  margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--accent);
+}
+.bilan-evolution {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.bilan-evolution h2 {
+  margin: 0 0 8px;
+}
+.evo-scroll {
+  overflow-x: auto;
+}
+.evo-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.evo-table th,
+.evo-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.evo-table tbody th {
+  font-weight: 500;
+  white-space: normal;
+}
+.evo-delta {
+  font-weight: 600;
+}
+.bilan-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.bilan-tab {
+  font: inherit;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.bilan-tab[aria-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+.bilan-follow .f {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}

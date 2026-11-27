@@ -217,6 +217,16 @@ c'est indiqué dans la section Limites, le pied de page, le résumé exporté et
     supprimer. Le patient ne voit pas ses scores ; les scores sont calculés à l'affichage et vont dans le PDF, le
     bloc SYSmeta « Anamnèse » et le résumé de l'IA.
 
+### Rebilan, évolution et rappels (plan 4, 27.11.2026)
+
+57. **Bilans reliés en série** : un rebilan, possible à tout moment (choix de l'utilisateur), est un bilan vide pour le
+    même patient (identité, zone et délai repris, aucune mesure copiée), relié au précédent. Les valeurs du bilan
+    précédent sont cachées par défaut et s'affichent à la demande (« avant : … ») (choix de l'utilisateur).
+58. **Évolution sans jugement** : une colonne par bilan (le premier et les 5 derniers au plus) et l'écart chiffré du
+    premier au dernier ; aucune interprétation, faute de seuils de changement sourcés. Aussi dans le PDF.
+59. **« À rebilanter »** : délai de 4 semaines par défaut, réglable ; date du prochain rebilan modifiable et report de
+    +1 ou +2 semaines (demande de l'utilisateur) ; « Fin de prise en charge » retire le patient de la liste.
+
 ## Technique
 
 - Vite 8, React 18.3, TypeScript strict (`noUncheckedIndexedAccess`), Vitest 5, ESLint 10 (règle interdisant

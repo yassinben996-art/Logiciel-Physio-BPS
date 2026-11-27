@@ -6,7 +6,8 @@
 // de Yass (transmise par le QR d'appairage, jamais par le relais). Sur chaque appareil, elle est stockée
 // enveloppée par la clé dérivée du PIN de cet appareil. Un PIN oublié rend l'appareil illisible ; ses bilans
 // reviennent du relais si l'appareil est relié à nouveau.
-import { normalizeBilan, type BilanState } from '../state/bilan';
+import { DEFAULT_FOLLOW_UP, normalizeBilan, type BilanState } from '../state/bilan';
+import { nextDue } from '../engine/followup';
 import { deriveKey, fromB64, importVaultKey, open, randomVaultKey, seal, toB64, type Box } from './crypto';
 
 const DB = 'bilan-vault';
@@ -28,6 +29,30 @@ export interface BilanMeta {
   homeQHash?: string;
   /** Pastille de « Mes bilans ». */
   qStatus?: 'pending' | 'received';
+  /** Série du patient et suivi (absents des fiches enregistrées avant le 27.11.2026, jusqu'au prochain enregistrement). */
+  patientId?: string;
+  previousId?: string | null;
+  createdAt?: string;
+  /** Date du prochain rebilan (AAAA-MM-JJ). */
+  due?: string;
+  closed?: boolean;
+}
+
+/**
+ * Fiche enregistrée avant le rebilan (27.11.2026), ou reçue d'un appareil pas encore à jour : complétée à la lecture
+ * (patient, date du bilan, échéance) pour que le patient apparaisse dans « À rebilanter ». Rien n'est réécrit.
+ */
+export function completeMeta(m: BilanMeta, raw: BilanState): BilanMeta {
+  if (m.createdAt && m.due && m.patientId) return m;
+  const b = normalizeBilan(raw);
+  return {
+    ...m,
+    patientId: b.patientId,
+    previousId: b.previousId,
+    createdAt: b.createdAt,
+    due: nextDue(b.createdAt, b.followUp),
+    closed: b.followUp.closed,
+  };
 }
 
 function homePart(b: BilanState): Partial<BilanMeta> {
@@ -179,6 +204,11 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
     zone: b.zone,
     updatedAt: b.updatedAt,
     ...homePart(b),
+    patientId: b.patientId ?? b.id,
+    previousId: b.previousId ?? null,
+    createdAt: b.createdAt,
+    due: nextDue(b.createdAt, b.followUp ?? DEFAULT_FOLLOW_UP),
+    closed: b.followUp?.closed ?? false,
     ...extra,
   });
   const conflictPart = (m: BilanMeta): Partial<BilanMeta> =>
@@ -200,7 +230,14 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
     async list() {
       const recs = await allRecs(idb);
       const metas = await Promise.all(
-        recs.filter((x) => !syncOf(x.rec).deleted).map((x) => open<BilanMeta>(key, x.rec.meta)),
+        recs
+          .filter((x) => !syncOf(x.rec).deleted)
+          .map(async (x) => {
+            const m = await open<BilanMeta>(key, x.rec.meta);
+            return m.createdAt && m.due && m.patientId
+              ? m
+              : completeMeta(m, await open<BilanState>(key, x.rec.data));
+          }),
       );
       return metas.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },

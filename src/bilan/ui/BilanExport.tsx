@@ -8,7 +8,16 @@ import { INTAKE } from '../content/intake';
 import TextPreview from './TextPreview';
 import type { BilanState } from '../state/bilan';
 
-export default function BilanExport({ zone, state }: { zone: ZoneDef; state: BilanState }) {
+export default function BilanExport({
+  zone,
+  state,
+  series = [],
+}: {
+  zone: ZoneDef;
+  state: BilanState;
+  /** Colonnes de l'évolution (rebilan), pour le PDF. */
+  series?: readonly BilanState[];
+}) {
   const [copied, setCopied] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [claude, setClaude] = useState<'idle' | 'preview' | 'copied'>('idle');
@@ -25,7 +34,7 @@ export default function BilanExport({ zone, state }: { zone: ZoneDef; state: Bil
     setMsg(null);
     try {
       const { exportPdf } = await import('../../pdf/exportPdf');
-      const r = await exportPdf(bilanSummaryLines(zone, state, new Date()), new Date(), 'bilan');
+      const r = await exportPdf(bilanSummaryLines(zone, state, new Date(), series), new Date(), 'bilan');
       if (r === 'declined') setMsg('Téléchargement annulé.');
     } catch {
       setMsg('La génération du PDF a échoué.');

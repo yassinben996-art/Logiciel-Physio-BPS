@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ZoneDef } from '../content/types';
 import { isPatientLocked, onRemoteLock, setPatientLocked } from '../patientGuard';
-import { bilanReducer, emptyBilan, type BilanAction, type BilanState } from '../state/bilan';
+import { bilanReducer, emptyBilan, makeRebilan, type BilanAction, type BilanState } from '../state/bilan';
+import { postpone, today } from '../engine/followup';
 import { createVault, hasVault, unlockVault, type BilanMeta, type Vault } from '../storage/vault';
 import { newHomeKey, ticketHash } from '../homeq/link';
 import { HomeQAnswered, type HomeQCreate } from '../homeq/create';
@@ -255,6 +256,45 @@ export default function BilanRoot() {
     setScreen({ k: 'unlock' });
   }, [leave, runSync]);
 
+  // Série du patient du bilan ouvert (évolution, valeurs d'avant), relue à l'ouverture d'un bilan.
+  const [series, setSeries] = useState<BilanState[]>([]);
+  const editId = screen.k === 'edit' ? screen.bilan.id : null;
+  const editPatient = screen.k === 'edit' ? screen.bilan.patientId : null;
+  useEffect(() => {
+    const v = vault.current;
+    if (!v || !editId || !editPatient) return;
+    let alive = true;
+    void (async () => {
+      const metas = (await v.list()).filter(
+        (m) => (m.patientId ?? m.id) === editPatient && !m.conflictOf && m.id !== editId,
+      );
+      const loaded = (await Promise.all(metas.map((m) => v.load(m.id)))).filter((b): b is BilanState => !!b);
+      if (alive) setSeries(loaded);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [editId, editPatient]);
+
+  /** Rebilan : enregistré tout de suite (il apparaît dans la liste et la série), puis ouvert. */
+  const rebilan = useCallback(
+    async (from: BilanState) => {
+      const v = vault.current;
+      if (!v || !(await leave())) return;
+      const r = makeRebilan(from);
+      try {
+        await v.save(r);
+      } catch {
+        setStatus('error');
+        return;
+      }
+      setStatus('saved');
+      edit(r);
+      syncSoon.current?.();
+    },
+    [leave, edit],
+  );
+
   const newBilan = useCallback(async () => {
     if (!(await leave())) return;
     setScreen({ k: 'zone' });
@@ -369,6 +409,17 @@ export default function BilanRoot() {
                 }
               })
             }
+            onRebilan={(id) => void vault.current?.load(id).then((b) => b && rebilan(b))}
+            onPostpone={(id, days) =>
+              void (async () => {
+                const v = vault.current;
+                const b = v && (await v.load(id));
+                if (!v || !b) return;
+                await v.save(bilanReducer(b, { type: 'followUp', due: postpone(today(), days) }));
+                await showList();
+                syncSoon.current?.();
+              })()
+            }
             onRemove={(id) =>
               void vault.current
                 ?.remove(id)
@@ -468,6 +519,8 @@ export default function BilanRoot() {
             ai={ai}
             homeQ={homeQ}
             injectRef={injectRef}
+            series={series}
+            onRebilan={() => current.current && void rebilan(current.current)}
             onChange={onChange}
             onNew={() => void newBilan()}
             onStartPatient={() =>
