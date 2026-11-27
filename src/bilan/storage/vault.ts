@@ -79,6 +79,8 @@ export interface Vault {
   markSynced(id: string, version: number, sentCt?: string): Promise<void>;
   /** Applique un enregistrement venu du relais (voir la conception, §5.4). */
   applyRemote(r: WireRecord, isOpen: boolean): Promise<'applied' | 'copied' | 'skipped'>;
+  /** Déchiffre un enregistrement reçu sans rien écrire (null si supprimé ou illisible). */
+  peekRemote(r: WireRecord): Promise<BilanState | null>;
   /** Duplique le bilan local sous un nouvel id, marqué « copie en conflit », à envoyer. */
   keepAsConflictCopy(id: string, at: string): Promise<string>;
 }
@@ -317,6 +319,14 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
         });
         return 'applied';
       }),
+    peekRemote: async (r) => {
+      if (r.deleted) return null;
+      try {
+        return normalizeBilan(await open<unknown>(key, r.data));
+      } catch {
+        return null;
+      }
+    },
     keepAsConflictCopy: (id, at) =>
       serial(async () => {
         const rec = await getRec(idb, id);

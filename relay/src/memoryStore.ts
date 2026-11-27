@@ -91,6 +91,12 @@ export class MemoryStore implements RelayStore {
   async deleteHome(hash: string) {
     this.home.delete(hash);
   }
+  async revokeHome(hash: string) {
+    const r = this.home.get(hash);
+    if (r?.box != null) return false;
+    this.home.delete(hash);
+    return true;
+  }
   async recordsSince(seq: number, limit: number) {
     return [...this.records.values()]
       .filter((r) => r.seq > seq)

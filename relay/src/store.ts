@@ -54,6 +54,8 @@ export interface RelayStore {
   /** Relève la boîte pour un appareil (bail) ; null si absente ou relevée par un autre. Atomique. */
   claimHome(hash: string, device: string, now: string, leaseBefore: string): Promise<string | null>;
   deleteHome(hash: string): Promise<void>;
+  /** Révoque un ticket sans dépôt (vrai) ; faux si le patient a déjà déposé ses réponses (rien n'est effacé). */
+  revokeHome(hash: string): Promise<boolean>;
 }
 
 /** Les dépôts non relevés sont gardés 30 jours après l'expiration du ticket. */

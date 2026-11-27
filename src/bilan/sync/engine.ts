@@ -84,6 +84,21 @@ export async function linkDevice(
 const offline = (e: unknown) =>
   e instanceof TypeError || (e instanceof RelayError && (e.status >= 500 || e.status === 429));
 
+async function mergeHomeIntoOpen(
+  v: Vault,
+  r: RemoteRecord,
+  applyOpen: (id: string, a: BilanAction) => Promise<boolean>,
+): Promise<void> {
+  const [remote, local] = await Promise.all([v.peekRemote(r), v.load(r.id)]);
+  if (!remote || !local) return;
+  const fresh = Object.entries(remote.qResults).some(
+    ([id, x]) => !local.qResults[id] || x.at > local.qResults[id]!.at,
+  );
+  if (!fresh) return;
+  const doneHash = local.homeQ && remote.homeQ?.hash !== local.homeQ.hash ? local.homeQ.hash : undefined;
+  await applyOpen(r.id, { type: 'homeQMerge', results: remote.qResults, ...(doneHash ? { doneHash } : {}) });
+}
+
 export async function syncOnce(
   v: Vault,
   opts: {
@@ -149,6 +164,9 @@ export async function syncOnce(
       const page = await api.since(cursor);
       for (const r of page.records) {
         const open = opts.isOpen(r.id);
+        // Bilan ouvert ici, réponses de questionnaires relevées par un autre appareil : on les ajoute à la
+        // saisie ouverte, sinon elles ne vivraient que dans la copie en conflit.
+        if (open && opts.applyOpen) await mergeHomeIntoOpen(v, r, opts.applyOpen);
         const res = await v.applyRemote(r, open);
         if (res !== 'skipped') received++;
         if (res === 'copied') {

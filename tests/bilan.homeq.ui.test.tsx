@@ -44,7 +44,7 @@ describe('questionnaires à domicile : écran de Yass', () => {
     expect(tsk).not.toBeChecked();
     fireEvent.click(tsk);
     fireEvent.click(screen.getByRole('button', { name: 'Créer le QR code' }));
-    await waitFor(() => expect(create).toHaveBeenCalledWith(['quickdash', 'spadi', 'tsk']));
+    await waitFor(() => expect(create).toHaveBeenCalledWith(['quickdash', 'spadi', 'tsk'], undefined));
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({
         type: 'homeQCreate',
@@ -57,7 +57,11 @@ describe('questionnaires à domicile : écran de Yass', () => {
     panel(s, { create: vi.fn() });
     expect(screen.getByText('En attente des réponses du patient')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'QR code des questionnaires' })).toBeInTheDocument();
-    expect(screen.getByText(`https://site.test/app/#/q?t=TICKET&k=${KEY}&q=spadi`)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `https://site.test/app/#/q?t=TICKET&k=${KEY}&q=spadi&e=${Date.parse('2099-12-11T10:00:00.000Z') / 1000}`,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copier le lien' })).toBeInTheDocument();
     expect(screen.getByText(/valable jusqu’au 11\.12\.2099/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Nouvel envoi' }));

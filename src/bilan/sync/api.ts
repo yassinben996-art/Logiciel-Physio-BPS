@@ -73,6 +73,9 @@ export function relayApi(relayUrl: string, token: string | null, f: typeof fetch
       const r = await call<{ box?: Box }>('POST', `/q/claim/${hash}`, {}, [200, 409]);
       return r.status === 200 ? (r.json.box ?? null) : null;
     },
+    /** Révoque l'ancien lien ; faux si le patient y a déjà répondu. */
+    homeRevoke: async (hash: string): Promise<boolean> =>
+      (await call('POST', `/q/revoke/${hash}`, {}, [204, 409])).status === 204,
     homeDone: async (hash: string) => {
       await call('DELETE', `/q/${hash}`);
     },

@@ -199,6 +199,12 @@ export async function handle(
       const box = await store.claimHome(hash, device.id, iso, leaseBefore);
       return box ? reply(200, { box: JSON.parse(box) as unknown }) : reply(409, { error: 'déjà relevé' });
     }
+    const rv = /^\/q\/revoke\/([^/]+)$/.exec(path);
+    if (req.method === 'POST' && rv) {
+      const hash = rv[1]!;
+      if (!HASH_RE.test(hash)) return reply(400, { error: 'empreinte invalide' });
+      return (await store.revokeHome(hash)) ? reply(204) : reply(409, { error: 'déjà répondu' });
+    }
     const hq = /^\/q\/([0-9a-f]{64})$/.exec(path);
     if (req.method === 'DELETE' && hq) {
       await store.deleteHome(hq[1]!);

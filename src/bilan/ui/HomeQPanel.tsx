@@ -6,13 +6,9 @@ import type { ZoneDef } from '../content/types';
 import type { Suggestion } from '../engine/rules';
 import { homeLink } from '../homeq/link';
 import { proposeHomeQuestionnaires } from '../homeq/propose';
-import type { BilanAction, BilanState, HomeRequest } from '../state/bilan';
+import type { BilanAction, BilanState } from '../state/bilan';
 import PairingQr from './PairingQr';
-
-export interface HomeQCreate {
-  /** Crée le ticket sur le relais et la clé ; renvoie la demande à enregistrer dans le bilan. */
-  create(ids: readonly string[]): Promise<HomeRequest>;
-}
+import { HomeQAnswered, type HomeQCreate } from '../homeq/create';
 
 interface Props {
   zone: ZoneDef;
@@ -54,15 +50,17 @@ export default function HomeQPanel({ zone, state: s, dispatch, suggestions, home
     setMsg(null);
     try {
       const ids = QUESTIONNAIRES.map((q) => q.id).filter((id) => chosen.includes(id));
-      dispatch({ type: 'homeQCreate', req: await homeQ.create(ids) });
+      dispatch({ type: 'homeQCreate', req: await homeQ.create(ids, req?.hash) });
       setComposing(false);
       setPicked(null);
       setCopied(false);
     } catch (e) {
       setMsg(
-        e instanceof TypeError
-          ? 'Hors connexion : réessaie quand le réseau revient.'
-          : 'Création impossible pour le moment.',
+        e instanceof HomeQAnswered
+          ? 'Le patient a déjà répondu : ses réponses arrivent à la prochaine synchronisation.'
+          : e instanceof TypeError
+            ? 'Hors connexion : réessaie quand le réseau revient.'
+            : 'Création impossible pour le moment.',
       );
     } finally {
       setBusy(false);

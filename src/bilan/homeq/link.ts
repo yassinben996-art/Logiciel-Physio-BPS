@@ -23,10 +23,18 @@ const KNOWN = new Set(QUESTIONNAIRES.map((q) => q.id));
 
 export const newHomeKey = (): string => b64url(crypto.getRandomValues(new Uint8Array(32)));
 
-export const homeLink = (base: string, p: { ticket: string; key: string; ids: readonly string[] }): string =>
-  `${base}#/q?t=${p.ticket}&k=${p.key}&q=${p.ids.join(',')}`;
+export const homeLink = (
+  base: string,
+  p: { ticket: string; key: string; ids: readonly string[]; expiresAt?: string },
+): string => {
+  const e = p.expiresAt ? Math.floor(Date.parse(p.expiresAt) / 1000) : NaN;
+  // La date limite voyage dans le lien : un lien expiré est signalé dès l'ouverture.
+  return `${base}#/q?t=${p.ticket}&k=${p.key}&q=${p.ids.join(',')}${Number.isFinite(e) ? `&e=${e}` : ''}`;
+};
 
-export function parseHomeLink(hash: string): { ticket: string; key: string; ids: string[] } | null {
+export function parseHomeLink(
+  hash: string,
+): { ticket: string; key: string; ids: string[]; expiresAt?: string } | null {
   const m = /^#\/q\?(.*)$/.exec(hash);
   if (!m) return null;
   const p = new URLSearchParams(m[1]);
@@ -34,7 +42,9 @@ export function parseHomeLink(hash: string): { ticket: string; key: string; ids:
   const key = p.get('k') ?? '';
   const ids = (p.get('q') ?? '').split(',').filter((id) => KNOWN.has(id));
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(ticket) || !/^[A-Za-z0-9_-]{43}$/.test(key) || !ids.length) return null;
-  return { ticket, key, ids: [...new Set(ids)] };
+  const e = Number(p.get('e'));
+  const expiresAt = p.get('e') && Number.isFinite(e) && e > 0 ? new Date(e * 1000).toISOString() : undefined;
+  return { ticket, key, ids: [...new Set(ids)], ...(expiresAt ? { expiresAt } : {}) };
 }
 
 const keyOf = (key: string) => importVaultKey(fromB64url(key));

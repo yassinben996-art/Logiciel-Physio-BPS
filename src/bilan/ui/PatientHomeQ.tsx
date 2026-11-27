@@ -61,6 +61,8 @@ export default function PatientHomeQ({ hash, relayUrl, submit }: Props) {
     return (
       <Shell title="Ce lien n’est pas valable." text="Demandez un nouveau lien à votre physiothérapeute." />
     );
+  // Date limite portée par le lien : inutile de remplir des questionnaires qui ne pourront plus être envoyés.
+  if (link.expiresAt && link.expiresAt <= new Date().toISOString()) return <Shell title={GONE} />;
   if (step.k === 'loading') return <Shell title="Un instant…" />;
   if (step.k === 'already') return <Shell title="Vos réponses ont déjà été envoyées. Merci !" />;
   if (step.k === 'sent') return <Shell title="Merci, c’est envoyé. Vous pouvez fermer cette page." />;

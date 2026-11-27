@@ -182,6 +182,14 @@ export class D1Store implements RelayStore {
   async deleteHome(hash: string) {
     await this.db.prepare('DELETE FROM home_q WHERE hash = ?').bind(hash).run();
   }
+  async revokeHome(hash: string) {
+    await this.db.prepare('DELETE FROM home_q WHERE hash = ? AND box IS NULL').bind(hash).run();
+    const left = await this.db
+      .prepare('SELECT 1 AS x FROM home_q WHERE hash = ?')
+      .bind(hash)
+      .first<{ x: number }>();
+    return !left;
+  }
   async recordsSince(seq: number, limit: number) {
     const r = await this.db
       .prepare('SELECT * FROM records WHERE seq > ? ORDER BY seq LIMIT ?')

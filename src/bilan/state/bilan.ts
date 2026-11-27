@@ -131,6 +131,12 @@ export type BilanAction =
       answers: Readonly<Record<string, Record<string, number>>>;
       at: string;
     }
+  | {
+      type: 'homeQMerge';
+      results: Readonly<Record<string, HomeResult>>;
+      /** Empreinte de la demande relevée ailleurs : la demande en attente est close si c'est elle. */
+      doneHash?: string;
+    }
   | { type: 'load'; bilan: BilanState }
   | { type: 'reset' };
 
@@ -305,6 +311,20 @@ function apply(s: BilanState, a: Exclude<BilanAction, { type: 'load' } | { type:
         Object.entries(a.answers).map(([id, answers]) => [id, { answers, at: a.at }]),
       );
       return { ...s, homeQ: null, qResults: { ...s.qResults, ...got } };
+    }
+    case 'homeQMerge': {
+      // Réponses relevées par un autre appareil, ajoutées à la saisie ouverte (le plus récent l'emporte).
+      const fresh = Object.entries(a.results).filter(([id, r]) => {
+        const cur = s.qResults[id];
+        return !cur || r.at > cur.at;
+      });
+      const close = !!a.doneHash && s.homeQ?.hash === a.doneHash;
+      if (!fresh.length && !close) return s;
+      return {
+        ...s,
+        homeQ: close ? null : s.homeQ,
+        qResults: { ...s.qResults, ...Object.fromEntries(fresh) },
+      };
     }
     case 'intakeStatus':
       return {

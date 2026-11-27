@@ -1,14 +1,22 @@
 // Écran du bilan clinicien. Tout le contenu (sections, champs, règles) vient de src/bilan/content.
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type MutableRefObject } from 'react';
 import { DISCLAIMER } from '../../data/text';
 import { SHOULDER, ZONES } from '../content';
 import { detectKeywords } from '../engine/keywords';
 import { intakeProgress, sectionProgress } from '../engine/progress';
 import { INTAKE } from '../content/intake';
 import { evaluate } from '../engine/rules';
-import { bilanReducer, emptyBilan, isDirty, type BilanState, type Identity } from '../state/bilan';
+import {
+  bilanReducer,
+  emptyBilan,
+  isDirty,
+  type BilanAction,
+  type BilanState,
+  type Identity,
+} from '../state/bilan';
 import { QUESTIONNAIRES } from '@q';
-import HomeQPanel, { type HomeQCreate } from './HomeQPanel';
+import HomeQPanel from './HomeQPanel';
+import type { HomeQCreate } from '../homeq/create';
 import BilanExport from './BilanExport';
 import FieldInput from './FieldInput';
 import IntakeSection from './IntakeSection';
@@ -31,6 +39,8 @@ interface Props {
   ai?: AiAsk | null;
   /** Questionnaires à domicile par le relais (null : synchronisation non active). */
   homeQ?: HomeQCreate | null;
+  /** Rempli avec le dispatch de cet écran : le parent y injecte des actions (réponses reçues) sans remonter. */
+  injectRef?: MutableRefObject<((a: BilanAction) => void) | null>;
 }
 
 const ID_FIELDS: readonly { field: keyof Identity; label: string; type: 'text' | 'date' }[] = [
@@ -48,6 +58,7 @@ export default function BilanApp({
   openIntake,
   ai,
   homeQ,
+  injectRef,
 }: Props) {
   const [s, dispatch] = useReducer(bilanReducer, initial, (i) => i ?? emptyBilan('shoulder'));
   const [confirm, setConfirm] = useState(false);
@@ -69,6 +80,14 @@ export default function BilanApp({
         .filter((v, i, a) => a.indexOf(v) === i),
     [zone, s.accepted, s.ai],
   );
+
+  useEffect(() => {
+    if (!injectRef) return;
+    injectRef.current = dispatch;
+    return () => {
+      if (injectRef.current === dispatch) injectRef.current = null;
+    };
+  }, [injectRef]);
 
   // Notifie le parent à chaque changement (pas au premier rendu).
   const first = useRef(s);
