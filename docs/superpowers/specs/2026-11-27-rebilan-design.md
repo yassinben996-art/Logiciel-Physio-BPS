@@ -1,7 +1,7 @@
 # Rebilan, évolution et rappels — document de conception
 
 Date : 27.11.2026 · Auteur : Claude, avec Yassine Bensaid (Yass)
-Statut : brouillon, à valider par Yass
+Statut : validé par Yass le 27.11.2026 (avec l'ajout « repousser la date du rebilan »)
 Complète : `2026-11-24-bilan-standardise-design.md` et les conceptions suivantes. Ce qui n'est pas dit ici reste régi par elles.
 
 ## 1. Intention
@@ -57,7 +57,8 @@ Celles des conceptions précédentes (chiffrement, synchronisation, aucune donn�
 
 ### 5.3 Rappels (choix de Claude, dans le cadre de la demande de Yass)
 - Chaque bilan porte un **délai de suivi**, 4 semaines par défaut, réglable dans l'en-tête (1, 2, 3, 4, 6, 8 semaines). Il porte aussi une case **« Fin de prise en charge »**. Un rebilan reprend le délai du bilan précédent.
-- Onglet **« À rebilanter (n) »** dans « Mes bilans ». Pour chaque patient, on prend son dernier bilan : il apparaît si ce bilan date de plus que son délai et que la prise en charge n'est pas terminée. Le plus en retard est en haut, avec « dernier bilan le JJ.MM, en retard de N jours » et les boutons « Rebilan » et « Ouvrir ».
+- **Repousser** (demande de Yass) : l'en-tête affiche « Prochain rebilan le JJ.MM.AAAA », date modifiable (elle remplace le délai pour ce bilan). Dans l'onglet, « Repousser » propose +1 semaine et +2 semaines à partir d'aujourd'hui.
+- Onglet **« À rebilanter (n) »** dans « Mes bilans ». Pour chaque patient, on prend son dernier bilan : il apparaît si la date du prochain rebilan (date choisie, sinon date du bilan + délai) est passée et que la prise en charge n'est pas terminée. Le plus en retard est en haut, avec « dernier bilan le JJ.MM, en retard de N jours » et les boutons « Rebilan » et « Ouvrir ».
 - Les copies en conflit sont exclues de l'onglet.
 
 ## 6. Ce qui est laissé au constructeur
