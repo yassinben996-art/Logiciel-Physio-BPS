@@ -42,7 +42,9 @@ function numRow(
   if (nums.every((n) => n === null)) return null;
   const known = nums.filter((n): n is number => n !== null);
   const row: EvolutionRow = { label, values: nums.map((n) => (n === null ? null : show(n))) };
-  if (known.length >= 2) row.delta = signed(known[known.length - 1]! - known[0]!, unit);
+  // Écart du premier au dernier bilan, seulement si le dernier a la valeur (sinon il comparerait deux bilans anciens).
+  if (known.length >= 2 && nums[nums.length - 1] !== null)
+    row.delta = signed(known[known.length - 1]! - known[0]!, unit);
   return row;
 }
 
@@ -114,7 +116,8 @@ export function evolutionRows(z: ZoneDef, columns: readonly BilanState[]): Evolu
     if (res.every((r) => !r)) continue;
     const row: EvolutionRow = { label: q.name, values: res.map((r) => (r ? r.display : null)) };
     const valid = res.filter((r) => r?.valid);
-    if (valid.length >= 2) row.delta = signed(valid[valid.length - 1]!.value - valid[0]!.value);
+    if (valid.length >= 2 && res[res.length - 1]?.valid)
+      row.delta = signed(valid[valid.length - 1]!.value - valid[0]!.value);
     rows.push(row);
   }
   return rows;

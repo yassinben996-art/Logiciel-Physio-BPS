@@ -38,6 +38,23 @@ export interface BilanMeta {
   closed?: boolean;
 }
 
+/**
+ * Fiche enregistrée avant le rebilan (27.11.2026), ou reçue d'un appareil pas encore à jour : complétée à la lecture
+ * (patient, date du bilan, échéance) pour que le patient apparaisse dans « À rebilanter ». Rien n'est réécrit.
+ */
+export function completeMeta(m: BilanMeta, raw: BilanState): BilanMeta {
+  if (m.createdAt && m.due && m.patientId) return m;
+  const b = normalizeBilan(raw);
+  return {
+    ...m,
+    patientId: b.patientId,
+    previousId: b.previousId,
+    createdAt: b.createdAt,
+    due: nextDue(b.createdAt, b.followUp),
+    closed: b.followUp.closed,
+  };
+}
+
 function homePart(b: BilanState): Partial<BilanMeta> {
   const received = Object.keys(b.qResults ?? {}).length > 0;
   if (b.homeQ) {
@@ -213,7 +230,14 @@ function makeVault(idb: IDBFactory, pinKey: CryptoKey, initialRaw: Uint8Array, i
     async list() {
       const recs = await allRecs(idb);
       const metas = await Promise.all(
-        recs.filter((x) => !syncOf(x.rec).deleted).map((x) => open<BilanMeta>(key, x.rec.meta)),
+        recs
+          .filter((x) => !syncOf(x.rec).deleted)
+          .map(async (x) => {
+            const m = await open<BilanMeta>(key, x.rec.meta);
+            return m.createdAt && m.due && m.patientId
+              ? m
+              : completeMeta(m, await open<BilanState>(key, x.rec.data));
+          }),
       );
       return metas.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },

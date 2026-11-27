@@ -79,7 +79,11 @@ export default function BilanApp({
     [allSeries, s.patientId],
   );
   // Série du patient, avec l'état ouvert à la place de sa version enregistrée.
-  const columns = useMemo(() => seriesColumns([...series.filter((b) => b.id !== s.id), s]), [series, s]);
+  // Évolution jusqu'au bilan affiché : les bilans faits après lui n'y entrent pas (ni dans son PDF).
+  const columns = useMemo(
+    () => seriesColumns([...series.filter((b) => b.id !== s.id && b.createdAt < s.createdAt), s]),
+    [series, s],
+  );
   // Rang dans la série : 0 pour le premier bilan, 1 pour le rebilan n° 2…
   const rank = series.filter((b) => b.id !== s.id && b.createdAt < s.createdAt).length;
   const prevBilan =
